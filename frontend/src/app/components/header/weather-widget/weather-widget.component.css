@@ -1,0 +1,83 @@
+/* KORREKTUR: Das Widget selbst wird jetzt auf der Außenhaut zur edlen Glaskapsel! */
+:host {
+  display: flex !important; 
+  background: rgba(255,255,255,0.22) !important; 
+  padding: 4px 12px !important; 
+  border-radius: 14px !important; 
+  backdrop-filter: blur(8px) !important; 
+  border: 1px solid rgba(255,255,255,0.3) !important; 
+  max-width: 260px !important; 
+  flex-basis: 260px !important;
+  height: 52px !important; 
+  align-items: center !important; 
+  box-sizing: border-box !important;
+  flex-shrink: 1 !important;
+}
+
+/* Wetter-Widget Container */
+.weather-widget-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px; 
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+.weather-temperature-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px; 
+}
+
+.temp-item {
+  display: flex;
+  align-items: center;
+  gap: 4px; 
+}
+
+.temp-item:last-child {
+  margin-left: -6px; 
+}
+
+.temp-value-text {
+  color: #ffffff !important;
+  font-weight: 950;
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+.current-main-temp .temp-value-text {
+  font-size: 14.5px;
+}
+
+.weather-icon-accent {
+  font-size: 12px;
+  display: inline-block;
+  line-height: 1;
+}
+
+.weather-extra-row {
+  display: flex;
+  align-items: center;
+}
+
+.extra-item-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.widget-split-row { display: flex; align-items: center; gap: 14px; box-sizing: border-box; width: 100%; justify-content: space-between; }
+.clock-column { display: flex; flex-direction: column; text-align: left; }
+.vorbild-clock { font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.0; font-variant-numeric: tabular-nums; font-family: system-ui, sans-serif; }
+.vorbild-date { font-size: 11px; font-weight: 800; color: #ffffff; margin-top: 2px; font-family: system-ui, sans-serif; white-space: nowrap; }
+.weather-column-right-vorbild { display: flex; flex-direction: column; text-align: left; }

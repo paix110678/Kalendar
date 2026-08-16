@@ -1,0 +1,34 @@
+<!-- Wetter-Widget: Alle Temperaturen in einer horizontalen Reihe ohne Trennstriche -->
+<div class="weather-widget-container">
+  
+  <div class="weather-temperature-bar">
+    <!-- Aktuelle Temperatur -->
+    <div class="temp-item current-main-temp">
+      <span *ngIf="config.live_temp !== '--' && +config.live_temp >= 25">🔥</span>
+      <span *ngIf="config.live_temp !== '--' && +config.live_temp < 25 && +config.live_temp > 0">🌡️</span>
+      <span *ngIf="config.live_temp !== '--' && +config.live_temp <= 0">❄️</span>
+      <span class="temp-value-text">{{ config.live_temp }}°C</span>
+    </div>
+
+    <!-- Höchsttemperatur -->
+    <div class="temp-item">
+      <span class="weather-icon-accent">☀️</span>
+      <span class="temp-value-text">{{ config.high_temp !== '--' ? config.high_temp : '--' }}°</span>
+    </div>
+
+    <!-- Tiefsttemperatur -->
+    <div class="temp-item">
+      <span class="weather-icon-accent">🌙</span>
+      <span class="temp-value-text">{{ config.low_temp !== '--' ? config.low_temp : '--' }}°</span>
+    </div>
+  </div>
+  
+  <!-- Regen und Ort kompakt darunter -->
+  <div class="weather-extra-row">
+    <div class="extra-item-wrapper">
+      <span>💧 {{ config.live_rain }}</span>
+      <span>📍 {{ config.weather_city }}</span>
+    </div>
+  </div>
+
+</div>

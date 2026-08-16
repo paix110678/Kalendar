@@ -1,0 +1,52 @@
+/* You can add global styles to this file, and also import other style files */
+/* src/styles.css */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f1f3f5;
+}
+
+/* Zwingt das Angular-Haupt-Tag, den gesamten Bildschirm einzunehmen */
+app-root {
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Erzwingt, dass der neue Angular-Einstiegspunkt den Bildschirm voll ausfüllt */
+app-calendar-shell {
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* --- GLOBALE STRUKTUR FÜR DAS LIVE-MAUS-TOOLTIP --- */
+.live-draw-tooltip {
+  position: fixed !important;
+  z-index: 999999 !important;
+  background: #1a1b1e !important;
+  color: #ffffff !important;
+  padding: 8px 14px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  font-family: sans-serif !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid #2c2e33 !important;
+  pointer-events: none !important; 
+  white-space: nowrap !important;
+  display: block !important;
+  opacity: 1 !important;
+  transform: translate(0, 0) !important;
+  transition: none !important;
+}

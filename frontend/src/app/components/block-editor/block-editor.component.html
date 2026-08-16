@@ -1,0 +1,42 @@
+<div class="editor-sidebar-inner">
+  <!-- Dynamische Headline je nach Modus -->
+  <h2 class="sidebar-headline">
+    {{ editingBlockId ? '✏️ Zeitblock bearbeiten' : '📅 Zeitblock erstellen' }}
+  </h2>
+
+  <div class="form-group-wrapper">
+    <!-- 1. PERSONEN-AUSWAHL ALS LISTE (Voreingestellt) -->
+    <label class="form-input-label">Für wen?</label>
+    <select class="form-select-field" [(ngModel)]="targetUserId" (change)="onTimeChange()" name="targetUser">
+      <option *ngFor="let user of activeUsers" [value]="user.id">
+        👤 {{ user.name }} ({{ user.role }})
+      </option>
+    </select>
+
+    <!-- 2. TITEL-EINGABE -->
+    <label class="form-input-label">Aufgaben-Titel</label>
+    <input class="form-text-input" [(ngModel)]="blockTitle" type="text" placeholder="z.B. Hausaufgaben machen..." name="title" autocomplete="off" />
+
+    <!-- 3. KATEGORIEN-AUSWAHL MIT ORIGINALEN FARBEN (BEHOBEN: Klammerfehler entfernt) -->
+    <label class="form-input-label">Kategorie / Farbe</label>
+    <select class="form-select-field" [(ngModel)]="blockType" (change)="onTimeChange()" name="category">
+      <option *ngFor="let cat of categories" [value]="cat.value" [style.color]="cat.color" style="font-weight: bold;">
+        ■ {{ cat.label }}
+      </option>
+    </select>
+
+    <!-- 4. START-UHRZEIT (Zeichnet live auf dem Grid mit) -->
+    <label class="form-input-label">Startzeit</label>
+    <input class="form-time-picker" [(ngModel)]="startTime" type="time" (step)="300" (input)="onTimeChange()" name="start" />
+
+    <!-- 5. END-UHRZEIT (Zeichnet live auf dem Grid mit) -->
+    <label class="form-input-label">Endzeit</label>
+    <input class="form-time-picker" [(ngModel)]="endTime" type="time" (step)="300" (input)="onTimeChange()" name="end" />
+  </div>
+
+  <!-- AKTIONEN -->
+  <div class="sidebar-action-buttons">
+    <button class="btn-action-save" (click)="saveBlock()">Speichern ⭐</button>
+    <button class="btn-action-cancel" (click)="closeEditor.emit()">Abbrechen</button>
+  </div>
+</div>

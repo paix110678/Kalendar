@@ -1,0 +1,5 @@
+<div class="view-mode-buttons">
+  <button [class.active]="currentViewMode === 'day'" (click)="changeViewMode('day')">Tag</button>
+  <button [class.active]="currentViewMode === '3days'" (click)="changeViewMode('3days')">3 Tage</button>
+  <button [class.active]="currentViewMode === 'week'" (click)="changeViewMode('week')">Woche</button>
+</div>

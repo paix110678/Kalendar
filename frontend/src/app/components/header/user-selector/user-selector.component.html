@@ -1,0 +1,26 @@
+<div class="user-selector-container">
+  <!-- WOFÜR: Macht jede Namenskapsel über die Index-Zahl (i) verschiebbar und reaktiv tauschbar -->
+  <div *ngFor="let u of activeUsers; let i = index" 
+       class="user-btn-wrapper-hover"
+       draggable="true"
+       (dragstart)="onDragStart(i)"
+       (dragover)="onDragOver($event)"
+       (drop)="onDrop(i)">
+
+    <!-- WOFÜR: Das Auge liegt im Button-Verbund und reagiert auf Mausberührung -->
+    <button class="eye-toggle-badge-hover-mode" (click)="userVisibilityToggled.emit({userId: u.id, event: $event})" title="Sichtbarkeit umschalten">
+      <span *ngIf="isUserVisible(u.id)">👁️</span>
+      <span *ngIf="!isUserVisible(u.id)" style="color: #fa5252; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));">❌</span>
+    </button>
+
+    <!-- WOFÜR: Hintergrund teiltransparent, Name in weiß, Sterne riesig mit Rahmen-Schrift -->
+    <button class="piggy-trigger-btn-transparent-style" [style.border-color]="u.color_code" [style.background-color]="u.color_code + '25'" (click)="rewardDashboardOpened.emit(u)">
+      <span class="user-name-label-white">{{ u.name }}</span>
+      <span class="user-stars-large-wrapper">
+        <span class="star-icon-giant">⭐</span>
+        <span class="star-count-stroke-number">{{ u.current_points }}</span>
+      </span>
+    </button>
+    
+  </div>
+</div>

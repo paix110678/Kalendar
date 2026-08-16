@@ -1,0 +1,50 @@
+:host {
+  display: block !important;
+  position: absolute !important; /* Schwebt frei im Raum des Gitterbetts */
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  
+  /* UNUMSTÖSSLICHE KAPSELUNG: Macht die gesamte Komponente für Klicks transparent! */
+  pointer-events: none !important; 
+  
+  box-sizing: border-box !important;
+  z-index: 10 !important; /* Liegt sauber über den Drop-Zonen, blockiert sie aber nicht */
+}
+
+/* Gestreifter Entwurfskasten */
+.preview-draft-block { 
+  width: calc(100% - 8px) !important;
+  margin: 0 4px !important;
+  pointer-events: none !important; 
+  position: absolute !important; 
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 6px; 
+  border-radius: 10px; 
+  color: #ffffff !important; 
+  font-family: system-ui, sans-serif; 
+  border: 2px dashed #ffffff; 
+  background: repeating-linear-gradient(45deg, #1c7ed6, #1c7ed6 10px, #1a72be 10px, #1a72be 20px) !important; 
+  box-shadow: 0 4px 12px rgba(28, 126, 214, 0.3); 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  box-sizing: border-box !important;
+}
+
+.block-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100% !important;
+  gap: 3px !important;
+}
+
+.preview-title { font-weight: 900; font-size: 14px; color: #ffffff !important; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+.preview-time { font-size: 11px; color: rgba(255,255,255,0.85) !important; font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }

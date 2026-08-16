@@ -1,0 +1,64 @@
+/* Äußere Kapsel-Box für die Ansichts-Schalter: Auf exakt 52px Höhe fixiert */
+.view-mode-buttons { 
+  display: flex !important; 
+  background: rgba(255, 255, 255, 0.2); 
+  padding: 4px !important; /* Erzeugt einen sauberen, gleichmäßigen Innenabstand für das schwebende Feld */
+  border-radius: 14px; 
+  backdrop-filter: blur(12px); 
+  height: 52px !important; 
+  box-sizing: border-box !important;
+  align-items: center !important; 
+  overflow: hidden;
+  flex-shrink: 1; 
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Basis-Styling der Knöpfe */
+.view-mode-buttons button { 
+  background: transparent; 
+  border: none; 
+  outline: none !important;
+  padding: 0px 16px; 
+  min-width: 80px; 
+  height: 100% !important; 
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px; 
+  font-weight: 800; 
+  color: rgba(255, 255, 255, 0.75); 
+  cursor: pointer; 
+  font-family: system-ui, sans-serif; 
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+  box-sizing: border-box !important;
+  white-space: nowrap; 
+  flex: 1;
+}
+
+/* Sicherer Seitenabstand für die äußeren Knöpfe */
+.view-mode-buttons button:first-child { padding-left: 20px !important; }
+.view-mode-buttons button:last-child { padding-right: 20px !important; }
+
+/* Hover-Effekt für die inaktiven Knöpfe */
+.view-mode-buttons button:not(.active):hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* KORREKTUR: Rundung zurückgeholt und vertikales Padding erzwungen, damit das Feld richtig groß wird */
+.view-mode-buttons button.active { 
+  background: rgba(0, 0, 0, 0.12) !important; 
+  color: #ffffff !important; 
+  
+  /* WIEDERHERGESTELLT & OPTIMIERT: Schöne runde Kanten für den aktiven Zustand */
+  border-radius: 10px !important; 
+  
+  /* KORREKTUR: Dehnt das verdunkelte Glasfeld vertikal voll aus */
+  padding: 12px 16px !important; 
+  
+  border: none !important; 
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.1); 
+  transform: scale(1.0); 
+  font-weight: 900;
+}

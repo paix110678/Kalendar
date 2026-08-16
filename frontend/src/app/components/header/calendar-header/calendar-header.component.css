@@ -1,0 +1,31 @@
+/* Haupt-Container: Nutzt ein voll-dynamisches Flex-Layout, das sich jeder Bildschirmbreite anpasst */
+.top-bar-controls { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  background: linear-gradient(90deg, #3bc9db 0%, #ff922b 100%); 
+  padding: 8px 16px; 
+  border-radius: 16px !important; 
+  box-shadow: 0 4px 25px rgba(0,0,0,0.08); 
+  gap: 12px; 
+  min-height: 72px; 
+  height: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Das administrative Zahnrad ganz links */
+.btn-admin-gear { 
+  background: transparent; 
+  border: none; 
+  outline: none; 
+  font-size: 28px; 
+  color: white; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  transition: transform 0.2s ease; 
+  flex-shrink: 0; 
+}
+.btn-admin-gear:hover { transform: rotate(45deg) scale(1.1); }

@@ -1,0 +1,49 @@
+<div class="app-layout">
+  
+  <!-- ETAGE 1: GLOBALER HEADER -->
+  <app-calendar-header 
+    [activeUsers]="calendarGrid.activeUsersSignal()"
+    [currentViewMode]="calendarGrid.currentViewMode"
+    (viewModeChanged)="calendarGrid.changeViewMode($event)"
+    (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
+    (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
+    (adminPageOpened)="calendarGrid.showAdminPage = true">
+  </app-calendar-header>
+
+  <!-- ETAGE 2: GEMEINSAMER HAUPTBEREICH UNDER DEM HEADER -->
+  <div class="main-content">
+    
+    <!-- SÄULE 1: SIDEBAR -->
+    @if (calendarGrid.showBlockEditor) {
+      <div class="left-editor-sidebar">
+        <app-block-editor 
+          [selectedUser]="calendarGrid.selectedUser" 
+          [activeUsers]="calendarGrid.activeUsersSignal()" 
+          (blockSaved)="calendarGrid.onEditorSuccess()" 
+          (closeEditor)="calendarGrid.onEditorCancel()">
+        </app-block-editor>
+      </div>
+    }
+
+    <!-- SÄULE 2: KALENDER-GRID -->
+    <app-calendar-grid #calendarGrid></app-calendar-grid>
+
+  </div>
+</div>
+
+<!-- Globale Overlays / Dashboards -->
+@if (calendarGrid.showRewardPage) {
+  <app-reward-dashboard 
+    [user]="calendarGrid.selectedUser" 
+    [activeRewards]="calendarGrid.activeRewardsSignal()" 
+    (closeDashboard)="calendarGrid.showRewardPage = false">
+  </app-reward-dashboard>
+}
+
+@if (calendarGrid.showAdminPage) {
+  <app-admin-dashboard 
+    [activeUsers]="calendarGrid.activeUsersSignal()" 
+    [activeRewards]="calendarGrid.activeRewardsSignal()" 
+    (closeAdmin)="calendarGrid.showAdminPage = false">
+  </app-admin-dashboard>
+}
