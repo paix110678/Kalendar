@@ -1,7 +1,7 @@
 import { Component, ViewEncapsulation } from '@angular/core';
 import { CalendarHeaderComponent } from './header/calendar-header/calendar-header.component';
-import { CalendarGridComponent } from './calendar-grid/calendar-grid.component';
-import { BlockEditorComponent } from './block-editor/block-editor.component';
+import { CalendarGridComponent } from './main/calendar-grid/calendar-grid.component';
+import { BlockEditorComponent } from './main/block-editor/block-editor.component';
 import { RewardDashboardComponent } from './reward-dashboard/reward-dashboard.component';
 import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
 

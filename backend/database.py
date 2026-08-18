@@ -54,16 +54,29 @@ def init_db():
             type TEXT CHECK(type IN ('snack', 'extra_time', 'cash')) NOT NULL
         )
     """)
+
+    # NEU: Die dynamische Kategorie-Tabelle speichert Name, Farbe und Standard-Abkürzung
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            value TEXT NOT NULL UNIQUE,
+            label TEXT NOT NULL,
+            color TEXT NOT NULL,
+            default_short TEXT NOT NULL
+        )
+    """)
     
+    # NEU: Das geänderte Tabellenmodell für die Zeitblöcke mit dem Abkürzungsfeld 'short_title'
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS time_blocks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             title TEXT NOT NULL,
-            day_of_week TEXT CHECK(day_of_week IN ('Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag')) NOT NULL,
+            short_title TEXT, -- Speichert die passgenaue Abkürzung für schmale Blöcke
+            day_of_week TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            type TEXT CHECK(type IN ('duty', 'media', 'school', 'sport', 'patchwork_garden', 'family')) NOT NULL,
+            type TEXT NOT NULL,
             is_locked INTEGER DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
@@ -84,6 +97,12 @@ def init_db():
         )
     """)
     
+    # REPARIERT & ERWEITERT: Migrationsschutz für bestehende Installationen (Fügt Spalten live hinzu)
+    cursor.execute("PRAGMA table_info(time_blocks)")
+    block_cols = [row["name"] for row in cursor.fetchall()]
+    if "short_title" not in block_cols:
+        cursor.execute("ALTER TABLE time_blocks ADD COLUMN short_title TEXT")
+
     cursor.execute("PRAGMA table_info(system_config)")
     cols = [row["name"] for row in cursor.fetchall()]
     if "api_url_open_meteo" not in cols:
@@ -108,7 +127,21 @@ def init_db():
     cursor.execute("UPDATE system_config SET weather_service = 'open_meteo' WHERE weather_service = 'manual'")
     conn.commit()
 
-    config_count = cursor.execute("SELECT COUNT(*) FROM system_config").fetchone()
+    # NEU: Befüllt die Kategorien-Tabelle mit deinen originalen Familienfarben, falls sie leer ist
+    cat_count = cursor.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
+    if cat_count == 0:
+        default_cats = [
+            ('duty', 'Pflicht (Duty)', '#fa5252', 'Duty'),
+            ('media', 'Medienzeit', '#be4bdb', 'Media'),
+            ('school', 'Schule / Hausaufgaben', '#fd7e14', 'Schule'),
+            ('sport', 'Sport / Verein', '#40c057', 'Sport'),
+            ('patchwork_garden', 'Garten / Patchwork', '#fab005', 'Garten'),
+            ('family', 'Familienzeit', '#15aabf', 'Family')
+        ]
+        cursor.executemany("INSERT INTO categories (value, label, color, default_short) VALUES (?, ?, ?, ?)", default_cats)
+        conn.commit()
+
+    config_count = cursor.execute("SELECT COUNT(*) FROM system_config").fetchone()[0]
     if config_count == 0:
         cursor.execute("""
             INSERT INTO system_config (

@@ -1,13 +1,13 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CalendarService, User, Reward, SystemConfig } from '../../services/calendar.service';
+import { CalendarService, User, Reward, SystemConfig, Category } from '../../services/calendar.service';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './admin-dashboard.component.html',
+  templateUrl: './admin-dashboard.component.html', // KORREKTUR: Haargenau mit deinem Festplatten-Dateinamen synchronisiert
   styleUrl: './admin-dashboard.component.css'
 })
 export class AdminDashboardComponent implements OnInit {
@@ -24,6 +24,12 @@ export class AdminDashboardComponent implements OnInit {
   public editingUserId: number | null = null;
   public editingRewardId: number | null = null;
   
+  // BEHOBEN: Diese Variablen stehen dem Template nun felsenfest zur Verfügung!
+  public editingCatId: number | null = null;
+  public tempCatLabel = '';
+  public tempCatShort = '';
+  public tempCatColor = '#adb5bd';
+
   public tempEditName = '';
   public tempEditGroup: 'adult' | 'child' = 'child';
   public tempEditColor = '#228be6';
@@ -34,15 +40,34 @@ export class AdminDashboardComponent implements OnInit {
   public createRewardCost = 15;
   public createRewardType: 'snack' | 'extra_time' | 'cash' = 'snack';
 
+  public dbCategories: Category[] = [];
   public localConfig: SystemConfig = { weather_city: 'Bremen', weather_plz: '28195', weather_service: 'open_meteo', api_key: '', live_temp: '--', live_rain: '--', high_temp: '--', low_temp: '--' };
 
   constructor(private calendarService: CalendarService) {}
 
   ngOnInit(): void {
+    this.calendarService.categories$.subscribe((cats: Category[]) => {
+      this.dbCategories = cats;
+    });
+
     this.calendarService.config$.subscribe(cfg => {
       if (cfg) {
         this.localConfig = { ...cfg };
       }
+    });
+  }
+
+  startEditCat(cat: Category): void {
+    this.editingCatId = cat.id;
+    this.tempCatLabel = cat.label;
+    this.tempCatShort = cat.default_short;
+    this.tempCatColor = cat.color;
+  }
+
+  saveCatEdit(catId: number): void {
+    if (!this.tempCatLabel.trim() || !this.tempCatShort.trim()) return;
+    this.calendarService.updateCategory(catId, this.tempCatLabel, this.tempCatColor, this.tempCatShort).subscribe(() => {
+      this.editingCatId = null;
     });
   }
 
@@ -70,7 +95,6 @@ export class AdminDashboardComponent implements OnInit {
   private executeConfigSave(): void {
     this.calendarService.updateSystemConfig(this.localConfig).subscribe({
       next: () => {
-        // KORREKTUR: Lädt die system_config sofort reaktiv im Kalender-Vordergrund neu!
         this.calendarService.loadSystemConfig(); 
         alert('Wetterkonfiguration & API erfolgreich gespeichert!');
         this.closeAdmin.emit();

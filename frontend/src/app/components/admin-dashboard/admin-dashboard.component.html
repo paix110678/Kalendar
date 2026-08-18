@@ -51,7 +51,39 @@
       </div>
     </div>
 
-    <!-- WETTER UND SYSTEMCONFIG (KORRIGIERT MIT AUSWAHL) -->
+    <!-- REPARIERT: Keine Ordner-Emojis, keine SQL-Texte, vollständig direkt editierbar! -->
+    <div class="admin-section">
+      <h3>🏷️ Kalender-Kategorien & Farben</h3>
+      <p class="section-sub">Verwalte die Aktivitäts-Typen, ihre Farben und Standard-Kürzel</p>
+      
+      <div class="items-list-wrapper" style="margin-top: 15px;">
+        <h4>System-Kategorien</h4>
+        <div class="list-item-row" *ngFor="let cat of dbCategories">
+          <ng-container *ngIf="editingCatId !== cat.id">
+            <span class="item-name">
+              <span class="color-preview-dot" [style.background-color]="cat.color"></span>
+              <strong>{{ cat.label }}</strong> 
+              <span style="color: #868e96; font-size: 13px; margin-left: 8px;">(Kürzel: <strong>{{ cat.default_short }}</strong>)</span>
+            </span>
+            <div class="action-btn-group">
+              <button class="btn-edit-trigger" (click)="startEditCat(cat)">✏️ Bearbeiten</button>
+            </div>
+          </ng-container>
+          
+          <ng-container *ngIf="editingCatId === cat.id">
+            <div class="inline-edit-form">
+              <input type="text" [(ngModel)]="tempCatLabel" placeholder="Kategorie-Name..." style="width: 200px;">
+              <input type="text" [(ngModel)]="tempCatShort" placeholder="Kürzel..." style="width: 90px;" maxlength="10">
+              <input type="color" [(ngModel)]="tempCatColor" title="Kategoriefarbe wählen" class="color-picker-input">
+              <button class="btn-save-inline" (click)="saveCatEdit(cat.id)">✅ Speichern</button>
+              <button class="btn-cancel-inline" (click)="editingCatId = null">✕</button>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- WETTER UND SYSTEMCONFIG -->
     <div class="admin-section">
       <h3>🌤️ Wetter & Standort konfigurieren</h3>
       <p class="section-sub">Wähle deinen präferierten Wetterdienst und logge deine Postleitzahl ein</p>
@@ -60,12 +92,11 @@
         <div class="form-grid-config">
           <div class="field-item">
             <label>Eindeutige Postleitzahl (PLZ):</label>
-            <input type="text" [(ngModel)]="localConfig.weather_plz" placeholder="z.B. 28195" style="width: 140px;">
+            <input type="text" [(ngModel)]="localConfig.weather_plz" placeholder="z.B. 28790" style="width: 140px;">
           </div>
           
           <div class="field-item">
             <label>Wetterdienst (API):</label>
-            <!-- KORREKTUR: Sauberes Zwei-Wege-Binding an localConfig.weather_service verankert -->
             <select [(ngModel)]="localConfig.weather_service" style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white; color: #212529;">
               <option value="open_meteo">🌦️ Open-Meteo (Kostenlos / Direkt aktiv)</option>
               <option value="weather_api">🌀 WeatherAPI (Erfordert Schlüssel)</option>
