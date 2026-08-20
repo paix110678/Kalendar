@@ -1,26 +1,36 @@
-<div class="top-bar-controls">
-  <!-- Großes Verwaltungssystem-Zahnrad ganz links -->
-  <button class="btn-admin-gear" (click)="adminPageOpened.emit()" title="Administration / Einstellungen">⚙️</button>
+<div class="top-bar-grid-container">
+  
+  <!-- ETAGE 1 (Oben links): Das Logo sitzt jetzt geschützt und weiß auf dem farbigen Hintergrund! -->
+  <div class="header-logo-row">
+    <app-logo></app-logo>
+  </div>
 
-  <!-- Symmetrische Ansichts-Buttons in der Mitte -->
-  <app-view-mode-buttons 
-    [currentViewMode]="currentViewMode" 
-    (viewModeChanged)="viewModeChanged.emit($event)">
-  </app-view-mode-buttons>
+  <!-- ETAGE 2 (Direkt darunter): Alle Controls perfekt aufgereiht innerhalb derselben Kapsel -->
+  <div class="controls-row">
+    <!-- Großes Verwaltungssystem-Zahnrad ganz links unten -->
+    <button class="btn-admin-gear" (click)="adminPageOpened.emit()" title="Administration / Einstellungen">⚙️</button>
 
-  <!-- Profilleiste mit permanentem, datenbankbasiertem Drag-and-Drop -->
-  <app-user-selector 
-    [activeUsers]="activeUsers"
-    (userVisibilityToggled)="userVisibilityToggled.emit($event)"
-    (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">
-  </app-user-selector>
+    <!-- Symmetrische Ansichts-Buttons in der Mitte -->
+    <app-view-mode-buttons 
+      [currentViewMode]="currentViewMode" 
+      (viewModeChanged)="viewModeChanged.emit($event)">
+    </app-view-mode-buttons>
 
-  <!-- Live-Wetteranzeige inkl. Uhrzeit ganz rechts -->
-  <app-weather-widget [config]="{
-    live_temp: sysConfig?.live_temp || '--',
-    high_temp: sysConfig?.high_temp || '--',
-    low_temp: sysConfig?.low_temp || '--',
-    live_rain: sysConfig?.live_rain || '--',
-    weather_city: sysConfig?.weather_city || 'Bremen'
-  }"></app-weather-widget>
+    <!-- Profilleiste mit Drag-and-Drop -->
+    <app-user-selector 
+      [activeUsers]="activeUsers"
+      (userVisibilityToggled)="userVisibilityToggled.emit($event)"
+      (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">
+    </app-user-selector>
+
+    <!-- Live-Wetteranzeige ganz rechts -->
+    <app-weather-widget [config]="{
+      live_temp: sysConfig?.live_temp || '--',
+      high_temp: sysConfig?.high_temp || '--',
+      low_temp: sysConfig?.low_temp || '--',
+      live_rain: sysConfig?.live_rain || '--',
+      weather_city: sysConfig?.weather_city || 'Bremen'
+    }"></app-weather-widget>
+  </div>
+
 </div>

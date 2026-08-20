@@ -5,6 +5,7 @@
   overflow: hidden;
 }
 
+/* Die Haupt-Haut der App steuert die globale Hintergrundfarbe */
 .app-layout {
   display: flex !important;
   flex-direction: column !important;
@@ -14,39 +15,44 @@
   background-color: #f1f3f5;
 }
 
-app-calendar-header {
+.dashboard-center-column {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important; /* REPARIERT: Nutzt jetzt die volle Bildschirmbreite links und rechts aus! */
+  margin: 0 auto !important;
+  padding: 20px !important;
+  gap: 15px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+}
+
+/* Diese gemeinsame Klasse teilt Rahmen, Ecken und Box-Modell absolut identisch auf beide Blöcke auf */
+.dashboard-frame-capsule {
   display: block !important;
   width: 100% !important;
-  flex-shrink: 0 !important;
-  padding: 20px 20px 0px 20px !important; /* Schafft den Abstand zum Rand für das Kapsel-Design */
+  max-width: 100% !important; /* REPARIERT: Erlaubt auch den inneren Gehäusen die volle Entfaltung */
+  border: 1px solid #212529 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.04) !important;
   box-sizing: border-box !important;
 }
 
-/* Der gemeinsame Hauptbereich unter dem Header */
-.main-content {
+app-calendar-header.dashboard-frame-capsule {
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.main-content.dashboard-frame-capsule {
   flex: 1 !important;
   display: flex !important;
   flex-direction: row !important;
   overflow: hidden !important;
-  padding: 20px !important;       
-  height: 100% !important;
-  gap: 20px !important;          
-  box-sizing: border-box !important;
-}
-
-app-block-editor {
-  display: block !important;
-  width: 320px !important;
-  min-width: 320px !important;
-  background: #ffffff !important;
-  border: 1px solid #e9ecef !important;
-  border-radius: 20px !important; 
   padding: 20px !important;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.04) !important;
-  overflow-y: auto !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
+  margin: 0 !important;
+  gap: 20px !important;          
 }
 
 app-calendar-grid {

@@ -1,25 +1,50 @@
-/* Haupt-Container: Nutzt ein voll-dynamisches Flex-Layout, das sich jeder Bildschirmbreite anpasst */
-.top-bar-controls { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
+/* Haupt-Container: Liefert nur noch den Verlauf, Gehäuse-Stile kommen jetzt aus der Shell */
+.top-bar-grid-container {
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(90deg, #3bc9db 0%, #ff922b 100%); 
-  padding: 8px 16px; 
-  border-radius: 16px !important; 
-  box-shadow: 0 4px 25px rgba(0,0,0,0.08); 
-  gap: 12px; 
-  min-height: 72px; 
-  height: auto;
+  padding: 12px 20px; 
+  border-radius: 19px !important; /* Schmiegt sich exakt von innen an den 20px Shell-Rahmen an */
   width: 100%;
   box-sizing: border-box;
+  gap: 12px;
 }
 
-/* Das administrative Zahnrad ganz links */
+.header-logo-row {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.controls-row { 
+  display: flex; 
+  align-items: center; 
+  justify-content: flex-start; 
+  width: 100%;
+  box-sizing: border-box;
+  gap: 12px;
+}
+
+app-view-mode-buttons {
+  flex-shrink: 0;
+}
+
+app-user-selector {
+  flex-grow: 1; 
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 20px; 
+}
+
+app-weather-widget {
+  flex-shrink: 0;
+}
+
 .btn-admin-gear { 
-  background: transparent; 
-  border: none; 
-  outline: none; 
-  font-size: 28px; 
+  background: transparent !important; 
+  border: none !important; 
+  outline: none !important; 
+  font-size: 26px; 
   color: white; 
   cursor: pointer; 
   display: flex; 
@@ -27,5 +52,8 @@
   justify-content: center; 
   transition: transform 0.2s ease; 
   flex-shrink: 0; 
+  box-shadow: none !important;
+  order: 99;
+  margin-left: auto;
 }
 .btn-admin-gear:hover { transform: rotate(45deg) scale(1.1); }

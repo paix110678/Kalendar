@@ -1,13 +1,13 @@
-/* KORREKTUR: Das Widget selbst wird jetzt auf der Außenhaut zur edlen Glaskapsel! */
+/* KORREKTUR: Die Glaskapsel passt sich jetzt millimetergenau der echten Breite des Inhalts an */
 :host {
   display: flex !important; 
   background: rgba(255,255,255,0.22) !important; 
-  padding: 4px 12px !important; 
+  padding: 4px 14px !important; /* Leicht erhöht für eleganten Seitenabstand */
   border-radius: 14px !important; 
   backdrop-filter: blur(8px) !important; 
   border: 1px solid rgba(255,255,255,0.3) !important; 
-  max-width: 260px !important; 
-  flex-basis: 260px !important;
+  width: fit-content !important; /* REPARIERT: Verhindert den leeren Raum auf der rechten Seite */
+  max-width: fit-content !important; /* REPARIERT: Schrumpft die Kapsel passgenau zusammen */
   height: 52px !important; 
   align-items: center !important; 
   box-sizing: border-box !important;
@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px; 
+  gap: 3px; /* Etwas kompakter für die flache Kapsel-Optik */
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -32,7 +32,7 @@
 .weather-temperature-bar {
   display: flex;
   align-items: center;
-  gap: 16px; 
+  gap: 12px; /* Ausbalancierter Abstand zwischen den Werten */
 }
 
 .temp-item {
@@ -42,7 +42,7 @@
 }
 
 .temp-item:last-child {
-  margin-left: -6px; 
+  margin-left: -2px; 
 }
 
 .temp-value-text {
@@ -70,10 +70,11 @@
 .extra-item-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px; /* Kompakter Abstand für die Unterzeile */
   font-size: 11px;
   font-weight: 900;
   color: rgba(255, 255, 255, 0.95) !important;
+  white-space: nowrap; /* Verhindert unerwünschte Zeilenumbrüche innerhalb der Kapsel */
 }
 
 .widget-split-row { display: flex; align-items: center; gap: 14px; box-sizing: border-box; width: 100%; justify-content: space-between; }

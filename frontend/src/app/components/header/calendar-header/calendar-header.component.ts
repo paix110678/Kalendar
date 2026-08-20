@@ -5,12 +5,20 @@ import { CalendarService, User, SystemConfig } from '../../../services/calendar.
 import { WeatherWidgetComponent } from '../weather-widget/weather-widget.component';
 import { UserSelectorComponent } from '../user-selector/user-selector.component';
 import { ViewModeButtonsComponent } from '../view-mode-buttons/view-mode-buttons.component'; 
+import { LogoComponent } from '../logo/logo.component'; // KORREKTUR: Logo-Import hinzugefügt
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-calendar-header',
   standalone: true,
-  imports: [CommonModule, FormsModule, WeatherWidgetComponent, UserSelectorComponent, ViewModeButtonsComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    WeatherWidgetComponent, 
+    UserSelectorComponent, 
+    ViewModeButtonsComponent,
+    LogoComponent // KORREKTUR: Registriert das neue Sub-Modul
+  ],
   templateUrl: './calendar-header.component.html',
   styleUrl: './calendar-header.component.css'
 })
@@ -23,7 +31,6 @@ export class CalendarHeaderComponent implements OnInit, OnDestroy {
   @Output() rewardDashboardOpened = new EventEmitter<User>();
   @Output() adminPageOpened = new EventEmitter<void>();
 
-  // KORREKTUR: Explizit als nullable deklariert, um den asynchronen Backend-Zustand sauber zu matchen
   public sysConfig: SystemConfig | null = null;
   private sub = new Subscription();
 
@@ -31,9 +38,7 @@ export class CalendarHeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.sub.add(this.calendarService.config$.subscribe(c => {
-      if (c) {
-        this.sysConfig = c;
-      }
+      if (c) this.sysConfig = c;
     }));
   }
 
