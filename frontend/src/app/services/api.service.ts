@@ -22,11 +22,12 @@ export class ApiService {
   getAllBlocks(): Observable<TimeBlock[]> { return this.http.get<TimeBlock[]>(this.apiBase + '/blocks/all'); }
   addTimeBlock(block: any): Observable<any> { return this.http.post(this.apiBase + '/blocks', block); }
   deleteTimeBlock(id: number): Observable<any> { return this.http.delete(this.apiBase + '/blocks/' + id); }
-  
-  // KORREKTUR: Akzeptiert jetzt das vollständige JSON-Objekt für JEDES Feld (Titel, Kürzel, Kategorie)
   moveTimeBlock(id: number, payload: any): Observable<any> { return this.http.put(`${this.apiBase}/blocks/${id}/move`, payload); }
-  
   updateUserBlockOwner(id: number, uid: number): Observable<any> { return this.http.put(`${this.apiBase}/blocks/${id}/owner`, { user_id: uid }); }
+
+  // NEU: Datenbank-Katalog-Abfragen
+  getDatabaseTables(): Observable<string[]> { return this.http.get<string[]>(`${this.apiBase}/blocks/db/tables`); }
+  getTableData(tableName: string): Observable<{columns: string[], rows: any[]}> { return this.http.get<any>(`${this.apiBase}/blocks/db/tables/${tableName}`); }
 
   getRewards(): Observable<Reward[]> { return this.http.get<Reward[]>(this.apiBase + '/rewards'); }
   addReward(t: string, p: number, type: string): Observable<any> { return this.http.post(this.apiBase + '/rewards', { title: t, point_cost: p, type }); }

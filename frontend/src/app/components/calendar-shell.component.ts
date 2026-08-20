@@ -1,22 +1,23 @@
-import { Component, ViewEncapsulation } from '@angular/core';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { CalendarHeaderComponent } from './header/calendar-header/calendar-header.component';
 import { CalendarGridComponent } from './main/calendar-grid/calendar-grid.component';
-import { BlockEditorComponent } from './main/block-editor/block-editor.component';
-import { RewardDashboardComponent } from './reward-dashboard/reward-dashboard.component';
-import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
+import { DashboardComponent } from './config/dashboard/dashboard.component'; 
+import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashboard.component'; // KORREKTUR: Importpfad an die Ordnerstruktur angepasst
 
 @Component({
   selector: 'app-calendar-shell',
   standalone: true,
   imports: [
+    CommonModule,
     CalendarHeaderComponent,
     CalendarGridComponent,
-    BlockEditorComponent,
-    RewardDashboardComponent,
-    AdminDashboardComponent
+    DashboardComponent,
+    RewardDashboardComponent // In die Standalone-Imports eingetragen!
   ],
   templateUrl: './calendar-shell.component.html',
-  styleUrl: './calendar-shell.component.css',
-  encapsulation: ViewEncapsulation.None // HEBEL: Schaltet die Kapselung für das globale Layout aus
+  styleUrl: './calendar-shell.component.css'
 })
-export class CalendarShellComponent {}
+export class CalendarShellComponent {
+  public showAdminPage = false;
+}

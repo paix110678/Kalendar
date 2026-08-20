@@ -1,49 +1,38 @@
-<div class="app-layout">
+<div class="calendar-app-shell" style="display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
   
-  <!-- ETAGE 1: GLOBALER HEADER -->
+  <!-- KOPFZEILE MIT ALLEN ORIGINAL-EVENTS -->
   <app-calendar-header 
     [activeUsers]="calendarGrid.activeUsersSignal()"
     [currentViewMode]="calendarGrid.currentViewMode"
     (viewModeChanged)="calendarGrid.changeViewMode($event)"
     (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
     (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
-    (adminPageOpened)="calendarGrid.showAdminPage = true">
+    (adminPageOpened)="showAdminPage = true">
   </app-calendar-header>
 
-  <!-- ETAGE 2: GEMEINSAMER HAUPTBEREICH UNDER DEM HEADER -->
-  <div class="main-content">
+  <div class="main-workspace-frame" style="flex: 1; display: flex; position: relative; overflow: hidden;">
     
-    <!-- SÄULE 1: SIDEBAR -->
-    @if (calendarGrid.showBlockEditor) {
-      <div class="left-editor-sidebar">
-        <app-block-editor 
-          [selectedUser]="calendarGrid.selectedUser" 
-          [activeUsers]="calendarGrid.activeUsersSignal()" 
-          (blockSaved)="calendarGrid.onEditorSuccess()" 
-          (closeEditor)="calendarGrid.onEditorCancel()">
-        </app-block-editor>
-      </div>
-    }
+    <!-- DER STABILE HAUPTKALENDER -->
+    <div class="grid-content-view" [style.display]="showAdminPage || calendarGrid.showRewardPage ? 'none' : 'block'" style="width: 100%; height: 100%;">
+      <app-calendar-grid #calendarGrid></app-calendar-grid>
+    </div>
 
-    <!-- SÄULE 2: KALENDER-GRID -->
-    <app-calendar-grid #calendarGrid></app-calendar-grid>
+    <!-- Das System-Dashboard -->
+    <app-admin-dashboard
+      *ngIf="showAdminPage"
+      [activeUsers]="calendarGrid.activeUsersSignal()"
+      [activeRewards]="calendarGrid.activeRewardsSignal()"
+      [selectedUser]="calendarGrid.selectedUser"
+      (closeAdmin)="showAdminPage = false">
+    </app-admin-dashboard>
+
+    <!-- REPARIERT: Dockt jetzt unfehlbar an die echten Schnittstellen [user] und (closeDashboard) an! -->
+    <app-reward-dashboard
+      *ngIf="calendarGrid.showRewardPage"
+      [user]="calendarGrid.selectedUser"
+      [activeRewards]="calendarGrid.activeRewardsSignal()"
+      (closeDashboard)="calendarGrid.showRewardPage = false">
+    </app-reward-dashboard>
 
   </div>
 </div>
-
-<!-- Globale Overlays / Dashboards -->
-@if (calendarGrid.showRewardPage) {
-  <app-reward-dashboard 
-    [user]="calendarGrid.selectedUser" 
-    [activeRewards]="calendarGrid.activeRewardsSignal()" 
-    (closeDashboard)="calendarGrid.showRewardPage = false">
-  </app-reward-dashboard>
-}
-
-@if (calendarGrid.showAdminPage) {
-  <app-admin-dashboard 
-    [activeUsers]="calendarGrid.activeUsersSignal()" 
-    [activeRewards]="calendarGrid.activeRewardsSignal()" 
-    (closeAdmin)="calendarGrid.showAdminPage = false">
-  </app-admin-dashboard>
-}

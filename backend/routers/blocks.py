@@ -115,7 +115,6 @@ def move_time_block(block_id: int, payload: TimeBlockUpdate):
         conn.close()
         raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
 
-    # KORREKTUR: Erzwingt kompromisslos die Werte aus dem Angular-Formular, falls sie übergeben wurden
     final_day = payload.day_of_week if payload.day_of_week is not None else block["day_of_week"]
     final_start = payload.start_time if payload.start_time is not None else block["start_time"]
     final_end = payload.end_time if payload.end_time is not None else block["end_time"]
@@ -125,7 +124,6 @@ def move_time_block(block_id: int, payload: TimeBlockUpdate):
     final_user_id = payload.user_id if payload.user_id is not None else block["user_id"]
 
     cursor = conn.cursor()
-    # KORREKTUR: Schreibt die Werte knallhart in die SQLite-Zeile
     cursor.execute("""
         UPDATE time_blocks 
         SET day_of_week = ?, start_time = ?, end_time = ?, title = ?, short_title = ?, type = ?, user_id = ? 
@@ -148,3 +146,26 @@ def delete_time_block(block_id: int):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+# NEU: Listet alle anwenderdefinierten Tabellen aus SQLite dynamisch auf
+@router.get("/db/tables")
+def get_db_tables():
+    conn = database.get_db_connection()
+    tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
+    conn.close()
+    return [t["name"] for t in tables]
+
+# NEU: Holt Spaltennamen und Zeilen für JEDE beliebige Tabelle vollkommen generisch ab
+@router.get("/db/tables/{table_name}")
+def get_db_table_data(table_name: str):
+    conn = database.get_db_connection()
+    valid_tables = [t["name"] for t in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+    if table_name not in valid_tables:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Ungueltiger Tabellenname")
+    
+    columns_info = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    columns = [c["name"] for c in columns_info]
+    rows = conn.execute(f"SELECT * FROM {table_name}").fetchall()
+    conn.close()
+    return {"columns": columns, "rows": [dict(r) for r in rows]}
