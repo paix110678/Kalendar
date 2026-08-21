@@ -1,0 +1,44 @@
+<div class="fullscreen-admin-page">
+  
+  <div class="admin-page-header">
+    <h2>⚙️ System-Zentrale &amp; Server-Konfiguration</h2>
+    <button class="btn-back" (click)="closeAdmin.emit()">⬅️ Zurück zum Kalender</button>
+  </div>
+
+  <div class="admin-split-wrapper">
+    
+    <!-- LINKER REAKTIVER NAVIGATIONSTREE -->
+    <div class="admin-navigation-tree">
+      <div class="tree-headline">System-Struktur</div>
+      
+      <button class="tree-node-btn" (click)="activeTab = 'users'" [class.node-active]="activeTab === 'users'">
+        👥 &nbsp; Familienmitglieder
+      </button>
+      
+      <button class="tree-node-btn" (click)="activeTab = 'categories'" [class.node-active]="activeTab === 'categories'">
+        🏷️ &nbsp; Kalender-Kategorien
+      </button>
+      
+      <button class="tree-node-btn" (click)="activeTab = 'system'" [class.node-active]="activeTab === 'system'">
+        🌤️ &nbsp; Wetter &amp; Standort
+      </button>
+
+      <div class="tree-separator"></div>
+      <div class="tree-headline">Datenbank-Tools</div>
+
+      <button class="tree-node-btn node-db" (click)="activeTab = 'database'" [class.node-db-active]="activeTab === 'database'">
+        🗄️ &nbsp; SQLite Inspektor
+      </button>
+    </div>
+
+    <!-- RECHTER INHALTSBEREICH: LÄDT REAKTIV DIE MODULARISIERTEN EINZEL-COMPONENTS -->
+    <div class="admin-content-panel">
+      @if (activeTab === 'users') { <app-users [activeUsers]="activeUsers"></app-users> }
+      @if (activeTab === 'categories') { <app-categories></app-categories> }
+      @if (activeTab === 'system') { <app-system></app-system> }
+      @if (activeTab === 'database') { <app-database [dbTables]="dbTables"></app-database> }
+    </div>
+
+  </div>
+</div>
+

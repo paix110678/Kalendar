@@ -1,0 +1,36 @@
+<div class="admin-section">
+  <h3>🌤️ Wetter &amp; Standort konfigurieren</h3>
+  <div class="inline-create-card" *ngIf="localConfig">
+    <div class="form-grid-config">
+      <div class="field-item">
+        <label>Eindeutige Postleitzahl (PLZ):</label>
+        <input type="text" [(ngModel)]="localConfig.weather_plz" style="width: 140px;">
+      </div>
+      <div class="field-item">
+        <label>Wetterdienst (API):</label>
+        <select [(ngModel)]="localConfig.weather_service">
+          <option value="open_meteo">🌦️ Open-Meteo (Kostenlos)</option>
+          <option value="weather_api">🌀 WeatherAPI (Schlüssel benötigt)</option>
+        </select>
+      </div>
+      <div class="field-item" *ngIf="localConfig.weather_service === 'weather_api'">
+        <label>WeatherAPI Key:</label>
+        <input type="text" [(ngModel)]="localConfig.api_key" style="width: 250px;">
+      </div>
+    </div>
+    <button class="btn-save-config-submit" (click)="triggerConfigUpdateProtection()">💾 Sichern</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="showPasswordPrompt">
+  <div class="security-modal-box">
+    <h3>🔑 Sicherheitsabfrage</h3>
+    <p>Diese Aktion erfordert Rechte für Erwachsene. Bitte gib das Admin-Passwort ein:</p>
+    <input type="password" [(ngModel)]="passwordInput" (keyup.enter)="verifyAdminAction()" placeholder="Passwort eingeben...">
+    <p class="error-text-msg" *ngIf="passwordError">{{ passwordError }}</p>
+    <div class="modal-buttons">
+      <button class="btn-modal-cancel" (click)="showPasswordPrompt = false">Abbrechen</button>
+      <button class="btn-modal-confirm" (click)="verifyAdminAction()">Bestätigen</button>
+    </div>
+  </div>
+</div>

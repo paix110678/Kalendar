@@ -1,0 +1,18 @@
+/* Steuert die Komponente von außen und zwingt das Icon links neben den Text */
+:host { 
+  display: flex !important; 
+  flex-direction: row !important; 
+  align-items: center !important; 
+}
+
+.brand-identity-block { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 14px; padding: 4px 0; }
+.brand-text-wrapper { display: flex; flex-direction: column; line-height: 0.95; }
+
+/* REPARIERT: Schriftgröße auf 44px angehoben, damit die lokale Schreibschrift wieder groß und präsent wirkt */
+.brand-title { font-family: 'Segoe Print', 'Comic Sans MS', cursive; font-size: 44px; font-weight: 700; color: #ffffff; margin: 0; padding: 0; letter-spacing: 0.5px; }
+
+/* Großer Slogan, perfekt auf die Breite des Namens gedehnt */
+.brand-slogan { font-family: system-ui, -apple-system, sans-serif; font-size: 10px; font-weight: 800; color: rgba(255, 255, 255, 0.95); letter-spacing: 0.9px; text-transform: uppercase; margin-top: 3px; }
+
+/* Das PNG-Icon, perfekt skaliert */
+.brand-png-icon { width: 50px; height: 50px; object-fit: contain; flex-shrink: 0; }

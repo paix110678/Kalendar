@@ -1,0 +1,16 @@
+<!-- REPARIERT: Kapselt die Texte starr, um vertikale Überlagerungen und Geister-Zeilenumbrüche zu verhindern -->
+<div class="preview-draft-block" [style.--draft-color]="getCategoryColor()">
+  <div class="block-content" style="display: flex; flex-direction: column; justify-content: space-around; height: 100%; overflow: hidden;">
+    
+    <!-- Der Titel bleibt starr auf einer Zeile -->
+    <span class="preview-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
+      ✍️ Entwurf...
+    </span>
+    
+    <!-- Die Uhrzeit steht isoliert und bricht niemals vertikal aus -->
+    <span class="preview-time" style="white-space: nowrap; line-height: 1.1;">
+      {{ calendarService.getDrawnStartTime() }} - {{ calendarService.getDrawnEndTime() }}
+    </span>
+    
+  </div>
+</div>

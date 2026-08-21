@@ -1,0 +1,23 @@
+/* Das übergeordnete, fixierte Vollbild-Layout der Zentrale */
+.fullscreen-admin-page { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f8f9fa; z-index: 500; padding: 40px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; }
+.admin-page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #dee2e6; padding-bottom: 15px; flex: 0 0 auto; }
+.btn-back { background: #e9ecef; border: 1px solid #ced4da; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+/* Die IDE-Zwei-Spalten-Brücke */
+.admin-split-wrapper { display: flex; flex: 1; overflow: hidden; background: white; border: 1px solid #dee2e6; border-radius: 12px; min-height: 0; }
+
+/* Linker Navigations-Baum */
+.admin-navigation-tree { width: 250px; background: #f8f9fa; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; box-sizing: border-box; }
+.tree-headline { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #adb5bd; letter-spacing: 0.8px; margin: 12px 0 4px 4px; }
+.tree-separator { border-top: 1px dashed #dee2e6; margin: 10px 0; }
+.tree-node-btn { width: 100%; border: none; padding: 10px 14px; text-align: left; background: transparent; color: #495057; font-weight: 600; font-size: 13px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box; }
+.tree-node-btn:hover { background: #e9ecef; }
+
+/* Reaktive Zustände im Tree */
+.node-active { background: #e7f5ff !important; color: #228be6 !important; font-weight: 700; }
+.node-db { font-weight: 700; }
+.node-db:hover { background: #fff0f6; }
+.node-db-active { background: #fff0f6 !important; color: #d6336c !important; }
+
+/* Rechtes Panel für die Subkomponenten */
+.admin-content-panel { flex: 1; padding: 30px; overflow-y: auto; background: white; min-width: 0; }

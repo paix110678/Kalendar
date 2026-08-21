@@ -5,7 +5,6 @@
   overflow: hidden;
 }
 
-/* Die Haupt-Haut der App steuert die globale Hintergrundfarbe */
 .app-layout {
   display: flex !important;
   flex-direction: column !important;
@@ -19,7 +18,7 @@
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  max-width: 100% !important; /* REPARIERT: Nutzt jetzt die volle Bildschirmbreite links und rechts aus! */
+  max-width: 100% !important;
   margin: 0 auto !important;
   padding: 20px !important;
   gap: 15px !important;
@@ -32,7 +31,7 @@
 .dashboard-frame-capsule {
   display: block !important;
   width: 100% !important;
-  max-width: 100% !important; /* REPARIERT: Erlaubt auch den inneren Gehäusen die volle Entfaltung */
+  max-width: 100% !important;
   border: 1px solid #212529 !important;
   border-radius: 20px !important;
   box-shadow: 0 4px 25px rgba(0,0,0,0.04) !important;
@@ -45,14 +44,15 @@ app-calendar-header.dashboard-frame-capsule {
   flex-shrink: 0 !important;
 }
 
+/* REPARIERT: Padding auf 0px gesetzt, damit die Rahmenlinie des Grids deckungsgleich an der Headerlinie anliegt! */
 .main-content.dashboard-frame-capsule {
   flex: 1 !important;
   display: flex !important;
   flex-direction: row !important;
   overflow: hidden !important;
-  padding: 20px !important;
+  padding: 0px !important; /* REPARIERT: Eliminiert die Verschiebung an den Kanten */
   margin: 0 !important;
-  gap: 20px !important;          
+  gap: 0px !important;          
 }
 
 app-calendar-grid {

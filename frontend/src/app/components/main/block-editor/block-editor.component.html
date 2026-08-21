@@ -1,0 +1,106 @@
+<div class="editor-form-wrapper">
+  
+  <div class="editor-header-title">
+    <span>✏️</span> {{ editingBlockId ? 'Zeitblock bearbeiten' : 'Neuer Zeitblock' }}
+  </div>
+
+  <div class="editor-card-box">
+    
+    <!-- FÜR WEN -->
+    <div class="form-group">
+      <label class="form-label">Für wen?</label>
+      <div class="input-icon-wrapper">
+        <select class="form-select" [(ngModel)]="targetUserId" (change)="onTimeChange()">
+          @for (user of activeUsers; track user.id) {
+            <option [value]="user.id">👤 {{ user.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- AUFGABEN-TITEL -->
+    <div class="form-group">
+      <label class="form-label">Aufgaben-Titel</label>
+      <input 
+        type="text" 
+        class="form-input" 
+        [(ngModel)]="blockTitle" 
+        placeholder="z.B. Hausaufgaben machen"
+        (ngModelChange)="onTimeChange()">
+    </div>
+
+    <!-- KURZZEICHEN -->
+    <div class="form-group">
+      <label class="form-label">Kurzzeichen (Wochenansicht)</label>
+      <input 
+        type="text" 
+        class="form-input" 
+        [(ngModel)]="blockShortTitle" 
+        placeholder="z.B. HA"
+        (ngModelChange)="onTimeChange()">
+    </div>
+
+    <!-- REPARIERT: Echtes, aufklappbares Custom-Dropdown mit runden Farbkreisen -->
+    <div class="form-group">
+      <label class="form-label">Kategorie wählen</label>
+      <div class="custom-dropdown-container">
+        
+        <!-- Der geschlossene Zustand (Das sichtbare Hauptfeld) -->
+        <button type="button" class="custom-dropdown-trigger" (click)="isDropdownOpen = !isDropdownOpen">
+          <span class="category-circle-indicator" [style.background-color]="getSelectedCategoryColor()" *ngIf="blockType"></span>
+          <span class="trigger-label-text">{{ getSelectedCategoryLabel() }}</span>
+          <span class="trigger-arrow-icon" [class.is-inverted]="isDropdownOpen">▼</span>
+        </button>
+
+        <!-- Das aufgeklappte Dropdown-Menü -->
+        @if (isDropdownOpen) {
+          <div class="custom-dropdown-menu">
+            @for (cat of categories; track cat.id) {
+              <button 
+                type="button" 
+                class="dropdown-menu-row"
+                [class.is-selected]="blockType === cat.value"
+                (click)="selectCategory(cat.value)">
+                
+                <span class="category-circle-indicator" [style.background-color]="cat.color"></span>
+                <span class="dropdown-row-text">{{ cat.label }}</span>
+                <span class="dropdown-check-mark">✓</span>
+                
+              </button>
+            }
+          </div>
+        }
+
+      </div>
+    </div>
+
+    <!-- ZEIT-SLOTS NEBENEINANDER -->
+    <div class="form-time-row">
+      <div class="form-group flex-1">
+        <label class="form-label">Startzeit</label>
+        <input 
+          type="time" 
+          class="form-input-time" 
+          [(ngModel)]="startTime" 
+          (change)="onTimeChange()">
+      </div>
+
+      <div class="form-group flex-1">
+        <label class="form-label">Endzeit</label>
+        <input 
+          type="time" 
+          class="form-input-time" 
+          [(ngModel)]="endTime" 
+          (change)="onTimeChange()">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AKTIONS-BUTTONS -->
+  <div class="editor-action-buttons">
+    <button class="btn-editor-save" [disabled]="!isFormValid()" (click)="saveBlock()">Speichern ⭐</button>
+    <button class="btn-editor-cancel" (click)="cancelAndReset()">Abbrechen</button>
+  </div>
+
+</div>

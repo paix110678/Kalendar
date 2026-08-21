@@ -1,0 +1,51 @@
+:host {
+  display: block !important;
+  /* REPARIERT: Keine absoluten Ausbrüche mehr – das Grid steuert Position und Höhe! */
+  position: relative !important; 
+  width: 100% !important; 
+  height: 100% !important;
+  pointer-events: none !important; 
+  box-sizing: border-box !important;
+  z-index: 10 !important; 
+}
+
+/* Gestreifter Entwurfskasten */
+.preview-draft-block { 
+  width: calc(100% - 8px) !important;
+  margin: 0 4px !important;
+  pointer-events: none !important; 
+  /* REPARIERT: Füllt jetzt exakt und relativ die vom Grid-Span vorgegebene Höhe der Zeilen aus */
+  position: relative !important; 
+  height: 100% !important;
+  padding: 6px; 
+  border-radius: 10px; 
+  color: #ffffff !important; 
+  font-family: system-ui, sans-serif; 
+  border: 2px dashed #ffffff; 
+  
+  /* Nutzt die reaktive Variable mitsamt transparentem Schwarzschleier für die schrägen Streifen */
+  background: repeating-linear-gradient(
+    45deg, 
+    var(--draft-color, #1c7ed6), 
+    var(--draft-color, #1c7ed6) 10px, 
+    rgba(0, 0, 0, 0.12) 10px, 
+    rgba(0, 0, 0, 0.12) 20px
+  ) !important; 
+  
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  box-sizing: border-box !important;
+}
+
+.block-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100% !important;
+  gap: 3px !important;
+}
+
+.preview-title { font-weight: 900; font-size: 14px; color: #ffffff !important; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+.preview-time { font-size: 11px; color: rgba(255,255,255,0.85) !important; font-weight: 700; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }

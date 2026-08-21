@@ -1,0 +1,32 @@
+<div class="admin-section">
+  <h3>🗄️ Relationaler SQLite Tabellen-Inspektor</h3>
+  <p style="color: #868e96; font-size: 13px; margin: -10px 0 10px 0;">Klicke auf eine Systemtabelle, um Schema und Zeilen live auszulesen</p>
+  
+  <div class="db-tables-grid">
+    <button *ngFor="let table of dbTables" 
+            (click)="openTableContent(table)"
+            [class.table-btn-active]="selectedTableName === table"
+            class="btn-db-table-select">
+      💾 &nbsp; {{ table }}
+    </button>
+  </div>
+
+  <div *ngIf="selectedTableName" class="live-table-data-box">
+    <h4 style="margin: 0 0 15px 0; color: #d6336c;">Tabelle: <span style="color: #212529; font-weight: 800;">{{ selectedTableName }}</span></h4>
+    <div class="table-scroll-frame">
+      <table class="generative-sql-table">
+        <thead>
+          <tr><th *ngFor="let col of currentTableColumns">{{ col }}</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of currentTableRows">
+            <td *ngFor="let col of currentTableColumns">{{ row[col] !== null ? row[col] : 'NULL' }}</td>
+          </tr>
+          <tr *ngIf="currentTableRows.length === 0">
+            <td [attr.colspan]="currentTableColumns.length" style="text-align: center; color: #adb5bd; font-style: italic; padding: 25px;">Keine Datensätze vorhanden.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

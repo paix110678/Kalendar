@@ -1,0 +1,43 @@
+<div class="admin-section">
+  <h3>👥 Familienmitglieder verwalten</h3>
+  <div class="inline-create-card">
+    <h4>Neues Mitglied hinzufügen</h4>
+    <div class="input-row">
+      <input type="text" [(ngModel)]="createUserName" placeholder="Name eintragen...">
+      <select [(ngModel)]="createUserGroup">
+        <option value="adult">Gruppe: Erwachsene</option>
+        <option value="child">Gruppe: Kinder</option>
+      </select>
+      <button class="btn-action-add" (click)="submitNewUser()">Hinzufügen</button>
+    </div>
+  </div>
+  
+  <div class="items-list-wrapper">
+    <h4>Angelegte Personen (Direkt editierbar)</h4>
+    <div class="list-item-row" *ngFor="let u of activeUsers">
+      <ng-container *ngIf="editingUserId !== u.id">
+        <span class="item-name">
+          <span class="color-preview-dot" [style.background-color]="u.color_code"></span>
+          👤 {{ u.name }} <strong>({{ u.role === 'adult' ? 'Erwachsene' : 'Kind' }})</strong>
+        </span>
+        <div class="action-btn-group">
+          <button class="btn-edit-trigger" (click)="startEditUser(u)">✏️ Bearbeiten</button>
+          <button class="btn-delete" (click)="deleteUser(u.id)">🗑️ Löschen</button>
+        </div>
+      </ng-container>
+      
+      <ng-container *ngIf="editingUserId === u.id">
+        <div class="inline-edit-form">
+          <input type="text" [(ngModel)]="tempEditName">
+          <select [(ngModel)]="tempEditGroup">
+            <option value="adult">Erwachsene</option>
+            <option value="child">Kind</option>
+          </select>
+          <input type="color" [(ngModel)]="tempEditColor" class="color-picker-input">
+          <button class="btn-save-inline" (click)="saveUserEdit(u.id)">✅ Speichern</button>
+          <button class="btn-cancel-inline" (click)="editingUserId = null">✕</button>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

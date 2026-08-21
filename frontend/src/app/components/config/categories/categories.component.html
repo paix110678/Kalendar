@@ -1,0 +1,26 @@
+<div class="admin-section">
+  <h3>🏷️ Kalender-Kategorien &amp; Farben</h3>
+  <div class="items-list-wrapper">
+    <div class="list-item-row" *ngFor="let cat of dbCategories">
+      <ng-container *ngIf="editingCatId !== cat.id">
+        <span class="item-name">
+          <span class="color-preview-dot" [style.background-color]="cat.color"></span>
+          <strong>{{ cat.label }}</strong> <span style="color: #868e96; font-size: 13px; margin-left: 8px;">(Kürzel: <strong>{{ cat.default_short }}</strong>)</span>
+        </span>
+        <div class="action-btn-group">
+          <button class="btn-edit-trigger" (click)="startEditCat(cat)">✏️ Bearbeiten</button>
+        </div>
+      </ng-container>
+      
+      <ng-container *ngIf="editingCatId === cat.id">
+        <div class="inline-edit-form">
+          <input type="text" [(ngModel)]="tempCatLabel">
+          <input type="text" [(ngModel)]="tempCatShort" style="width: 90px;" maxlength="10">
+          <input type="color" [(ngModel)]="tempCatColor" class="color-picker-input">
+          <button class="btn-save-inline" (click)="saveCatEdit(cat.id)">✅ Speichern</button>
+          <button class="btn-cancel-inline" (click)="editingCatId = null">✕</button>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

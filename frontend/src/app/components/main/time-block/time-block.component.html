@@ -1,0 +1,21 @@
+<!-- REPARIERT: Nutzt den lokalen click-Handler, der die Event-Kette korrekt nach oben emittiert -->
+<div class="time-block" 
+     [ngClass]="block.type" 
+     [class.locked]="block.is_locked" 
+     [style.background-color]="getBlockColor()" 
+     draggable="true" 
+     (dragstart)="onDragStart($event)"
+     (click)="onBlockClick($event)">
+  
+  <button class="btn-block-trash" (click)="deleteBlock($event)">✕</button>
+  
+  <div class="block-content">
+    <span class="block-title">
+      <span class="title-full">[{{ user.name }}] {{ block.title }}</span>
+      <span class="title-short">[{{ user.name }}] {{ block.short_title || block.title }}</span>
+    </span>
+    <span class="block-time">{{ block.start_time }} - {{ block.end_time }}</span>
+  </div>
+  
+  <div class="resize-handle" (mousedown)="startResize($event)"></div>
+</div>
