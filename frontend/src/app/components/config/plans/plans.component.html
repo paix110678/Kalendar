@@ -1,0 +1,126 @@
+<section class="plans-page">
+  <header class="plans-header">
+    <div>
+      <h3>Pläne erstellen</h3>
+      <p>Lege Tage und individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
+    </div>
+  </header>
+
+  <form class="plan-form" (ngSubmit)="savePlan()">
+    <div class="form-grid">
+      <label class="field field-name">
+        <span>Name des Plans</span>
+        <input
+          type="text"
+          name="planName"
+          [(ngModel)]="planName"
+          maxlength="100"
+          placeholder="z. B. Stundenplan Kay"
+          required>
+      </label>
+
+      <label class="field">
+        <span>Erster Tag</span>
+        <select name="startDay" [(ngModel)]="startDay">
+          @for (day of daysOfWeek; track day) {
+            <option [value]="day">{{ day }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Letzter Tag</span>
+        <select name="endDay" [(ngModel)]="endDay">
+          @for (day of daysOfWeek; track day) {
+            <option [value]="day">{{ day }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field field-count">
+        <span>Anzahl der Stunden</span>
+        <input
+          type="number"
+          name="hoursCount"
+          min="1"
+          max="24"
+          [ngModel]="hoursCount"
+          (ngModelChange)="onHoursCountChange($event)">
+      </label>
+    </div>
+
+    <div class="hours-heading">
+      <div>
+        <h4>Stundenzeiten</h4>
+        <p>Die vorgeschlagenen Zeiten kannst du für jede Stunde anpassen.</p>
+      </div>
+      <span>{{ hoursCount }} Stunden</span>
+    </div>
+
+    <div class="hours-grid">
+      @for (hour of hours; track $index; let index = $index) {
+        <div class="hour-row">
+          <strong>{{ index + 1 }}. Stunde</strong>
+          <label class="field">
+            <span>Beginn</span>
+            <input
+              type="time"
+              [name]="'hourStart' + index"
+              [(ngModel)]="hour.start_time"
+              required>
+          </label>
+          <label class="field">
+            <span>Ende</span>
+            <input
+              type="time"
+              [name]="'hourEnd' + index"
+              [(ngModel)]="hour.end_time"
+              required>
+          </label>
+        </div>
+      }
+    </div>
+
+    <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
+    <p class="form-message form-success" role="status" [hidden]="!successMessage">{{ successMessage }}</p>
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="button button-secondary"
+        [hidden]="editingPlanId === null"
+        (click)="resetForm()">Abbrechen</button>
+      <button type="submit" class="button button-primary" [disabled]="saving">
+        {{ saving ? 'Wird gespeichert …' : editingPlanId === null ? 'Plan speichern' : 'Änderungen speichern' }}
+      </button>
+    </div>
+  </form>
+
+  <section class="saved-plans">
+    <div class="saved-plans-heading">
+      <h4>Gespeicherte Pläne</h4>
+      <div class="saved-plans-controls">
+        <span [hidden]="!loading">Wird geladen …</span>
+        <button type="button" class="button button-secondary" [disabled]="loading" (click)="loadPlans()">
+          Aktualisieren
+        </button>
+      </div>
+    </div>
+
+    <p class="form-message form-error" role="alert" [hidden]="loading || !errorMessage">{{ errorMessage }}</p>
+    <p class="empty-state" [hidden]="loading || plans.length !== 0 || !!errorMessage">Noch keine Pläne gespeichert.</p>
+
+    @for (plan of plans; track plan.id) {
+      <article class="plan-card">
+        <div class="plan-details">
+          <strong>{{ plan.name }}</strong>
+          <span>ID {{ plan.id }} · {{ plan.start_day }} bis {{ plan.end_day }} · {{ plan.hours_count }} Stunden</span>
+        </div>
+        <div class="plan-actions">
+          <button type="button" class="button button-secondary" (click)="editPlan(plan)">Bearbeiten</button>
+          <button type="button" class="button button-danger" (click)="deletePlan(plan)">Löschen</button>
+        </div>
+      </article>
+    }
+  </section>
+</section>

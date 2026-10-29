@@ -3,6 +3,20 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { User, TimeBlock, Reward, SystemConfig, Category } from './calendar.service';
 
+export interface PlanHour {
+  start_time: string;
+  end_time: string;
+}
+
+export interface PlanDefinition {
+  id: number;
+  name: string;
+  start_day: string;
+  end_day: string;
+  hours_count: number;
+  hours: PlanHour[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly apiBase = 'http://localhost:8000/api';
@@ -28,6 +42,11 @@ export class ApiService {
   // NEU: Datenbank-Katalog-Abfragen
   getDatabaseTables(): Observable<string[]> { return this.http.get<string[]>(`${this.apiBase}/blocks/db/tables`); }
   getTableData(tableName: string): Observable<{columns: string[], rows: any[]}> { return this.http.get<any>(`${this.apiBase}/blocks/db/tables/${tableName}`); }
+
+  getPlans(): Observable<PlanDefinition[]> { return this.http.get<PlanDefinition[]>(`${this.apiBase}/plans`); }
+  createPlan(plan: Omit<PlanDefinition, 'id'>): Observable<PlanDefinition> { return this.http.post<PlanDefinition>(`${this.apiBase}/plans`, plan); }
+  updatePlan(id: number, plan: Omit<PlanDefinition, 'id'>): Observable<PlanDefinition> { return this.http.put<PlanDefinition>(`${this.apiBase}/plans/${id}`, plan); }
+  deletePlan(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/plans/${id}`); }
 
   getRewards(): Observable<Reward[]> { return this.http.get<Reward[]>(this.apiBase + '/rewards'); }
   addReward(t: string, p: number, type: string): Observable<any> { return this.http.post(this.apiBase + '/rewards', { title: t, point_cost: p, type }); }

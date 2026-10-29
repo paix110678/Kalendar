@@ -14,6 +14,10 @@
       <button class="tree-node-btn" (click)="activeTab = 'users'" [class.node-active]="activeTab === 'users'">
         👥 &nbsp; Familienmitglieder
       </button>
+
+      <button class="tree-node-btn" (click)="openPlans()" [class.node-active]="activeTab === 'plans'">
+        📅 &nbsp; Pläne
+      </button>
       
       <button class="tree-node-btn" (click)="activeTab = 'categories'" [class.node-active]="activeTab === 'categories'">
         🏷️ &nbsp; Kalender-Kategorien
@@ -34,6 +38,7 @@
     <!-- RECHTER INHALTSBEREICH: LÄDT REAKTIV DIE MODULARISIERTEN EINZEL-COMPONENTS -->
     <div class="admin-content-panel">
       @if (activeTab === 'users') { <app-users [activeUsers]="activeUsers"></app-users> }
+      @if (activeTab === 'plans') { <app-plans></app-plans> }
       @if (activeTab === 'categories') { <app-categories></app-categories> }
       @if (activeTab === 'system') { <app-system></app-system> }
       @if (activeTab === 'database') { <app-database [dbTables]="dbTables"></app-database> }
@@ -41,4 +46,3 @@
 
   </div>
 </div>
-

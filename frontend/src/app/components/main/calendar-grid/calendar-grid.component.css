@@ -6,7 +6,8 @@
   background: #ffffff; 
   height: 100% !important; 
   box-sizing: border-box; 
-  padding: 0px !important; 
+  /* Keep the library's 6px bottom frame buffer inside this clipped viewport. */
+  padding: 0 0 6px !important;
 }
 
 .calendar-container { 

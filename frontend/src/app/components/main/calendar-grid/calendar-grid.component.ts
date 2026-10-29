@@ -1,23 +1,25 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { CalendarDrawerDirective } from '../calendar-grid/calendar-drawer.directive'; 
+import {
+  CalendarResource,
+  CalendarEvent,
+  GridCalendar,
+  GridConfig,
+  GridTheme,
+  GridViewMode,
+} from '@swbpapk_acmtemu/grid-calendar';
 import { CalendarService, TimeBlock, User } from '../../../services/calendar.service';
-import { TimeBlockComponent } from '../time-block/time-block.component'; 
-import { PreviewDraftComponent } from '../preview-draft/preview-draft.component'; 
 import { BlockEditorComponent } from '../block-editor/block-editor.component';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-calendar-grid',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    CalendarDrawerDirective,
-    TimeBlockComponent, 
-    PreviewDraftComponent,
-    BlockEditorComponent
+    CommonModule,
+    GridCalendar,
+    BlockEditorComponent,
   ],
   templateUrl: './calendar-grid.component.html',
   styleUrl: './calendar-grid.component.css'
@@ -29,91 +31,67 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   public activeUsersSignal = toSignal(this.calendarService.users$, { initialValue: [] as User[] });
   public currentBlocksSignal = toSignal(this.calendarService.blocks$, { initialValue: [] as TimeBlock[] });
   public activeRewardsSignal = toSignal(this.calendarService.rewards$, { initialValue: [] as any[] });
+  public calendarEvents: CalendarEvent[] = [];
   public selectedUser: User | null = null;
   public showAdminPage = false;
   public showBlockEditor = false;
   public showRewardPage = false;
-  public lastDrawnUserId = 0;
   public isEditingExisting = false;
-  public isDrawingLive = false;
   public currentViewMode: 'day' | '3days' | 'week' = 'day';
-  public filteredDays: string[] = [];
+  public filteredDays: TimeBlock['day_of_week'][] = [];
   public hiddenUserIds: { [userId: number]: boolean } = {};
-  public currentDayName!: string;
-  public daysOfWeek = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-  public timeSlots: string[] = [];
-  public currentBlackLineRow = 1;
-  public currentBlackTimeStr = '06:00';
+  public currentDayName!: TimeBlock['day_of_week'];
+  public daysOfWeek: TimeBlock['day_of_week'][] = [
+    'Montag',
+    'Dienstag',
+    'Mittwoch',
+    'Donnerstag',
+    'Freitag',
+    'Samstag',
+    'Sonntag',
+  ];
   public currentEditingBlockId: number | null = null; 
-  private updateIntervalId: any = null;
+  public readonly calendarConfig: GridConfig = {
+    workingHoursStart: this.calendarService.START_HOUR,
+    // Date treats hour 24 as 00:00, which would place the 24:00 label at the grid's start.
+    workingHoursEnd: this.calendarService.END_HOUR - 1 / 60,
+    pixelsPerHour: 60,
+    gridLineIntervalMinutes: 5,
+  };
+  public readonly calendarTheme: GridTheme = {
+    colorPrimary: '#212529',
+    colorBackground: '#ffffff',
+    colorBorder: '#212529',
+    colorEventDefault: '#228be6',
+    colorHourLine: '#495057',
+    fontFamily: 'system-ui, sans-serif',
+  };
+  public readonly anchorDate = this.getTodayAtMidnight();
+  private readonly blockSubscription = new Subscription();
 
   ngOnInit(): void {
-    this.timeSlots = [];
-    const slotsCount = ((this.calendarService.END_HOUR - this.calendarService.START_HOUR) * 60) / 5;
-    
-    for (let slot = 0; slot <= slotsCount; slot++) {
-      if (slot === slotsCount) {
-        this.timeSlots.push('00:00');
-      } else {
-        this.timeSlots.push(this.calendarService.gridRowToTime(slot + 1));
-      }
-    }
     (window as any).hiddenUserIdsCache = this.hiddenUserIds;
-
-    const dateObj = new Date();
-    const daysEnToDe: { [key: string]: string } = { 'Monday': 'Montag', 'Tuesday': 'Dienstag', 'Wednesday': 'Mittwoch', 'Thursday': 'Donnerstag', 'Friday': 'Freitag', 'Saturday': 'Samstag', 'Sunday': 'Sonntag' };
-    this.currentDayName = daysEnToDe[dateObj.toLocaleDateString('en-US', { weekday: 'long' })] || 'Donnerstag';
-
+    this.currentDayName = this.getDayName(this.anchorDate);
+    this.blockSubscription.add(
+      this.calendarService.blocks$.subscribe(() => this.syncCalendarEvents()),
+    );
     this.updateViewTimeline();
-    this.calculateLiveGridRow();
-
-    this.updateIntervalId = setInterval(() => {
-      this.calculateLiveGridRow();
-    }, 5000);
   }
 
   ngOnDestroy(): void {
-    if (this.updateIntervalId) {
-      clearInterval(this.updateIntervalId);
-    }
+    this.blockSubscription.unsubscribe();
   }
 
-  private calculateLiveGridRow(): void {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-
-    this.currentBlackTimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-
-    if (hours < this.calendarService.START_HOUR) {
-      this.currentBlackLineRow = 1;
-      return;
-    }
-    if (hours >= this.calendarService.END_HOUR && minutes > 0) {
-      this.currentBlackLineRow = 217;
-      return;
-    }
-
-    const totalMinutesSinceStart = (hours - this.calendarService.START_HOUR) * 60 + minutes;
-    this.currentBlackLineRow = Math.floor(totalMinutesSinceStart / 5) + 1;
+  public get calendarViewMode(): GridViewMode {
+    return this.currentViewMode === '3days' ? '3day' : this.currentViewMode;
   }
 
-  public getFormattedDateWithKW(dayName: string): string {
-    const today = new Date();
-    const currentDayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1; 
-    const targetDayIdx = this.daysOfWeek.indexOf(dayName);   
-    const diff = targetDayIdx - currentDayIdx;
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + diff);
-    const dd = String(targetDate.getDate()).padStart(2, '0');
-    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const d = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-
-    return `(${dd}.${mm}. / KW ${weekNo})`;
+  public get calendarResources(): CalendarResource[] {
+    return this.getVisibleUsers().map((user) => ({
+      id: user.id,
+      name: user.name,
+      color: user.color_code,
+    }));
   }
 
   public changeViewMode(mode: 'day' | '3days' | 'week'): void {
@@ -133,40 +111,23 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
         this.daysOfWeek[(startIdx + 2) % 7]
       ];
     } else {
-      const rotated: string[] = [];
+      const rotated: TimeBlock['day_of_week'][] = [];
       for (let i = 0; i < 7; i++) {
         rotated.push(this.daysOfWeek[(startIdx + i) % 7]);
       }
       this.filteredDays = rotated;
     }
-    this.cdr.detectChanges();
-  }
-
-  public onDrawingStarted(user: User): void {
-    localStorage.removeItem('EDITING_BLOCK_ID');
-    this.currentEditingBlockId = null;
-    this.isEditingExisting = false;
-    this.isDrawingLive = true; 
-    this.lastDrawnUserId = user.id;
-    this.selectedUser = user;
-    this.cdr.detectChanges();
-  }
-
-  public onDrawingFinished(): void {
-    this.isDrawingLive = false; 
-    this.showBlockEditor = true;
+    this.syncCalendarEvents();
     this.cdr.detectChanges();
   }
 
   public editExistingBlock(block: TimeBlock): void {
     this.isEditingExisting = true;
-    this.isDrawingLive = false;
     const owner = this.activeUsersSignal().find(u => u.id === block.user_id);
     if (owner) {
       localStorage.setItem('EDITING_BLOCK_ID', block.id.toString());
       this.currentEditingBlockId = block.id; 
       this.selectedUser = owner;
-      this.lastDrawnUserId = owner.id;
       this.showBlockEditor = true;
       this.cdr.detectChanges();
     }
@@ -175,9 +136,10 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   public onEditorSuccess(): void {
     this.showBlockEditor = false;
     this.isEditingExisting = false;
-    this.isDrawingLive = false;
     this.currentEditingBlockId = null;
+    this.calendarEvents = this.calendarEvents.filter((event) => event.id >= 0);
     localStorage.removeItem('EDITING_BLOCK_ID');
+    localStorage.removeItem('DRAWN_DAY');
     localStorage.removeItem('DRAWN_START_TIME');
     localStorage.removeItem('DRAWN_END_TIME');
     this.calendarService.loadInitialData();
@@ -187,9 +149,10 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   public onEditorCancel(): void {
     this.showBlockEditor = false;
     this.isEditingExisting = false;
-    this.isDrawingLive = false;
     this.currentEditingBlockId = null;
+    this.calendarEvents = this.calendarEvents.filter((event) => event.id >= 0);
     localStorage.removeItem('EDITING_BLOCK_ID');
+    localStorage.removeItem('DRAWN_DAY');
     localStorage.removeItem('DRAWN_START_TIME');
     localStorage.removeItem('DRAWN_END_TIME');
     this.calendarService.loadAllBlocks();
@@ -200,6 +163,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.hiddenUserIds[userId] = !this.hiddenUserIds[userId];
     (window as any).hiddenUserIdsCache = this.hiddenUserIds;
+    this.syncCalendarEvents();
     this.cdr.detectChanges();
   }
 
@@ -217,32 +181,185 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges(); 
   }
 
-  public onDrop(event: DragEvent, targetDay: string, targetRow: number, userId: number): void {
-    event.preventDefault();
-    const rawId = event.dataTransfer?.getData('text/plain');
-    
-    if (!rawId || isNaN(Number(rawId))) return;
+  public onCalendarEventsChange(events: CalendarEvent[]): void {
+    this.calendarEvents = events;
+  }
 
-    const id = Number(rawId);
-    const b = this.currentBlocksSignal().find(x => x.id === id);
-    if (b) {
-      const start = this.calendarService.gridRowToTime(targetRow);
-      const end = this.calendarService.gridRowToTime(targetRow + this.calendarService.durationToGridRows(b.start_time, b.end_time));
-      
-      this.calendarService.updateUserBlockOwner(id, userId).subscribe(() => {
-        const movedPayload = {
-          day_of_week: targetDay as any,
-          start_time: start,
-          end_time: end,
-          title: b.title,
-          short_title: b.short_title || null,
-          type: b.type,
-          user_id: userId
-        };
-        this.calendarService.moveTimeBlock(id, movedPayload).subscribe(() => {
-          this.cdr.detectChanges();
-        });
-      });
+  public onCalendarEventCreated(event: CalendarEvent): void {
+    const user = this.activeUsersSignal().find((candidate) => candidate.id === event.resourceId);
+    if (!user) {
+      console.error(`Kalenderentwurf ${event.id} verweist auf keinen sichtbaren Benutzer.`);
+      this.syncCalendarEvents();
+      return;
     }
+
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    if (!this.isValidDate(start) || !this.isValidDate(end)) {
+      console.error(`Kalenderentwurf ${event.id} enthält eine ungültige Zeitspanne.`);
+      this.syncCalendarEvents();
+      return;
+    }
+
+    localStorage.removeItem('EDITING_BLOCK_ID');
+    localStorage.setItem('DRAWN_DAY', this.getDayName(start));
+    localStorage.setItem('DRAWN_START_TIME', this.formatTime(start));
+    localStorage.setItem('DRAWN_END_TIME', this.formatTime(end));
+    this.currentEditingBlockId = null;
+    this.isEditingExisting = false;
+    this.selectedUser = user;
+    this.showBlockEditor = true;
+    this.cdr.detectChanges();
+  }
+
+  public onCalendarEventClicked(event: CalendarEvent): void {
+    const block = this.findTimeBlockForEvent(event);
+    if (block) {
+      this.editExistingBlock(block);
+    }
+  }
+
+  public onCalendarEventEdited(eventId: number): void {
+    const event = this.calendarEvents.find((candidate) => candidate.id === eventId);
+    if (event) {
+      this.onCalendarEventClicked(event);
+    }
+  }
+
+  public onCalendarEventDeleted(event: CalendarEvent): void {
+    const block = this.findTimeBlockForEvent(event);
+    if (!block) {
+      console.error(`Kein Datenbank-Zeitblock für Kalendertermin ${event.id} gefunden.`);
+      this.syncCalendarEvents();
+      return;
+    }
+    if (!confirm('Zeitblock löschen?')) {
+      this.syncCalendarEvents();
+      return;
+    }
+
+    this.calendarService.deleteTimeBlock(block.id).subscribe({
+      error: (error: unknown) => {
+        console.error('Zeitblock konnte nicht gelöscht werden:', error);
+        this.syncCalendarEvents();
+      },
+    });
+  }
+
+  public onCalendarEventMoved(event: CalendarEvent): void {
+    this.persistCalendarEvent(event);
+  }
+
+  public onCalendarEventUpdated(event: CalendarEvent): void {
+    this.persistCalendarEvent(event);
+  }
+
+  private syncCalendarEvents(): void {
+    const visibleUserIds = new Set(this.getVisibleUsers().map((user) => user.id));
+    const pendingDrafts = this.calendarEvents.filter((event) => event.id < 0);
+    const events = this.currentBlocksSignal()
+      .filter((block) => visibleUserIds.has(block.user_id))
+      .flatMap((block) =>
+        this.filteredDays
+          .filter((day) => day === block.day_of_week)
+          .map((day) => {
+            const date = this.getDateForDay(day);
+            const dayIndex = this.daysOfWeek.indexOf(day);
+            const endCrossesMidnight = block.end_time === '00:00'
+              && block.start_time !== '00:00';
+
+            return {
+              id: block.id * 10 + dayIndex,
+              title: block.title,
+              shortTitle: block.short_title,
+              start: this.toCalendarDateTime(date, block.start_time),
+              end: this.toCalendarDateTime(date, block.end_time, endCrossesMidnight),
+              resourceId: block.user_id,
+              category: block.type,
+              color: this.calendarService.getCategoryColor(block.type),
+              meta: { blockId: block.id },
+            };
+          }),
+      );
+
+    this.calendarEvents = [...events, ...pendingDrafts];
+  }
+
+  private persistCalendarEvent(event: CalendarEvent): void {
+    const block = this.findTimeBlockForEvent(event);
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    if (!block || !this.isValidDate(start) || !this.isValidDate(end) || end <= start) {
+      console.error(`Kalendertermin ${event.id} kann nicht gespeichert werden.`);
+      this.syncCalendarEvents();
+      return;
+    }
+
+    const userId = event.resourceId ?? block.user_id;
+    const payload = {
+      day_of_week: this.getDayName(start),
+      start_time: this.formatTime(start),
+      end_time: this.formatTime(end),
+      title: block.title,
+      short_title: block.short_title ?? null,
+      type: block.type,
+      user_id: userId,
+    };
+
+    this.calendarService.updateUserBlockOwner(block.id, userId).subscribe({
+      next: () => {
+        this.calendarService.moveTimeBlock(block.id, payload).subscribe({
+          error: (error: unknown) => {
+            console.error('Zeitblock konnte nicht verschoben werden:', error);
+            this.calendarService.loadAllBlocks();
+          },
+        });
+      },
+      error: (error: unknown) => {
+        console.error('Besitzer des Zeitblocks konnte nicht geändert werden:', error);
+        this.calendarService.loadAllBlocks();
+      },
+    });
+  }
+
+  private findTimeBlockForEvent(event: CalendarEvent): TimeBlock | undefined {
+    const blockId = event.meta?.['blockId'];
+    const databaseId = typeof blockId === 'number' ? blockId : Math.floor(event.id / 10);
+    return this.currentBlocksSignal().find((block) => block.id === databaseId);
+  }
+
+  private getDateForDay(day: TimeBlock['day_of_week']): Date {
+    const date = new Date(this.anchorDate);
+    const anchorDayIndex = this.daysOfWeek.indexOf(this.currentDayName);
+    const targetDayIndex = this.daysOfWeek.indexOf(day);
+    date.setDate(date.getDate() + ((targetDayIndex - anchorDayIndex + 7) % 7));
+    return date;
+  }
+
+  private getTodayAtMidnight(): Date {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }
+
+  private getDayName(date: Date): TimeBlock['day_of_week'] {
+    return this.daysOfWeek[(date.getDay() + 6) % 7];
+  }
+
+  private toCalendarDateTime(date: Date, time: string, nextDay = false): string {
+    const [hours, minutes] = time.split(':').map(Number);
+    const dateTime = new Date(date);
+    if (nextDay) {
+      dateTime.setDate(dateTime.getDate() + 1);
+    }
+    dateTime.setHours(hours, minutes, 0, 0);
+    return dateTime.toISOString();
+  }
+
+  private formatTime(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+
+  private isValidDate(date: Date): boolean {
+    return !Number.isNaN(date.getTime());
   }
 }

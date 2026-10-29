@@ -96,6 +96,17 @@ def init_db():
             api_url_zippopotam TEXT
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            start_day TEXT NOT NULL,
+            end_day TEXT NOT NULL,
+            hours_count INTEGER NOT NULL,
+            hours_json TEXT NOT NULL
+        )
+    """)
     
     # REPARIERT & ERWEITERT: Migrationsschutz für bestehende Installationen (Fügt Spalten live hinzu)
     cursor.execute("PRAGMA table_info(time_blocks)")

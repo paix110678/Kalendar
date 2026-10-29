@@ -13,109 +13,26 @@
     </div>
   }
 
-  <!-- RECHTER HAUPTBEREICH: DAS UNBESTECHLICHE GITTERBETT -->
+  <!-- Der neue Grid-Kalender verwendet weiterhin die bestehenden Backend-Zeitblöcke. -->
   <div class="calendar-scroll-viewport">
-    <div class="calendar-container" [style.grid-template-columns]="'repeat(' + filteredDays.length + ', 1fr)'">
-      
-      @for (day of filteredDays; track day; let isFirst = $first) {
-        <div class="day-matrix-block" [class.current-day-highlight]="day === currentDayName">
-          <div class="day-matrix-header">
-            <span class="day-title-text">{{ day }} {{ getFormattedDateWithKW(day) }}</span>
-            @if (day === currentDayName) {
-              <span class="today-tag">Heute</span>
-            }
-          </div>
-          
-          <!-- DAS GLOBALE HAUPT-RANGIER-GRID -->
-          <div class="grid-wrapper" 
-               [style.grid-template-columns]="'55px repeat(' + getVisibleUsers().length + ', 1fr)'">
-            
-            <!-- 1. ZEITACHSE LINKS -->
-            @for (slot of timeSlots; track slot; let i = $index) {
-              <div [style.grid-row]="i + 2" [style.grid-column]="1" class="time-label">
-                @if (i % 12 === 0 || i === timeSlots.length - 1) {
-                  <span>{{ slot }}</span>
-                }
-              </div>
-            }
-
-            <!-- 2. PERSONEN-SPALTEN -->
-            @for (user of getVisibleUsers(); track user.id; let userIdx = $index) {
-              
-              <!-- Das visuelle Spalten-Gehäuse -->
-              <div class="person-column-wrapper-bg"
-                   [style.grid-column]="userIdx + 2"
-                   [style.grid-row]="'1 / span 218'"
-                   [style.border-color]="user.color_code" 
-                   [style.background-color]="user.color_code + '03'">
-              </div>
-
-              <!-- Das eingekreiste Namens-Badge -->
-              <div class="person-column-title-integrated-modern" 
-                   [style.grid-column]="userIdx + 2"
-                   [style.grid-row]="1"
-                   [style.border-color]="user.color_code" 
-                   [style.background-color]="user.color_code">
-                <span class="name-label-text-integrated-white">{{ user.name }}</span>
-              </div>
-              
-              <!-- Die absolut transparenten Berührungs-/Dropzonen -->
-              @for (slot of timeSlots; track slot; let idx = $index) {
-                <div 
-                     [style.grid-column]="userIdx + 2"
-                     [style.grid-row]="idx + 2" 
-                     class="drop-zone" 
-                     (dragover)="$event.preventDefault()" 
-                     (drop)="onDrop($event, day, idx + 1, user.id)"
-                     appCalendarDrawer 
-                     [day]="day" 
-                     [slotRow]="idx + 1" 
-                     (drawStarted)="onDrawingStarted(user)"
-                     (drawEnded)="onDrawingFinished()">
-                  
-                  <span class="drop-zone-hover-time">{{ calendarService.gridRowToTime(idx + 1) }}</span>
-                  
-                </div>
-              }
-
-              <!-- Die Zeitblöcke aus der Datenbank -->
-              @for (block of currentBlocksSignal(); track block.id) {
-                @if (block.day_of_week === day && block.user_id === user.id) {
-                  <app-time-block-widget 
-                    [block]="block"
-                    [user]="user"
-                    [style.grid-column]="userIdx + 2"
-                    [style.grid-row]="(calendarService.timeToGridRow(block.start_time) + 1) + ' / span ' + calendarService.durationToGridRows(block.start_time, block.end_time)"
-                    (blockClicked)="editExistingBlock($event)">
-                  </app-time-block-widget>
-                }
-              }
-
-              <!-- REPARIERT: Der schraffierte Live-Entwurfs-Vorschaublock füllt exakt die vom Grid vorgegebene Höhe aus -->
-              @if ((isDrawingLive || showBlockEditor) && !isEditingExisting && calendarService.getDrawnDay() === day && lastDrawnUserId === user.id) {
-                <app-preview-draft 
-                  [style.grid-column]="userIdx + 2"
-                  [style.grid-row]="(calendarService.timeToGridRow(calendarService.getDrawnStartTime()) + 1) + ' / span ' + calendarService.durationToGridRows(calendarService.getDrawnStartTime(), calendarService.getDrawnEndTime())"
-                  [ngClass]="calendarService.getDrawnCategory()" 
-                  style="pointer-events: none !important; display: block !important; width: 100% !important; height: 100% !important;">
-                </app-preview-draft>
-              }
-            }
-
-            <!-- 3. DIE SCHWARZE ECHTZEITLINIE -->
-            @if (day === currentDayName) {
-              <div class="black-grid-time-line" 
-                   [style.grid-column]="'2 / span ' + getVisibleUsers().length"
-                   [style.grid-row]="currentBlackLineRow + 1">
-                <span class="black-grid-time-badge">{{ currentBlackTimeStr }}</span>
-              </div>
-            }
-
-          </div> <!-- /grid-wrapper -->
-        </div> <!-- /day-matrix-block -->
-      }
-
-    </div> <!-- /calendar-container -->
+    <glc-grid-calendar
+      style="display: block; width: 100%; height: 100%;"
+      [events]="calendarEvents"
+      contentMode="grid"
+      [resources]="calendarResources"
+      [viewMode]="calendarViewMode"
+      columnMode="resource"
+      [anchorDate]="anchorDate"
+      [config]="calendarConfig"
+      [theme]="calendarTheme"
+      (eventsChange)="onCalendarEventsChange($event)"
+      (eventCreateRequested)="onCalendarEventCreated($event)"
+      (eventClicked)="onCalendarEventClicked($event)"
+      (eventEditRequested)="onCalendarEventEdited($event)"
+      (eventMoved)="onCalendarEventMoved($event)"
+      (eventUpdated)="onCalendarEventUpdated($event)"
+      (eventDeleted)="onCalendarEventDeleted($event)">
+    </glc-grid-calendar>
   </div> <!-- /calendar-scroll-viewport -->
 
 </div>
