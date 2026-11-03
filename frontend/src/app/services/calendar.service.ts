@@ -38,14 +38,26 @@ export class CalendarService {
 
   public loadInitialData(): void { 
     this.loadCategories(); 
-    this.apiService.getUsers().subscribe((u: User[]) => { this.usersSubject.next(u); this.loadAllBlocks(); }); 
-    this.apiService.getRewards().subscribe((r: Reward[] = []) => this.rewardsSubject.next(r)); 
+    this.loadUsers();
+    this.loadAllBlocks();
+    this.loadRewards();
     this.loadSystemConfig(); 
   }
   public loadCategories(): void { this.apiService.getCategories().subscribe((c: Category[]) => this.categoriesSubject.next(c)); }
   public loadSystemConfig(): void { this.apiService.getSystemConfig().subscribe((c: SystemConfig) => this.configSubject.next(c)); }
-  public loadAllBlocks(): void { this.apiService.getAllBlocks().subscribe((b: TimeBlock[]) => this.blocksSubject.next(b.map((x: any) => ({ ...x, is_locked: Boolean(x.is_locked) })))); }
-  private initDataReload(): void { this.apiService.getUsers().subscribe((u: User[]) => { this.usersSubject.next(u); }); }
+  public loadAllBlocks(): void { this.apiService.getAllBlocks().subscribe((blocks: TimeBlock[]) => this.blocksSubject.next(blocks.map((block) => ({ ...block, is_locked: Boolean(block.is_locked) })))); }
+  private loadUsers(): void { this.apiService.getUsers().subscribe((users: User[]) => this.usersSubject.next(users)); }
+  private loadRewards(): void { this.apiService.getRewards().subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards)); }
+  private updateUserPoints(userId: number, points: number): void {
+    const user = this.usersSubject.value.find((candidate) => candidate.id === userId);
+    if (!user) {
+      this.loadUsers();
+      return;
+    }
+
+    user.current_points = points;
+    this.usersSubject.next([...this.usersSubject.value]);
+  }
 
   public getCategoryColor(type: string): string {
     const found = this.categoriesSubject.value.find(c => c.value === type);
@@ -66,13 +78,13 @@ export class CalendarService {
     return this.apiService.updateCategory(id, label, color, short).pipe(tap(() => { this.loadCategories(); this.loadAllBlocks(); }));
   }
 
-  public addUser(n: string, r: string, c = '#228be6'): Observable<any> { return this.apiService.addUser(n, r, c).pipe(tap(() => this.initDataReload())); }
-  public updateUser(id: number, n: string, r: string, c: string): Observable<any> { return this.apiService.updateUser(id, n, r, c).pipe(tap(() => this.initDataReload())); }
-  public deleteUser(id: number): Observable<any> { return this.apiService.deleteUser(id).pipe(tap(() => this.initDataReload())); }
-  public updateUserBlockOwner(id: number, uid: number): Observable<any> { return this.apiService.updateUserBlockOwner(id, uid).pipe(tap(() => this.loadAllBlocks())); }
-  public addReward(t: string, p: number, type: string): Observable<any> { return this.apiService.addReward(t, p, type).pipe(tap(() => this.loadInitialData())); }
-  public updateReward(id: number, t: string, p: number, type: string): Observable<any> { return this.apiService.updateReward(id, t, p, type).pipe(tap(() => this.loadInitialData())); }
-  public deleteReward(id: number): Observable<any> { return this.apiService.deleteReward(id).pipe(tap(() => this.loadInitialData())); }
+  public addUser(n: string, r: string, c = '#228be6'): Observable<any> { return this.apiService.addUser(n, r, c).pipe(tap(() => this.loadUsers())); }
+  public updateUser(id: number, n: string, r: string, c: string): Observable<any> { return this.apiService.updateUser(id, n, r, c).pipe(tap(() => this.loadUsers())); }
+  public deleteUser(id: number): Observable<any> { return this.apiService.deleteUser(id).pipe(tap(() => { this.loadUsers(); this.loadAllBlocks(); })); }
+  public updateUserBlockOwner(id: number, uid: number): Observable<any> { return this.apiService.updateUserBlockOwner(id, uid); }
+  public addReward(t: string, p: number, type: string): Observable<any> { return this.apiService.addReward(t, p, type).pipe(tap(() => this.loadRewards())); }
+  public updateReward(id: number, t: string, p: number, type: string): Observable<any> { return this.apiService.updateReward(id, t, p, type).pipe(tap(() => this.loadRewards())); }
+  public deleteReward(id: number): Observable<any> { return this.apiService.deleteReward(id).pipe(tap(() => this.loadRewards())); }
   public addTimeBlock(block: any): Observable<any> { return this.apiService.addTimeBlock(block).pipe(tap(() => this.loadAllBlocks())); }
   public deleteTimeBlock(id: number): Observable<any> { return this.apiService.deleteTimeBlock(id).pipe(tap(() => this.loadAllBlocks())); }
   
@@ -85,8 +97,12 @@ export class CalendarService {
   }
   
   public updateUsersOrder(newOrder: User[]): void { this.usersSubject.next(newOrder); this.apiService.saveUserOrder(newOrder.map(u => u.id)).subscribe(); }
-  public claimReward(uid: number, rid: number): Observable<any> { return this.apiService.claimReward(uid, rid).pipe(tap(() => this.loadInitialData())); }
-  public passTuev(id: number): Observable<any> { return this.apiService.passTuev(id).pipe(tap(() => this.loadInitialData())); }
+  public claimReward(uid: number, rid: number): Observable<any> {
+    return this.apiService.claimReward(uid, rid).pipe(tap((result: { remaining_points: number }) => this.updateUserPoints(uid, result.remaining_points)));
+  }
+  public passTuev(id: number): Observable<any> {
+    return this.apiService.passTuev(id).pipe(tap((result: { current_points: number }) => this.updateUserPoints(id, result.current_points)));
+  }
   public updateSystemConfig(cfg: SystemConfig): Observable<any> { return this.apiService.updateSystemConfig(cfg).pipe(tap(() => this.loadSystemConfig())); }
   public verifyAdminPassword(p: string): Observable<any> { return this.apiService.verifyAdminPassword(p); }
   public changeAdminPassword(o: string, n: string): Observable<any> { return this.apiService.changeAdminPassword(o, n); }
@@ -106,6 +122,10 @@ export class CalendarService {
   public gridRowToTime(r: number): string { const m = (r - 1) * 5 + (this.START_HOUR * 60); return `${this.padZero(Math.floor(m / 60))}:${this.padZero(m % 60)}`; }
   public getDrawnEndTimeString(s: number, e: number): string { const d = (e - s) * 5; return d % 15 !== 0 ? this.gridRowToTime(s + Math.round(d / 15) * 3) : this.gridRowToTime(e); }
   private padZero(n: number): string { return n < 10 ? `0${n}` : `${n}`; }
-  public updateSchoolStatus(id: number, status: 'GREEN' | 'RED'): void { this.apiService.updateSchoolStatus(id, status).subscribe(() => this.loadInitialData()); }
-  public updateSportStatus(id: number, status: 'BASE' | 'SILBER'): void { this.apiService.updateSportStatus(id, status).subscribe(() => this.loadInitialData()); }
+  public updateSchoolStatus(id: number, status: 'GREEN' | 'RED'): void {
+    this.apiService.updateSchoolStatus(id, status).subscribe(() => { this.loadUsers(); this.loadAllBlocks(); });
+  }
+  public updateSportStatus(id: number, status: 'BASE' | 'SILBER'): void {
+    this.apiService.updateSportStatus(id, status).subscribe(() => { this.loadUsers(); this.loadAllBlocks(); });
+  }
 }

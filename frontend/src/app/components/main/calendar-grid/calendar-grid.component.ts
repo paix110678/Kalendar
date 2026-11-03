@@ -75,6 +75,9 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     this.blockSubscription.add(
       this.calendarService.blocks$.subscribe(() => this.syncCalendarEvents()),
     );
+    this.blockSubscription.add(
+      this.calendarService.users$.subscribe(() => this.syncCalendarEvents()),
+    );
     this.updateViewTimeline();
   }
 
@@ -142,7 +145,6 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     localStorage.removeItem('DRAWN_DAY');
     localStorage.removeItem('DRAWN_START_TIME');
     localStorage.removeItem('DRAWN_END_TIME');
-    this.calendarService.loadInitialData();
     this.cdr.detectChanges();
   }
 

@@ -33,7 +33,6 @@ export class UsersComponent {
     const finalRole = this.tempEditGroup === 'adult' ? 'adult' : 'child_10';
     this.calendarService.updateUser(userId, this.tempEditName, finalRole, this.tempEditColor).subscribe(() => {
       this.editingUserId = null;
-      this.calendarService.loadAllBlocks();
     });
   }
 
@@ -42,13 +41,12 @@ export class UsersComponent {
     const finalRole = this.createUserGroup === 'adult' ? 'adult' : 'child_10';
     this.calendarService.addUser(this.createUserName, finalRole, '#228be6').subscribe(() => {
       this.createUserName = '';
-      this.calendarService.loadAllBlocks();
     });
   }
 
   deleteUser(userId: number): void {
     if(confirm('Mitglied wirklich löschen?')) {
-      this.calendarService.deleteUser(userId).subscribe(() => this.calendarService.loadAllBlocks());
+      this.calendarService.deleteUser(userId).subscribe();
     }
   }
 }

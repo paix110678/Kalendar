@@ -1,38 +1,45 @@
 /* Zeitblöcke Design */
-.time-block { 
-  position: absolute !important; 
-  left: 0px !important; right: 0px !important; top: 0px !important; bottom: 0px !important;
-  width: calc(100% - 8px) !important; margin: 0 4px !important;
-  pointer-events: auto !important; /* REPARIERT: Block ist voll interaktiv und fängt Klicks sauber ab! */
-  padding: 6px 10px !important; border-radius: 10px !important; color: white !important; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; cursor: pointer; overflow: hidden !important; 
-  display: flex !important; flex-direction: column !important; font-family: system-ui, sans-serif; 
-  height: calc(100% - 1px) !important; border-left: 5px solid rgba(0,0,0,0.15) !important; box-sizing: border-box !important;
+.time-block {
+  position: absolute;
+  inset: 0;
+  width: calc(100% - 8px);
+  height: calc(100% - 1px);
+  margin: 0 4px;
+  padding: 6px 10px;
+  border-left: 5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: system-ui, sans-serif;
 }
 .time-block:hover { transform: scale(1.005); }
-.block-content { display: flex; flex-direction: column; justify-content: space-around !important; height: 100% !important; gap: 0px !important; overflow: hidden; box-sizing: border-box !important; }
+.block-content { display: flex; flex-direction: column; justify-content: space-around; height: 100%; overflow: hidden; }
 
 .block-title { 
-  font-weight: 950; font-size: 14px; line-height: 1.2 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 14px; letter-spacing: -0.1px; 
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+  font-weight: 950; font-size: 14px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 14px; letter-spacing: -0.1px;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
-.block-time { font-size: 11px; line-height: 1.1 !important; opacity: 0.9 !important; font-weight: 800; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important; white-space: nowrap; }
+.block-time { font-size: 11px; line-height: 1.1; opacity: 0.9; font-weight: 800; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; white-space: nowrap; }
 
 /* Text-Umschalter Steuerung */
-.title-short { display: none !important; }
-.title-full { display: inline !important; }
+.title-short { display: none; }
+.title-full { display: inline; }
 
 /* KORREKTUR: Bei ultrakurzer Höhe Uhrzeit rauswerfen */
 :host-context([style*="grid-row-end: 2"]), :host-context([style*="grid-row-end: 3"]), :host-context([style*="grid-row-end: 4"]) {
-  .block-time { display: none !important; }
-  .block-title { font-size: 11px !important; line-height: 1 !important; }
-  .time-block { padding: 2px 6px !important; }
+  .block-time { display: none; }
+  .block-title { font-size: 11px; line-height: 1; }
+  .time-block { padding: 2px 6px; }
 }
 
 /* KORREKTUR FÜR DIE WOCHE: Erkennt schmale Spalten und blendet die Abkürzung ein */
 @media screen and (max-width: 1400px) {
-  .title-full { display: none !important; }
-  .title-short { display: inline !important; }
+  .title-full { display: none; }
+  .title-short { display: inline; }
 }
 
 .btn-block-trash { position: absolute; top: 4px; right: 4px; background: rgba(0, 0, 0, 0.15); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; z-index: 5; }

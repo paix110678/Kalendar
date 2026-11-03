@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CalendarHeaderComponent } from './header/calendar-header/calendar-header.component';
 import { CalendarGridComponent } from './main/calendar-grid/calendar-grid.component';
-import { DashboardComponent } from './config/dashboard/dashboard.component'; 
-import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashboard.component'; // KORREKTUR: Importpfad an die Ordnerstruktur angepasst
+import { DashboardComponent } from './config/dashboard/dashboard.component';
+import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashboard.component';
 
 @Component({
   selector: 'app-calendar-shell',
@@ -13,7 +13,7 @@ import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashb
     CalendarHeaderComponent,
     CalendarGridComponent,
     DashboardComponent,
-    RewardDashboardComponent // In die Standalone-Imports eingetragen!
+    RewardDashboardComponent,
   ],
   templateUrl: './calendar-shell.component.html',
   styleUrl: './calendar-shell.component.css'

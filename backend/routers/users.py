@@ -128,6 +128,9 @@ def update_sport_status(user_id: int, payload: StatusSportUpdate):
 def final_tuev_passed(user_id: int):
     conn = database.get_db_connection()
     conn.execute("UPDATE users SET current_points = current_points + 10 WHERE id = ?", (user_id,))
+    user = conn.execute("SELECT current_points FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.commit()
     conn.close()
-    return {"status": "success"}
+    if not user:
+        raise HTTPException(status_code=404, detail="Nutzer nicht gefunden")
+    return {"status": "success", "current_points": user["current_points"]}

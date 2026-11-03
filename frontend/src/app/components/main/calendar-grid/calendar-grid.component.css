@@ -1,215 +1,13 @@
-/* Haupt-Container */
-.calendar-scroll-viewport { 
-  flex: 1; 
-  overflow: hidden !important; 
-  border-radius: 20px; 
-  background: #ffffff; 
-  height: 100% !important; 
-  box-sizing: border-box; 
-  /* Keep the library's 6px bottom frame buffer inside this clipped viewport. */
-  padding: 0 0 6px !important;
-}
-
-.calendar-container { 
-  display: grid !important; 
-  gap: 6px !important;      
-  background: transparent; 
-  width: 100% !important;   
-  height: 100% !important; 
-}
-
-.day-matrix-block { 
-  background: #ffffff; 
-  border: 1px solid #212529 !important; 
-  border-radius: 16px; 
-  display: flex; 
-  flex-direction: column; 
-  overflow: hidden !important; 
-  width: 100% !important;   
-  height: 100% !important; 
-}
-
-.day-matrix-header { 
-  padding: 12px 16px; 
-  border-bottom: 1px solid #f1f3f5; 
-  font-family: system-ui, sans-serif; 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-}
-
-.day-title-text { font-size: 24px; font-weight: 900; color: #212529; letter-spacing: -0.5px; }
-.today-tag { background: #fa5252; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); }
-
-/* REPARIERT: Das pure, proportionale Gitterbett mit integrierter Puffer-Zeile am Fuß */
-.grid-wrapper { 
-  display: grid !important; 
-  position: relative !important; 
-  width: 100% !important; 
-  padding-top: 10px !important; 
-  /* REPARIERT: Kein padding-bottom mehr, das den lila Rahmen abschneidet! */
-  padding-bottom: 0px !important; 
-  flex: 1 !important; 
-  height: 100% !important; 
-  box-sizing: border-box !important;
-  
-  /* REPARIERT: Zeile 1 = Kopfraum (30px) | Zeile 2-218 = 217 Slots (1fr) | Zeile 219 = Fester Puffer am Fuß (25px) */
-  grid-template-rows: 30px repeat(217, 1fr) 25px !important; 
-  
-  overflow: hidden !important; 
-  overflow-y: hidden !important;
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
-}
-
-.grid-wrapper::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Die Achsen-Beschriftung links */
-.time-label { 
-  font-size: 12px; 
-  color: #495057; 
-  text-align: right; 
-  padding-right: 8px; 
-  position: relative !important;
-  transform: translateY(-50%) !important; 
-  font-family: system-ui, sans-serif; 
-  font-weight: 800; 
-  display: flex; 
-  align-items: center; 
-  justify-content: flex-end; 
-  z-index: 10;
-}
-
-/* REPARIERT: Zieht den lila Rahmen mitsamt dem Hintergrund reaktiv über die volle Länge (span 219) */
-.person-column-wrapper-bg {
-  border: 1.5px solid; 
-  border-radius: 10px !important; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.015) !important;
-  z-index: 1;
-  pointer-events: none !important;
-  grid-row: 1 / span 219 !important; /* REPARIERT: Spannt sich jetzt über die Pufferzeile am Boden */
-}
-
-/* Die Namens-Badges haften fest in Reihe 1 */
-.person-column-title-integrated-modern {
-  justify-self: center;
-  align-self: center;
-  max-width: 90% !important;
-  font-size: 12px !important; 
-  font-weight: 950 !important; 
-  font-family: system-ui, sans-serif; 
-  z-index: 99 !important; 
-  padding: 2px 8px !important; 
-  border: 1.5px solid; 
-  border-radius: 20px !important; 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important; 
+.calendar-scroll-viewport {
+  flex: 1;
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  text-align: center !important;
-}
-
-.name-label-text-integrated-white { 
-  color: #ffffff !important; 
-  text-transform: capitalize !important; 
-  font-weight: 950 !important; 
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, -1px 1px 0 #000 !important; 
-}
-
-/* Die flachen Berührungszonen im Gitterbett */
-.drop-zone { 
-  border-bottom: 1px solid #f8f9fa !important; 
-  height: 100% !important; 
-  box-sizing: border-box !important; 
-  width: 100% !important; 
-  z-index: 5;
-  position: relative !important;
-}
-
-.drop-zone:hover { 
-  background-color: rgba(0, 0, 0, 0.02) !important; 
-  border-bottom: 1px solid #adb5bd !important; 
-}
-
-/* Hover-Uhrzeit sitzt präzise oberhalb der Intervall-Trennlinie */
-.drop-zone-hover-time {
-  position: absolute !important;
-  left: 6px !important;
-  top: 0px !important; 
-  transform: translateY(-100%) !important; 
-  margin-top: -2px !important; 
-  background: #212529 !important;
-  color: #ffffff !important;
-  padding: 1px 5px !important;
-  border-radius: 4px !important;
-  font-family: system-ui, sans-serif !important;
-  font-size: 10px !important;
-  font-weight: 900 !important;
-  z-index: 9999 !important;
-  pointer-events: none !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
-  white-space: nowrap !important;
-  opacity: 0 !important;
-  transition: opacity 0.1s ease !important;
-}
-
-.drop-zone:hover .drop-zone-hover-time {
-  opacity: 1 !important;
-}
-
-/* Felsenfest eingeklinkte Block-Widgets */
-app-time-block-widget {
-  z-index: 10 !important;
-  box-sizing: border-box !important;
-  pointer-events: auto !important;
-  position: relative !important;
-  width: 100% !important;
+  border-radius: 20px;
+  background: #ffffff;
   height: 100% !important;
+  padding: 0 0 6px !important;
+  box-sizing: border-box;
 }
 
-/* Das Vorschau-Draft-Widget bettet sich absolut berechnungsfrei in die Grid-Zelle ein */
-app-preview-draft {
-  z-index: 9 !important;
-  box-sizing: border-box !important;
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Die mattschwarze Echtzeitlinie */
-.black-grid-time-line {
-  position: relative !important;
-  height: 1px !important; 
-  border-top: 2.5px dashed #212529 !important;
-  z-index: 99999 !important;
-  pointer-events: none !important;
-  width: 100% !important;
-}
-
-/* Das reaktive schwarze Uhrzeit-Badge */
-.black-grid-time-badge {
-  position: absolute !important;
-  right: 6px !important; 
-  top: -4px !important; 
-  transform: translateY(-100%) !important; 
-  background: #212529 !important; 
-  color: #ffffff !important;
-  padding: 4px 8px !important;
-  border-radius: 6px !important;
-  font-family: system-ui, sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 900 !important;
-  white-space: nowrap !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-  display: inline-block !important; 
-  visibility: visible !important;
-}
-
-/* Das neue globale Flex-Layout splittet den Bildschirm */
 .calendar-main-layout-wrapper {
   display: flex !important;
   flex-direction: row !important;
@@ -218,19 +16,18 @@ app-preview-draft {
   width: 100% !important;
   height: 100% !important;
   gap: 12px !important;
-  box-sizing: border-box !important;
+  box-sizing: border-box;
   overflow: hidden !important;
 }
 
-/* Die feste, strukturelle linke Spalte für die Editor-Komponente */
 .calendar-sidebar-editor-container {
-  flex: 0 0 340px !important; 
+  flex: 0 0 340px !important;
   height: 100% !important;
   background: #ffffff !important;
   border: 1px solid #212529 !important;
   border-radius: 16px !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
-  box-sizing: border-box !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+  box-sizing: border-box;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;

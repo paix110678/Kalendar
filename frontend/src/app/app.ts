@@ -1,6 +1,12 @@
 import { Component } from '@angular/core';
 import { CalendarShellComponent } from './components/calendar-shell.component';
 
+// ✅ Dynamic Import für Bundle Optimizer
+async function loadCalendarShell() {
+  const component = await import('./components/calendar-shell.component');
+  return component.CalendarShellComponent;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,

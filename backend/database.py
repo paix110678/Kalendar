@@ -8,26 +8,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "kalender.db")
 
 def get_db_connection():
-    print("\n--- 🔍 DATENBANK-SYNC ACTIVE ---")
-    print(f"🎯 Verbinde mit echter Datenbank unter: {DB_FILE}")
-    
-    if os.path.exists(DB_FILE):
-        print(f"🎉 ERFOLG: Datenquelle online! Größe: {os.path.getsize(DB_FILE)} Bytes")
-    else:
-        print("❌⚠️ WARNUNG: Datei im backend-Ordner nicht gefunden!")
-
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
-    
-    # Auslesen der Tabellen zur Absicherung im Terminal
-    try:
-        cursor = conn.cursor()
-        tables = cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
-        print(f"📊 Geladene Tabellen: {[t['name'] for t in tables]}")
-    except Exception as e:
-        print(f"❌ Fehler: {e}")
-        
-    print("--------------------------------\n")
     return conn
 
 def init_db():

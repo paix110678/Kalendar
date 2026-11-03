@@ -29,7 +29,7 @@ export class ApiService {
   saveUserOrder(ids: number[]): Observable<any> { return this.http.put(this.apiBase + '/users/reorder', { user_ids: ids }); }
   updateSchoolStatus(id: number, status: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id + '/status-school', { status }); }
   updateSportStatus(id: number, status: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id + '/status-sport', { status }); }
-  passTuev(id: number): Observable<any> { return this.http.post(this.apiBase + '/users/' + id + '/tuev-passed', {}); }
+  passTuev(id: number): Observable<{ current_points: number }> { return this.http.post<{ current_points: number }>(this.apiBase + '/users/' + id + '/tuev-passed', {}); }
 
   getCategories(): Observable<Category[]> { return this.http.get<Category[]>(this.apiBase + '/blocks/categories'); }
   updateCategory(id: number, label: string, color: string, short: string): Observable<any> { return this.http.put(`${this.apiBase}/blocks/categories/${id}`, { label, color, default_short: short }); }
@@ -52,7 +52,7 @@ export class ApiService {
   addReward(t: string, p: number, type: string): Observable<any> { return this.http.post(this.apiBase + '/rewards', { title: t, point_cost: p, type }); }
   updateReward(id: number, t: string, p: number, type: string): Observable<any> { return this.http.put(this.apiBase + '/rewards/' + id, { title: t, point_cost: p, type }); }
   deleteReward(id: number): Observable<any> { return this.http.delete(this.apiBase + '/rewards/' + id); }
-  claimReward(uid: number, rid: number): Observable<any> { return this.http.post(this.apiBase + '/rewards/claim', { user_id: uid, reward_id: rid }); }
+  claimReward(uid: number, rid: number): Observable<{ remaining_points: number }> { return this.http.post<{ remaining_points: number }>(this.apiBase + '/rewards/claim', { user_id: uid, reward_id: rid }); }
 
   getSystemConfig(): Observable<SystemConfig> { return this.http.get<SystemConfig>(this.apiBase + '/config'); }
   updateSystemConfig(cfg: SystemConfig): Observable<any> { return this.http.put(this.apiBase + '/config', cfg); }

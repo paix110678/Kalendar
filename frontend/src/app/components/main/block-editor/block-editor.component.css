@@ -1,274 +1,211 @@
 :host {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-  background: #ffffff !important;
-  font-family: system-ui, -apple-system, sans-serif !important;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 .editor-form-wrapper {
-  padding: 24px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-  background: #ffffff !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px;
+  background: #ffffff;
 }
 
 .editor-header-title {
-  font-size: 24px !important;
-  font-weight: 950 !important;
-  color: #212529 !important;
-  margin-bottom: 24px !important;
-  letter-spacing: -0.5px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  border-bottom: 2px solid #212529 !important;
-  padding-bottom: 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #212529;
+  color: #212529;
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.5px;
 }
 
 .editor-card-box {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 20px !important;
-  flex: 1 !important;
-  overflow-y: auto !important;
-  padding-right: 4px !important;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.editor-card-box::-webkit-scrollbar {
-  width: 6px !important;
-}
-.editor-card-box::-webkit-scrollbar-thumb {
-  background: #ced4da !important;
-  border-radius: 10px !important;
-}
+.editor-card-box::-webkit-scrollbar { width: 6px; }
+.editor-card-box::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
 
-.form-group {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-
-.flex-1 {
-  flex: 1 !important;
-}
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.flex-1 { flex: 1; }
 
 .form-label {
-  font-size: 12px !important;
-  font-weight: 950 !important;
-  color: #212529 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.7px !important;
+  color: #212529;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.form-input,
+.form-select,
+.form-input-time,
+.custom-dropdown-trigger {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #212529;
+  border-radius: 12px;
+  background: #f8f9fa;
 }
 
 .form-input,
 .form-select,
 .form-input-time {
-  width: 100% !important;
-  padding: 14px 16px !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: #212529 !important;
-  background: #f8f9fa !important;
-  border: 2px solid #212529 !important;
-  border-radius: 12px !important;
-  box-sizing: border-box !important;
-  font-family: inherit !important;
-  transition: all 0.15s ease !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
+  color: #212529;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .form-select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://w3.org' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23212529' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
-  background-repeat: no-repeat !important;
-  background-position: right 14px center !important;
-  background-size: 16px !important;
-  padding-right: 40px !important;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://w3.org' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23212529' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
 }
 
 .form-input:focus,
 .form-select:focus,
 .form-input-time:focus {
-  outline: none !important;
-  background: #ffffff !important;
-  border-color: #228be6 !important;
-  box-shadow: 0 0 0 4px rgba(34, 139, 230, 0.15) !important;
+  outline: none;
+  background: #ffffff;
+  border-color: #228be6;
+  box-shadow: 0 0 0 4px rgba(34, 139, 230, 0.15);
 }
 
-/* REPARIERT: Custom Dropdown Hülle */
-.custom-dropdown-container {
-  position: relative !important;
-  width: 100% !important;
-}
+.custom-dropdown-container { position: relative; width: 100%; }
 
-/* REPARIERT: Der geschlossene Haupt-Auslöser (Sieht aus wie ein Selectfeld) */
 .custom-dropdown-trigger {
-  display: flex !important;
-  align-items: center !important;
-  width: 100% !important;
-  padding: 14px 16px !important;
-  background: #f8f9fa !important;
-  border: 2px solid #212529 !important;
-  border-radius: 12px !important;
-  cursor: pointer !important;
-  font-family: inherit !important;
-  text-align: left !important;
-  box-sizing: border-box !important;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
 }
 
-.trigger-label-text {
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: #212529 !important;
-  flex: 1 !important;
-}
+.trigger-label-text { flex: 1; color: #212529; font-size: 16px; font-weight: 700; }
+.trigger-arrow-icon { margin-left: 10px; color: #212529; font-size: 11px; transition: transform 0.15s ease; }
+.trigger-arrow-icon.is-inverted { transform: rotate(180deg); }
 
-.trigger-arrow-icon {
-  font-size: 11px !important;
-  color: #212529 !important;
-  transition: transform 0.15s ease !important;
-  margin-left: 10px !important;
-}
-
-.trigger-arrow-icon.is-inverted {
-  transform: rotate(180deg) !important;
-}
-
-/* REPARIERT: Das echte, herabschwebende Ausklappmenü */
 .custom-dropdown-menu {
-  position: absolute !important;
-  top: calc(100% + 4px) !important;
-  left: 0 !important;
-  right: 0 !important;
-  background: #ffffff !important;
-  border: 2px solid #212529 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
-  z-index: 999 !important; /* Schwebt über den Start- und Endzeitfeldern */
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #212529;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .dropdown-menu-row {
-  display: flex !important;
-  align-items: center !important;
-  width: 100% !important;
-  padding: 14px 16px !important;
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid #ced4da !important;
-  cursor: pointer !important;
-  text-align: left !important;
-  font-family: inherit !important;
-  position: relative !important;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid #ced4da;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
 }
 
-.custom-dropdown-menu .dropdown-menu-row:last-child {
-  border-bottom: none !important;
-}
+.custom-dropdown-menu .dropdown-menu-row:last-child { border-bottom: 0; }
+.dropdown-menu-row:hover { background: #f1f3f5; }
 
-.dropdown-menu-row:hover {
-  background: #f1f3f5 !important;
-}
-
-/* Perfekt runder Farbkreis */
 .category-circle-indicator {
-  width: 18px !important;
-  height: 18px !important;
-  border-radius: 50% !important;
-  display: inline-block !important;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15) !important;
-  flex-shrink: 0 !important;
-  margin-right: 12px !important;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
-.dropdown-row-text {
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: #495057 !important;
-}
+.dropdown-row-text { color: #495057; font-size: 16px; font-weight: 700; }
 
 .dropdown-check-mark {
-  position: absolute !important;
-  right: 16px !important;
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  color: #228be6 !important;
-  opacity: 0 !important;
+  position: absolute;
+  right: 16px;
+  color: #228be6;
+  font-size: 16px;
+  font-weight: 900;
+  opacity: 0;
 }
 
-/* Aktiv markierte Zeile im offenen Menü */
-.dropdown-menu-row.is-selected {
-  background: #f8f9fa !important;
-}
+.dropdown-menu-row.is-selected { background: #f8f9fa; }
+.dropdown-menu-row.is-selected .dropdown-row-text { color: #212529; font-weight: 850; }
+.dropdown-menu-row.is-selected .dropdown-check-mark { opacity: 1; }
 
-.dropdown-menu-row.is-selected .dropdown-row-text {
-  color: #212529 !important;
-  font-weight: 850 !important;
-}
-
-.dropdown-menu-row.is-selected .dropdown-check-mark {
-  opacity: 1 !important;
-}
-
-.form-time-row {
-  display: flex !important;
-  gap: 14px !important;
-  width: 100% !important;
-}
+.form-time-row { display: flex; gap: 14px; width: 100%; }
 
 .editor-action-buttons {
-  margin-top: 24px !important;
-  padding-top: 16px !important;
-  border-top: 1px solid #f1f3f5 !important;
-  display: flex !important;
-  gap: 12px !important;
-  width: 100% !important;
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.btn-editor-save,
+.btn-editor-cancel {
+  padding: 16px;
+  border: 2px solid #212529;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .btn-editor-save {
-  flex: 1.5 !important;
-  padding: 16px !important;
-  background: #212529 !important;
-  color: #ffffff !important;
-  border: 2px solid #212529 !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  flex: 1.5;
+  background: #212529;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .btn-editor-save:disabled {
-  background: #adb5bd !important;
-  border-color: #adb5bd !important;
-  color: #ffffff !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
+  border-color: #adb5bd;
+  background: #adb5bd;
+  box-shadow: none;
+  color: #ffffff;
+  cursor: not-allowed;
 }
 
 .btn-editor-cancel {
-  flex: 1 !important;
-  padding: 16px !important;
-  background: #ffffff !important;
-  color: #495057 !important;
-  border: 2px solid #ced4da !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  flex: 1;
+  border-color: #ced4da;
+  background: #ffffff;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 800;
 }
 
-.btn-editor-cancel:hover {
-  background: #f8f9fa !important;
-  border-color: #212529 !important;
-  color: #212529 !important;
-}
+.btn-editor-cancel:hover { border-color: #212529; background: #f8f9fa; color: #212529; }
