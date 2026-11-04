@@ -7,7 +7,8 @@
   backdrop-filter: blur(8px) !important; 
   border: 1px solid rgba(255,255,255,0.3) !important; 
   width: fit-content !important; /* REPARIERT: Verhindert den leeren Raum auf der rechten Seite */
-  max-width: fit-content !important; /* REPARIERT: Schrumpft die Kapsel passgenau zusammen */
+  max-width: 100% !important;
+  min-width: 0 !important;
   height: 52px !important; 
   align-items: center !important; 
   box-sizing: border-box !important;
@@ -27,18 +28,27 @@
   margin: 0 !important;
   font-family: system-ui, sans-serif;
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .weather-temperature-bar {
   display: flex;
   align-items: center;
-  gap: 12px; /* Ausbalancierter Abstand zwischen den Werten */
+  justify-content: space-between;
+  gap: clamp(2px, 0.7vw, 12px);
+  width: 100%;
+  min-width: 0;
 }
 
 .temp-item {
   display: flex;
   align-items: center;
-  gap: 4px; 
+  gap: clamp(1px, 0.3vw, 4px);
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
 }
 
 .temp-item:last-child {
@@ -48,18 +58,20 @@
 .temp-value-text {
   color: #ffffff !important;
   font-weight: 950;
-  font-size: 14px;
+  font-size: clamp(10px, 1.1vw, 14px);
   text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  white-space: nowrap;
 }
 
 .current-main-temp .temp-value-text {
-  font-size: 14.5px;
+  font-size: clamp(10px, 1.15vw, 14.5px);
 }
 
 .weather-icon-accent {
-  font-size: 12px;
+  font-size: clamp(9px, 0.95vw, 12px);
   display: inline-block;
   line-height: 1;
+  flex: 0 0 auto;
 }
 
 .weather-extra-row {
@@ -70,11 +82,20 @@
 .extra-item-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px; /* Kompakter Abstand für die Unterzeile */
+  gap: clamp(2px, 0.6vw, 8px);
   font-size: 11px;
   font-weight: 900;
   color: rgba(255, 255, 255, 0.95) !important;
   white-space: nowrap; /* Verhindert unerwünschte Zeilenumbrüche innerhalb der Kapsel */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.extra-item-wrapper span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .widget-split-row { display: flex; align-items: center; gap: 14px; box-sizing: border-box; width: 100%; justify-content: space-between; }
@@ -82,3 +103,47 @@
 .vorbild-clock { font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.0; font-variant-numeric: tabular-nums; font-family: system-ui, sans-serif; }
 .vorbild-date { font-size: 11px; font-weight: 800; color: #ffffff; margin-top: 2px; font-family: system-ui, sans-serif; white-space: nowrap; }
 .weather-column-right-vorbild { display: flex; flex-direction: column; text-align: left; }
+
+@media (max-width: 640px) {
+  :host {
+    padding: 3px 6px !important;
+    justify-content: center !important;
+  }
+
+  .weather-widget-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .weather-temperature-bar {
+    gap: 0;
+    min-width: 0;
+  }
+
+  .temp-item:not(.current-main-temp),
+  .weather-extra-row {
+    display: none;
+  }
+
+  .current-main-temp {
+    gap: 2px;
+  }
+
+  .temp-value-text,
+  .current-main-temp .temp-value-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  :host {
+    padding: 2px 3px !important;
+  }
+
+  .temp-value-text,
+  .current-main-temp .temp-value-text {
+    font-size: 10px;
+  }
+}

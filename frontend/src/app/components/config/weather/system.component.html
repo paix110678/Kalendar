@@ -7,6 +7,20 @@
         <input type="text" [(ngModel)]="localConfig.weather_plz" style="width: 140px;">
       </div>
       <div class="field-item">
+        <label>Erkannter Ort:</label>
+        <input type="text" [value]="localConfig.weather_city || 'Noch nicht ermittelt'" style="width: 180px;" readonly>
+      </div>
+      <div class="field-item">
+        <label>Gespeicherte Koordinaten:</label>
+        <input
+          type="text"
+          [value]="localConfig.weather_latitude !== null && localConfig.weather_longitude !== null
+            ? localConfig.weather_latitude + ', ' + localConfig.weather_longitude
+            : 'Noch nicht ermittelt'"
+          style="width: 200px;"
+          readonly>
+      </div>
+      <div class="field-item">
         <label>Wetterdienst (API):</label>
         <select [(ngModel)]="localConfig.weather_service">
           <option value="open_meteo">🌦️ Open-Meteo (Kostenlos)</option>
@@ -18,6 +32,8 @@
         <input type="text" [(ngModel)]="localConfig.api_key" style="width: 250px;">
       </div>
     </div>
+    <p class="error-text-msg" role="alert" *ngIf="configMessage && configError">{{ configMessage }}</p>
+    <p role="status" *ngIf="configMessage && !configError">{{ configMessage }}</p>
     <button class="btn-save-config-submit" (click)="triggerConfigUpdateProtection()">💾 Sichern</button>
   </div>
 </div>

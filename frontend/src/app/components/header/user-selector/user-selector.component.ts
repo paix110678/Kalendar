@@ -25,6 +25,10 @@ export class UserSelectorComponent {
     return !((window as any).hiddenUserIdsCache?.[userId]);
   }
 
+  public getUserAbbreviation(name: string): string {
+    return name.split(/[_\s-]+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+  }
+
   // WOFÜR: Merkt sich den Startpunkt der gezogenen Person im Gatter
   public onDragStart(index: number): void {
     this.draggedUserIndex = index;

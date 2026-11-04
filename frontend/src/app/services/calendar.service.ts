@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { ApiService } from './api.service';
+import { BehaviorSubject, Observable, map, switchMap, tap } from 'rxjs';
+import { ApiService, PlanConflictResolution, PlanSubject, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
 
-export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; }
+export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; assigned_plan_id: number | null; }
 export interface Category { id: number; value: string; label: string; color: string; default_short: string; } 
-export interface TimeBlock { id: number; user_id: number; title: string; short_title?: string; day_of_week: 'Montag' | 'Dienstag' | 'Mittwoch' | 'Donnerstag' | 'Freitag' | 'Samstag' | 'Sonntag'; start_time: string; end_time: string; type: string; is_locked: boolean; } 
+export interface TimeBlock { id: number; user_id: number; title: string; short_title?: string; day_of_week: 'Montag' | 'Dienstag' | 'Mittwoch' | 'Donnerstag' | 'Freitag' | 'Samstag' | 'Sonntag'; start_time: string; end_time: string; type: string; is_locked: boolean; color?: string | null; plan_assignment_id?: number | null; plan_period?: number | null; person_event_type_id?: number | null; is_visible?: boolean; }
 export interface Reward { id: number; title: string; point_cost: number; type: 'snack' | 'extra_time' | 'cash'; }
-export interface SystemConfig { weather_city: string; weather_plz: string; weather_service: 'open_meteo' | 'weather_api'; api_key: string; live_temp: string; live_rain: string; high_temp: string; low_temp: string; }
+export interface SystemConfig { weather_city: string; weather_plz: string; weather_latitude: number | null; weather_longitude: number | null; weather_service: 'open_meteo' | 'weather_api'; api_key: string; live_temp: string; live_rain: string; high_temp: string; low_temp: string; }
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
@@ -24,7 +23,7 @@ export class CalendarService {
   public blocks$: Observable<TimeBlock[]> = this.blocksSubject.asObservable();
   private rewardsSubject = new BehaviorSubject<Reward[]>([]);
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
-  private configSubject = new BehaviorSubject<SystemConfig>({ weather_city: 'Bremen', weather_plz: '28790', weather_service: 'open_meteo', api_key: '', live_temp: '--', live_rain: '--', high_temp: '--', low_temp: '--' });
+  private configSubject = new BehaviorSubject<SystemConfig>({ weather_city: 'Bremen', weather_plz: '28790', weather_latitude: null, weather_longitude: null, weather_service: 'open_meteo', api_key: '', live_temp: '--', live_rain: '--', high_temp: '--', low_temp: '--' });
   public config$: Observable<SystemConfig> = this.configSubject.asObservable();
 
   public readonly START_HOUR = 6; public readonly END_HOUR = 24; public readonly ROW_HEIGHT_PIXELS = 4.5;
@@ -41,13 +40,63 @@ export class CalendarService {
     this.loadUsers();
     this.loadAllBlocks();
     this.loadRewards();
-    this.loadSystemConfig(); 
+    this.loadInitialSystemConfig();
   }
   public loadCategories(): void { this.apiService.getCategories().subscribe((c: Category[]) => this.categoriesSubject.next(c)); }
   public loadSystemConfig(): void { this.apiService.getSystemConfig().subscribe((c: SystemConfig) => this.configSubject.next(c)); }
-  public loadAllBlocks(): void { this.apiService.getAllBlocks().subscribe((blocks: TimeBlock[]) => this.blocksSubject.next(blocks.map((block) => ({ ...block, is_locked: Boolean(block.is_locked) })))); }
+  private loadInitialSystemConfig(): void {
+    this.apiService.resolveWeatherLocation().subscribe({
+      next: (_result: SystemConfigLocationResult) => this.loadSystemConfig(),
+      error: (error: unknown) => {
+        console.error('Standortprüfung beim Frontend-Start fehlgeschlagen:', error);
+        this.loadSystemConfig();
+      },
+    });
+  }
+  public loadAllBlocks(): void {
+    this.refreshAllBlocks().subscribe({
+      error: (error: unknown) => console.error('Kalenderblöcke konnten nicht geladen werden:', error),
+    });
+  }
+  public refreshAllBlocks(): Observable<TimeBlock[]> {
+    return this.apiService.getAllBlocks().pipe(tap((blocks) => this.publishBlocks(blocks)));
+  }
   private loadUsers(): void { this.apiService.getUsers().subscribe((users: User[]) => this.usersSubject.next(users)); }
+  public refreshUsers(): void { this.loadUsers(); }
   private loadRewards(): void { this.apiService.getRewards().subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards)); }
+  public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport'>): Observable<UpdateUserProfileResult> {
+    return this.apiService.updateUserProfile(userId, profile).pipe(tap(({ user, blocks_changed }) => {
+      this.usersSubject.next(this.usersSubject.value.map((currentUser) => currentUser.id === userId ? user : currentUser));
+      if (blocks_changed) this.loadAllBlocks();
+    }));
+  }
+  public applyPlan(userId: number, planId: number, title: string, subjects: PlanSubject[], resolutions: PlanConflictResolution[] = []) {
+    return this.apiService.applyPlan(userId, planId, title, subjects, resolutions).pipe(
+      switchMap((result) => this.refreshAllBlocks().pipe(
+        map((blocks) => {
+          this.usersSubject.next(this.usersSubject.value.map((user) =>
+            user.id === userId ? { ...user, assigned_plan_id: result.assigned_plan_id } : user,
+          ));
+          return result;
+        }),
+      )),
+    );
+  }
+
+  private publishBlocks(blocks: TimeBlock[]): void {
+    this.blocksSubject.next(blocks.map((block) => ({
+      ...block,
+      is_locked: Boolean(block.is_locked),
+      is_visible: block.is_visible !== false && Boolean(block.is_visible ?? true),
+    })));
+  }
+  public setPlanEventVisibility(blockId: number, visible: boolean) {
+    return this.apiService.setPlanEventVisibility(blockId, visible).pipe(tap(({ is_visible }) => {
+      this.blocksSubject.next(this.blocksSubject.value.map((block) =>
+        block.id === blockId ? { ...block, is_visible } : block,
+      ));
+    }));
+  }
   private updateUserPoints(userId: number, points: number): void {
     const user = this.usersSubject.value.find((candidate) => candidate.id === userId);
     if (!user) {
@@ -103,7 +152,9 @@ export class CalendarService {
   public passTuev(id: number): Observable<any> {
     return this.apiService.passTuev(id).pipe(tap((result: { current_points: number }) => this.updateUserPoints(id, result.current_points)));
   }
-  public updateSystemConfig(cfg: SystemConfig): Observable<any> { return this.apiService.updateSystemConfig(cfg).pipe(tap(() => this.loadSystemConfig())); }
+  public updateSystemConfig(cfg: SystemConfig): Observable<SystemConfigUpdateResult> {
+    return this.apiService.updateSystemConfig(cfg).pipe(tap(() => this.loadSystemConfig()));
+  }
   public verifyAdminPassword(p: string): Observable<any> { return this.apiService.verifyAdminPassword(p); }
   public changeAdminPassword(o: string, n: string): Observable<any> { return this.apiService.changeAdminPassword(o, n); }
 

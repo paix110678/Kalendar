@@ -11,14 +11,74 @@
     <div class="admin-navigation-tree">
       <div class="tree-headline">System-Struktur</div>
       
-      <button class="tree-node-btn" (click)="activeTab = 'users'" [class.node-active]="activeTab === 'users'">
+      <button class="tree-node-btn" (click)="selectMembers()" [class.node-active]="activeTab === 'users' && selectedMemberId === null">
         👥 &nbsp; Familienmitglieder
       </button>
+      @if (activeUsers.length > 0) {
+        <div class="member-tree-navigation" aria-label="Familienmitglieder">
+          @for (user of activeUsers; track user.id) {
+            <button
+              type="button"
+              class="tree-node-btn member-tree-item"
+              [class.member-tree-item-active]="activeTab === 'users' && selectedMemberId === user.id"
+              (click)="selectMember(user.id)">
+              <span class="member-tree-color" [style.background-color]="user.color_code" aria-hidden="true"></span>
+              <span>{{ user.name }}</span>
+            </button>
+          }
+        </div>
+      }
 
       <button class="tree-node-btn" (click)="openPlans()" [class.node-active]="activeTab === 'plans'">
         📅 &nbsp; Pläne
       </button>
-      
+      <div class="plan-tree-navigation" aria-label="Gespeicherte Pläne">
+        @if (plansLoading) {
+          <span class="plan-tree-message">Pläne werden geladen …</span>
+        } @else if (plansLoadError) {
+          <span class="plan-tree-message plan-tree-error" role="alert">{{ plansLoadError }}</span>
+          <button type="button" class="plan-tree-retry" (click)="refreshSavedPlans()">Erneut versuchen</button>
+        } @else if (savedPlans.length === 0) {
+          <span class="plan-tree-message">Keine Pläne gespeichert</span>
+        } @else {
+          @for (plan of savedPlans; track plan.id) {
+            <button
+              type="button"
+              class="tree-node-btn plan-tree-item"
+              [class.plan-tree-item-active]="activeTab === 'plans' && selectedPlanId === plan.id"
+              (click)="openSavedPlan(plan.id)">
+              <span class="plan-tree-marker" aria-hidden="true">◷</span>
+              <span class="plan-tree-name">{{ plan.name }}</span>
+            </button>
+          }
+        }
+      </div>
+
+      <button class="tree-node-btn" (click)="openHolidays()" [class.node-active]="activeTab === 'holidays' && selectedHolidayState === null">
+        🏖️ &nbsp; Ferien &amp; Feiertage
+      </button>
+      <div class="plan-tree-navigation" aria-label="Gespeicherte Bundesländer">
+        @if (holidaysLoading) {
+          <span class="plan-tree-message">Bundesländer werden geladen …</span>
+        } @else if (holidaysLoadError) {
+          <span class="plan-tree-message plan-tree-error" role="alert">{{ holidaysLoadError }}</span>
+          <button type="button" class="plan-tree-retry" (click)="refreshSavedHolidays()">Erneut versuchen</button>
+        } @else if (savedHolidayStates.length === 0) {
+          <span class="plan-tree-message">Keine Bundesländer hinzugefügt</span>
+        } @else {
+          @for (state of savedHolidayStates; track state) {
+            <button
+              type="button"
+              class="tree-node-btn plan-tree-item"
+              [class.plan-tree-item-active]="activeTab === 'holidays' && selectedHolidayState === state"
+              (click)="openHolidays(state)">
+              <span class="plan-tree-marker" aria-hidden="true">◷</span>
+              <span class="plan-tree-name">{{ holidayStateName(state) }}</span>
+            </button>
+          }
+        }
+      </div>
+
       <button class="tree-node-btn" (click)="activeTab = 'categories'" [class.node-active]="activeTab === 'categories'">
         🏷️ &nbsp; Kalender-Kategorien
       </button>
@@ -37,8 +97,25 @@
 
     <!-- RECHTER INHALTSBEREICH: LÄDT REAKTIV DIE MODULARISIERTEN EINZEL-COMPONENTS -->
     <div class="admin-content-panel">
-      @if (activeTab === 'users') { <app-users [activeUsers]="activeUsers"></app-users> }
-      @if (activeTab === 'plans') { <app-plans></app-plans> }
+      @if (activeTab === 'users') {
+        <app-users
+          [activeUsers]="activeUsers"
+          [selectedUserId]="selectedMemberId"
+          (memberClosed)="selectedMemberId = null">
+        </app-users>
+      }
+      @if (activeTab === 'plans') { <app-plans (plansChanged)="onPlansChanged($event)"></app-plans> }
+      @if (activeTab === 'holidays') {
+        @defer {
+          <app-holidays
+            [selectedStateCode]="selectedHolidayState"
+            [savedStateCodes]="savedHolidayStates"
+            (stateAdded)="onHolidayStateAdded($event)">
+          </app-holidays>
+        } @placeholder {
+          <p role="status">Ferien und Feiertage werden geladen …</p>
+        }
+      }
       @if (activeTab === 'categories') { <app-categories></app-categories> }
       @if (activeTab === 'system') { <app-system></app-system> }
       @if (activeTab === 'database') { <app-database [dbTables]="dbTables"></app-database> }

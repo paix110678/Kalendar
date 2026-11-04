@@ -19,25 +19,30 @@
 .controls-row { 
   display: flex; 
   align-items: center; 
-  justify-content: flex-start; 
+  justify-content: space-between;
   width: 100%;
   box-sizing: border-box;
-  gap: 12px;
+  gap: clamp(4px, 1vw, 12px);
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 app-view-mode-buttons {
-  flex-shrink: 0;
+  flex: 0 1 258px;
+  min-width: 0;
 }
 
 app-user-selector {
-  flex-grow: 1; 
+  flex: 1 1 auto;
   display: flex;
   justify-content: flex-start;
-  padding-left: 20px; 
+  min-width: 0;
+  padding-left: clamp(0px, 1.5vw, 20px);
 }
 
 app-weather-widget {
-  flex-shrink: 0;
+  flex: 0 1 177px;
+  min-width: 0;
 }
 
 .btn-admin-gear { 
@@ -51,9 +56,55 @@ app-weather-widget {
   align-items: center; 
   justify-content: center; 
   transition: transform 0.2s ease; 
-  flex-shrink: 0; 
+  flex: 0 0 48px;
+  width: 48px;
   box-shadow: none !important;
-  order: 99;
-  margin-left: auto;
+  order: 4;
+  margin-left: 0;
 }
 .btn-admin-gear:hover { transform: rotate(45deg) scale(1.1); }
+
+@media (max-width: 640px) {
+  app-view-mode-buttons {
+    flex-basis: 84px;
+  }
+
+  app-user-selector {
+    padding-left: 0;
+  }
+
+  app-weather-widget {
+    display: none !important;
+  }
+
+  .btn-admin-gear {
+    flex-basis: 30px;
+    width: 30px;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 360px) {
+  .top-bar-grid-container {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .controls-row {
+    gap: 3px;
+  }
+
+  app-view-mode-buttons {
+    flex-basis: 72px;
+  }
+
+  app-weather-widget {
+    flex-basis: 42px;
+  }
+
+  .btn-admin-gear {
+    flex-basis: 24px;
+    width: 24px;
+    padding: 0;
+  }
+}

@@ -14,8 +14,9 @@
     </button>
 
     <!-- WOFÜR: Hintergrund teiltransparent, Name in weiß, Sterne riesig mit Rahmen-Schrift -->
-    <button class="piggy-trigger-btn-transparent-style" [style.border-color]="u.color_code" [style.background-color]="u.color_code + '25'" (click)="rewardDashboardOpened.emit(u)">
+    <button class="piggy-trigger-btn-transparent-style" [style.border-color]="u.color_code" [style.background-color]="u.color_code + '25'" [title]="u.name" (click)="rewardDashboardOpened.emit(u)">
       <span class="user-name-label-white">{{ u.name }}</span>
+      <span class="user-name-abbreviation">{{ getUserAbbreviation(u.name) }}</span>
       <span class="user-stars-large-wrapper">
         <span class="star-icon-giant">⭐</span>
         <span class="star-count-stroke-number">{{ u.current_points }}</span>

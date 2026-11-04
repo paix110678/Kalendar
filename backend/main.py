@@ -9,7 +9,7 @@ import database
 import uvicorn
 
 # Router-Imports
-from routers import users, blocks, rewards, config, plans
+from routers import users, blocks, rewards, config, plans, holidays
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -22,10 +22,15 @@ for stream in (sys.stdout, sys.stderr):
 async def hourly_weather_cron_task():
     # Wir warten nach dem Serverstart 3 Sekunden, damit die DB bereit ist
     await asyncio.sleep(3)
+    try:
+        await asyncio.to_thread(config.ensure_weather_location)
+    except config.LocationLookupError as error:
+        logger.warning("Standort konnte beim Start nicht ermittelt werden; neuer Versuch beim nächsten Start: %s", error)
+
     while True:
         print("⏰ Stündliche Wetter-API-Aktualisierung wird ausgeführt...")
         try:
-            config.fetch_live_weather_pure_ram()
+            await asyncio.to_thread(config.fetch_live_weather_pure_ram)
         except Exception as e:
             print(f"⚠️ Wetter-Cron-Job verzögert: {e}")
         # Wartet exakt 1 Stunde (3600 Sekunden) im Hintergrund
@@ -68,6 +73,7 @@ app.include_router(blocks.router)
 app.include_router(rewards.router)
 app.include_router(config.router)
 app.include_router(plans.router)
+app.include_router(holidays.router)
 
 @app.get("/")
 def read_root():

@@ -216,20 +216,24 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
 
   public onCalendarEventClicked(event: CalendarEvent): void {
     const block = this.findTimeBlockForEvent(event);
-    if (block) {
+    if (block && !this.isBlockReadOnly(block)) {
       this.editExistingBlock(block);
     }
   }
 
   public onCalendarEventEdited(eventId: number): void {
     const event = this.calendarEvents.find((candidate) => candidate.id === eventId);
-    if (event) {
+    if (event && !event.locked) {
       this.onCalendarEventClicked(event);
     }
   }
 
   public onCalendarEventDeleted(event: CalendarEvent): void {
     const block = this.findTimeBlockForEvent(event);
+    if (block && this.isBlockReadOnly(block)) {
+      this.syncCalendarEvents();
+      return;
+    }
     if (!block) {
       console.error(`Kein Datenbank-Zeitblock für Kalendertermin ${event.id} gefunden.`);
       this.syncCalendarEvents();
@@ -260,7 +264,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     const visibleUserIds = new Set(this.getVisibleUsers().map((user) => user.id));
     const pendingDrafts = this.calendarEvents.filter((event) => event.id < 0);
     const events = this.currentBlocksSignal()
-      .filter((block) => visibleUserIds.has(block.user_id))
+      .filter((block) => visibleUserIds.has(block.user_id) && block.is_visible !== false)
       .flatMap((block) =>
         this.filteredDays
           .filter((day) => day === block.day_of_week)
@@ -278,7 +282,8 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
               end: this.toCalendarDateTime(date, block.end_time, endCrossesMidnight),
               resourceId: block.user_id,
               category: block.type,
-              color: this.calendarService.getCategoryColor(block.type),
+              color: block.color || this.calendarService.getCategoryColor(block.type),
+              locked: this.isBlockReadOnly(block),
               meta: { blockId: block.id },
             };
           }),
@@ -289,6 +294,10 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
 
   private persistCalendarEvent(event: CalendarEvent): void {
     const block = this.findTimeBlockForEvent(event);
+    if (block && this.isBlockReadOnly(block)) {
+      this.syncCalendarEvents();
+      return;
+    }
     const start = new Date(event.start);
     const end = new Date(event.end);
     if (!block || !this.isValidDate(start) || !this.isValidDate(end) || end <= start) {
@@ -328,6 +337,10 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     const blockId = event.meta?.['blockId'];
     const databaseId = typeof blockId === 'number' ? blockId : Math.floor(event.id / 10);
     return this.currentBlocksSignal().find((block) => block.id === databaseId);
+  }
+
+  private isBlockReadOnly(block: TimeBlock): boolean {
+    return block.is_locked || block.plan_assignment_id != null;
   }
 
   private getDateForDay(day: TimeBlock['day_of_week']): Date {

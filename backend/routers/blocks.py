@@ -26,10 +26,32 @@ class TimeBlockUpdate(BaseModel):
 class TimeBlockOwnerUpdate(BaseModel):
     user_id: int
 
+class PlanBlockVisibilityUpdate(BaseModel):
+    visible: bool
+
 class CategoryUpdate(BaseModel):
     label: str
     color: str
     default_short: str
+
+
+def reject_plan_event_mutation(block):
+    if block["plan_assignment_id"] is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Plan-Events können nur über die Planverwaltung geändert werden.",
+        )
+
+
+def serialize_time_block(row):
+    block = dict(row)
+    if block["person_event_type_name"] is not None:
+        block["title"] = block["person_event_type_name"]
+        block["color"] = block["person_event_type_color"]
+    block.pop("person_event_type_name")
+    block.pop("person_event_type_color")
+    return block
+
 
 @router.get("/categories")
 def get_all_categories():
@@ -54,16 +76,40 @@ def update_category(cat_id: int, payload: CategoryUpdate):
 @router.get("/all")
 def get_all_blocks():
     conn = database.get_db_connection()
-    blocks = conn.execute("SELECT * FROM time_blocks").fetchall()
-    conn.close()
-    return [dict(b) for b in blocks]
+    try:
+        blocks = conn.execute(
+            """
+            SELECT time_blocks.*, person_event_types.name AS person_event_type_name,
+                   person_event_types.color AS person_event_type_color
+            FROM time_blocks
+            LEFT JOIN person_event_types
+                ON person_event_types.id = time_blocks.person_event_type_id
+               AND person_event_types.user_id = time_blocks.user_id
+            """
+        ).fetchall()
+        return [serialize_time_block(block) for block in blocks]
+    finally:
+        conn.close()
 
 @router.get("/{user_id}")
 def get_blocks_for_user(user_id: int):
     conn = database.get_db_connection()
-    blocks = conn.execute("SELECT * FROM time_blocks WHERE user_id = ?", (user_id,)).fetchall()
-    conn.close()
-    return [dict(b) for b in blocks]
+    try:
+        blocks = conn.execute(
+            """
+            SELECT time_blocks.*, person_event_types.name AS person_event_type_name,
+                   person_event_types.color AS person_event_type_color
+            FROM time_blocks
+            LEFT JOIN person_event_types
+                ON person_event_types.id = time_blocks.person_event_type_id
+               AND person_event_types.user_id = time_blocks.user_id
+            WHERE time_blocks.user_id = ?
+            """,
+            (user_id,),
+        ).fetchall()
+        return [serialize_time_block(block) for block in blocks]
+    finally:
+        conn.close()
 
 @router.post("")
 def create_time_block(payload: TimeBlockCreate):
@@ -84,68 +130,93 @@ def create_time_block(payload: TimeBlockCreate):
     conn.close()
     return {"status": "success", "block_id": new_id}
 
+@router.put("/{block_id}/visibility")
+def update_plan_block_visibility(block_id: int, payload: PlanBlockVisibilityUpdate):
+    conn = database.get_db_connection()
+    try:
+        block = conn.execute(
+            "SELECT plan_assignment_id FROM time_blocks WHERE id = ?",
+            (block_id,),
+        ).fetchone()
+        if not block:
+            raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
+        if block["plan_assignment_id"] is None:
+            raise HTTPException(status_code=422, detail="Nur gespeicherte Plan-Events können einzeln ausgeblendet werden.")
+
+        conn.execute(
+            "UPDATE time_blocks SET is_visible = ? WHERE id = ?",
+            (int(payload.visible), block_id),
+        )
+        conn.commit()
+        return {"id": block_id, "is_visible": payload.visible}
+    finally:
+        conn.close()
+
 @router.put("/{block_id}/owner")
 def update_block_owner(block_id: int, payload: TimeBlockOwnerUpdate):
     conn = database.get_db_connection()
-    block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
-    if not block:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
-        
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (block["user_id"],)).fetchone()
-    
-    if user["role"] != "adult":
-        if block["is_locked"] == 1:
-            conn.close()
-            raise HTTPException(status_code=403, detail="Dieser Block ist fixiert.")
-        if user["status_school"] == "RED":
-            conn.close()
-            raise HTTPException(status_code=403, detail="Kontrollmodus aktiv (RED): Keine Autonomie.")
+    try:
+        block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
+        if not block:
+            raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
+        reject_plan_event_mutation(block)
 
-    conn.execute("UPDATE time_blocks SET user_id = ? WHERE id = ?", (payload.user_id, block_id))
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (block["user_id"],)).fetchone()
+
+        if user["role"] != "adult":
+            if block["is_locked"] == 1:
+                raise HTTPException(status_code=403, detail="Dieser Block ist fixiert.")
+            if user["status_school"] == "RED":
+                raise HTTPException(status_code=403, detail="Kontrollmodus aktiv (RED): Keine Autonomie.")
+
+        conn.execute("UPDATE time_blocks SET user_id = ? WHERE id = ?", (payload.user_id, block_id))
+        conn.commit()
+        return {"status": "success"}
+    finally:
+        conn.close()
 
 @router.put("/{block_id}/move")
 def move_time_block(block_id: int, payload: TimeBlockUpdate):
     conn = database.get_db_connection()
-    block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
-    if not block:
+    try:
+        block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
+        if not block:
+            raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
+        reject_plan_event_mutation(block)
+
+        final_day = payload.day_of_week if payload.day_of_week is not None else block["day_of_week"]
+        final_start = payload.start_time if payload.start_time is not None else block["start_time"]
+        final_end = payload.end_time if payload.end_time is not None else block["end_time"]
+        final_title = payload.title if payload.title is not None else block["title"]
+        final_short = payload.short_title if payload.short_title is not None else block["short_title"]
+        final_type = payload.type if payload.type is not None else block["type"]
+        final_user_id = payload.user_id if payload.user_id is not None else block["user_id"]
+
+        conn.execute("""
+            UPDATE time_blocks
+            SET day_of_week = ?, start_time = ?, end_time = ?, title = ?, short_title = ?, type = ?, user_id = ?
+            WHERE id = ?
+        """, (final_day, final_start, final_end, final_title, final_short, final_type, final_user_id, block_id))
+
+        conn.commit()
+        return {"status": "success"}
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
-
-    final_day = payload.day_of_week if payload.day_of_week is not None else block["day_of_week"]
-    final_start = payload.start_time if payload.start_time is not None else block["start_time"]
-    final_end = payload.end_time if payload.end_time is not None else block["end_time"]
-    final_title = payload.title if payload.title is not None else block["title"]
-    final_short = payload.short_title if payload.short_title is not None else block["short_title"]
-    final_type = payload.type if payload.type is not None else block["type"]
-    final_user_id = payload.user_id if payload.user_id is not None else block["user_id"]
-
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE time_blocks 
-        SET day_of_week = ?, start_time = ?, end_time = ?, title = ?, short_title = ?, type = ?, user_id = ? 
-        WHERE id = ?
-    """, (final_day, final_start, final_end, final_title, final_short, final_type, final_user_id, block_id))
-    
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
 
 @router.delete("/{block_id}")
 def delete_time_block(block_id: int):
     conn = database.get_db_connection()
-    block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
-    if not block:
+    try:
+        block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
+        if not block:
+            raise HTTPException(status_code=404, detail="Zeitblock existiert nicht")
+        reject_plan_event_mutation(block)
+
+        conn.execute("DELETE FROM time_blocks WHERE id = ?", (block_id,))
+        conn.commit()
+        return {"status": "success"}
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="Zeitblock existiert nicht")
-    
-    conn.execute("DELETE FROM time_blocks WHERE id = ?", (block_id,))
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
 
 # NEU: Listet alle anwenderdefinierten Tabellen aus SQLite dynamisch auf
 @router.get("/db/tables")

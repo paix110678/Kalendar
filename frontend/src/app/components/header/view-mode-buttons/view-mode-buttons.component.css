@@ -62,3 +62,33 @@
   transform: scale(1.0); 
   font-weight: 900;
 }
+
+.view-label-short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .view-mode-buttons {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .view-mode-buttons button {
+    min-width: 0;
+    padding-right: 2px;
+    padding-left: 2px;
+    font-size: 12px;
+  }
+
+  .view-mode-buttons button:first-child { padding-left: 3px !important; }
+  .view-mode-buttons button:last-child { padding-right: 3px !important; }
+  .view-mode-buttons button.active { padding: 8px 2px !important; }
+
+  .view-label-full {
+    display: none;
+  }
+
+  .view-label-short {
+    display: inline;
+  }
+}

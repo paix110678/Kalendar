@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, PlanDefinition, PlanHour } from '../../../services/api.service';
-import { timeout } from 'rxjs';
+import { CalendarService } from '../../../services/calendar.service';
+import { catchError, map, of, switchMap, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-plans',
@@ -11,9 +13,13 @@ import { timeout } from 'rxjs';
   templateUrl: './plans.component.html',
   styleUrl: './plans.component.css',
 })
-export class PlansComponent {
+export class PlansComponent implements OnInit {
   private readonly apiService = inject(ApiService);
+  private readonly calendarService = inject(CalendarService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private pendingPlanId: number | null = null;
+
+  @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
 
   readonly daysOfWeek = [
     'Montag',
@@ -37,6 +43,10 @@ export class PlansComponent {
   errorMessage = '';
   successMessage = '';
 
+  ngOnInit(): void {
+    this.loadPlans();
+  }
+
   loadPlans(preserveError = false): void {
     this.loading = true;
     if (!preserveError) {
@@ -46,6 +56,16 @@ export class PlansComponent {
       next: (plans) => {
         this.plans = plans;
         this.loading = false;
+        this.plansChanged.emit(plans);
+        if (this.pendingPlanId !== null) {
+          const selectedPlan = plans.find((plan) => plan.id === this.pendingPlanId);
+          this.pendingPlanId = null;
+          if (selectedPlan) {
+            this.editPlan(selectedPlan);
+          } else {
+            this.errorMessage = 'Der ausgewählte Plan konnte nicht gefunden werden.';
+          }
+        }
         this.changeDetector.markForCheck();
       },
       error: () => {
@@ -91,26 +111,46 @@ export class PlansComponent {
     };
 
     this.saving = true;
-    const request = this.editingPlanId === null
+    const editingPlanId = this.editingPlanId;
+    const updatingPlan = editingPlanId !== null;
+    const request = editingPlanId === null
       ? this.apiService.createPlan(payload)
-      : this.apiService.updatePlan(this.editingPlanId, payload);
-    request.pipe(timeout({ first: 15000 })).subscribe({
-      next: (savedPlan) => {
+      : this.apiService.updatePlan(editingPlanId, payload);
+    request.pipe(
+      timeout({ first: 15000 }),
+      switchMap((savedPlan) => {
+        if (!updatingPlan) {
+          return of({ savedPlan, calendarRefreshed: true });
+        }
+        return this.calendarService.refreshAllBlocks().pipe(
+          timeout({ first: 15000 }),
+          map(() => ({ savedPlan, calendarRefreshed: true })),
+          catchError((error: unknown) => {
+            console.error('Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden:', error);
+            return of({ savedPlan, calendarRefreshed: false });
+          }),
+        );
+      }),
+    ).subscribe({
+      next: ({ savedPlan, calendarRefreshed }) => {
         this.saving = false;
-        this.successMessage = this.editingPlanId === null
+        this.successMessage = !updatingPlan
           ? 'Plan wurde gespeichert.'
-          : 'Plan wurde aktualisiert.';
+          : calendarRefreshed
+            ? 'Plan und zugehörige wiederkehrende Termine wurden aktualisiert.'
+            : 'Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
         this.plans = [
           ...this.plans.filter((plan) => plan.id !== savedPlan.id),
           savedPlan,
         ].sort((first, second) => first.id - second.id);
+        this.plansChanged.emit(this.plans);
         this.resetForm();
         this.loadPlans();
         this.changeDetector.markForCheck();
       },
-      error: () => {
+      error: (error: unknown) => {
         this.saving = false;
-        this.errorMessage = 'Speichern fehlgeschlagen oder die Antwort blieb aus. Die Planliste wird zur Kontrolle aktualisiert.';
+        this.errorMessage = this.getSaveErrorMessage(error);
         this.loadPlans(true);
         this.changeDetector.markForCheck();
       },
@@ -128,6 +168,20 @@ export class PlansComponent {
     this.errorMessage = '';
   }
 
+  openPlan(planId: number): void {
+    this.pendingPlanId = null;
+    const plan = this.plans.find((item) => item.id === planId);
+    if (plan) {
+      this.editPlan(plan);
+      return;
+    }
+
+    this.pendingPlanId = planId;
+    if (!this.loading) {
+      this.loadPlans();
+    }
+  }
+
   deletePlan(plan: PlanDefinition): void {
     if (!confirm(`Plan „${plan.name}“ wirklich löschen?`)) {
       return;
@@ -135,13 +189,26 @@ export class PlansComponent {
 
     this.errorMessage = '';
     this.successMessage = '';
-    this.apiService.deletePlan(plan.id).subscribe({
-      next: () => {
+    this.apiService.deletePlan(plan.id).pipe(
+      switchMap(() => this.calendarService.refreshAllBlocks().pipe(
+        timeout({ first: 15000 }),
+        map(() => true),
+        catchError((error: unknown) => {
+          console.error('Plan wurde gelöscht, aber der Kalender konnte nicht aktualisiert werden:', error);
+          return of(false);
+        }),
+      )),
+    ).subscribe({
+      next: (calendarRefreshed) => {
         this.plans = this.plans.filter((item) => item.id !== plan.id);
+        this.plansChanged.emit(this.plans);
+        this.calendarService.refreshUsers();
         if (this.editingPlanId === plan.id) {
           this.resetForm();
         }
-        this.successMessage = 'Plan wurde gelöscht.';
+        this.successMessage = calendarRefreshed
+          ? 'Plan und zugehörige wiederkehrende Termine wurden gelöscht.'
+          : 'Plan wurde gelöscht, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
         this.changeDetector.markForCheck();
       },
       error: () => {
@@ -152,6 +219,7 @@ export class PlansComponent {
   }
 
   resetForm(): void {
+    this.pendingPlanId = null;
     this.editingPlanId = null;
     this.planName = '';
     this.startDay = 'Montag';
@@ -178,4 +246,14 @@ export class PlansComponent {
     const minutes = minutesInDay % 60;
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
+
+  private getSaveErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const detail = error.error?.detail;
+      if (typeof detail === 'string') return detail;
+      if (detail && typeof detail.message === 'string') return detail.message;
+    }
+    return 'Speichern fehlgeschlagen oder die Antwort blieb aus. Die Planliste wird zur Kontrolle aktualisiert.';
+  }
+
 }

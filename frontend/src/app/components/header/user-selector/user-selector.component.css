@@ -1,7 +1,7 @@
 /* Haupt-Container der Leiste: Verteilt den Platz hochelastisch im Header */
 .user-selector-container {
   display: flex;
-  gap: 8px;
+  gap: clamp(2px, 0.6vw, 8px);
   flex: 1;
   justify-content: center;
   flex-wrap: nowrap;
@@ -11,6 +11,7 @@
   padding-top: 6px !important; 
   padding-bottom: 2px;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .user-btn-wrapper-hover {
@@ -18,7 +19,8 @@
   align-items: center;
   position: relative !important;
   flex-shrink: 1;
-  min-width: 50px;
+  min-width: 0;
+  flex: 1 1 0;
 }
 
 /* Transparenter Kapsel-Button in der jeweiligen Spurfarbe */
@@ -26,8 +28,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: clamp(2px, 0.4vw, 6px);
+  padding: 4px clamp(3px, 0.8vw, 12px);
   border: 2px solid;
   border-radius: 28px;
   backdrop-filter: blur(4px);
@@ -38,6 +40,8 @@
   transition: all 0.15s ease-in-out;
   flex-shrink: 1;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
 }
 .piggy-trigger-btn-transparent-style:hover {
   transform: translateY(-1px);
@@ -105,4 +109,61 @@
   opacity: 1 !important; 
   pointer-events: auto !important; 
   transform: scale(1.05);
+}
+
+.user-name-abbreviation {
+  display: none;
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .user-selector-container {
+    justify-content: space-between;
+  }
+
+  .user-stars-large-wrapper {
+    display: none;
+  }
+
+  .user-name-label-white {
+    display: block;
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .piggy-trigger-btn-transparent-style {
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-name-label-white {
+    display: none;
+  }
+
+  .user-name-abbreviation {
+    display: inline;
+  }
+
+  .piggy-trigger-btn-transparent-style {
+    padding: 2px;
+  }
+}
+
+@media (max-width: 360px) {
+  .user-selector-container {
+    gap: 1px;
+  }
+
+  .user-name-abbreviation {
+    font-size: 10px;
+  }
+
+  .piggy-trigger-btn-transparent-style {
+    height: 28px;
+  }
 }

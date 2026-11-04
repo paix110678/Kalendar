@@ -28,7 +28,7 @@ export class TimeBlockComponent implements OnDestroy {
   constructor(private calendarService: CalendarService) {}
 
   public getBlockColor(): string {
-    return this.calendarService.getCategoryColor(this.block.type);
+    return this.block.color || this.calendarService.getCategoryColor(this.block.type);
   }
 
   public onDragStart(event: DragEvent): void {

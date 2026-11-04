@@ -1,0 +1,258 @@
+<section class="member-details">
+  <header class="details-header">
+    <div>
+      <h4>Einstellungen für {{ user.name }}</h4>
+      <p>Profil, Status und persönlicher Stundenplan</p>
+    </div>
+    <button type="button" class="button button-muted" (click)="close.emit()">Schließen</button>
+  </header>
+
+  <form class="settings-form" (ngSubmit)="saveProfile()">
+    <h5>Mitgliedseinstellungen</h5>
+    <div class="settings-grid">
+      <label>
+        <span>Name</span>
+        <input type="text" name="memberName" [(ngModel)]="name" maxlength="100" required>
+      </label>
+      <label>
+        <span>Rolle</span>
+        <select name="memberRole" [(ngModel)]="role">
+          @for (option of roles; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Farbe</span>
+        <input type="color" name="memberColor" [(ngModel)]="colorCode">
+      </label>
+      <label>
+        <span>Sterne</span>
+        <input type="number" name="memberPoints" min="0" step="1" [(ngModel)]="currentPoints" required>
+      </label>
+      <label>
+        <span>Schulstatus</span>
+        <select name="schoolStatus" [(ngModel)]="schoolStatus">
+          <option value="GREEN">Grün</option>
+          <option value="RED">Rot</option>
+        </select>
+      </label>
+      <label>
+        <span>Sportstatus</span>
+        <select name="sportStatus" [(ngModel)]="sportStatus">
+          <option value="BASE">Basis</option>
+          <option value="SILBER">Silber</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-actions">
+      <p class="error-message" role="alert" [hidden]="!profileError">{{ profileError }}</p>
+      <p class="success-message" role="status" [hidden]="!profileMessage">{{ profileMessage }}</p>
+      <button type="submit" class="button button-primary" [disabled]="profileSaving">
+        {{ profileSaving ? 'Speichert …' : 'Einstellungen speichern' }}
+      </button>
+    </div>
+  </form>
+
+  <section class="plan-section">
+    <h5>Plan auswählen und speichern</h5>
+    <label class="plan-select">
+      <span>Stundenplan</span>
+      <select
+        name="selectedPlan"
+        [value]="selectedPlanId ?? ''"
+        (change)="onPlanSelection($event)"
+        [disabled]="plansLoading">
+        <option value="">Bitte Plan auswählen</option>
+        @for (plan of plans; track plan.id) {
+          <option [value]="plan.id">{{ plan.name }} ({{ plan.start_day }} bis {{ plan.end_day }})</option>
+        }
+      </select>
+    </label>
+    @if (plansLoading) {
+      <p class="muted-message">Pläne werden geladen …</p>
+    } @else if (plans.length === 0) {
+      <p class="muted-message">Es sind noch keine Pläne angelegt. Erstelle zuerst einen Plan in der Planverwaltung.</p>
+    }
+    @if (assignmentLoading) {
+      <p class="muted-message" role="status">Die gespeicherte Plan-Zuordnung wird geladen …</p>
+    }
+
+    <section class="person-event-types">
+      <div>
+        <h6>Fachliste für {{ user.name }}</h6>
+        <p class="plan-intro">Diese Einträge gehören nur zu dieser Person und können anschließend im Stundenplan ausgewählt werden.</p>
+      </div>
+      @if (eventTypesLoading) {
+        <p class="muted-message">Persönliche Fachliste wird geladen …</p>
+      }
+      <form class="event-type-create" (ngSubmit)="createPersonEventType()">
+        <label>
+          <span>Name</span>
+          <input type="text" name="personEventTypeName" [(ngModel)]="eventTypeName" maxlength="100" required>
+        </label>
+        <label class="event-type-color">
+          <span>Farbe</span>
+          <input type="color" name="personEventTypeColor" [(ngModel)]="eventTypeColor">
+        </label>
+        <button type="submit" class="button button-primary" [disabled]="eventTypeSaving">Hinzufügen</button>
+      </form>
+      <p class="error-message" role="alert" [hidden]="!eventTypeError">{{ eventTypeError }}</p>
+      <p class="success-message" role="status" [hidden]="!eventTypeMessage">{{ eventTypeMessage }}</p>
+      @for (eventType of personEventTypes; track eventType.id) {
+        <div class="person-event-type-row">
+          <span class="event-type-id">ID {{ eventType.id }}</span>
+          <label>
+            <span>Name</span>
+            <input type="text" [name]="'personEventTypeName-' + eventType.id" [(ngModel)]="eventType.name" maxlength="100" required>
+          </label>
+          <label class="event-type-color">
+            <span>Farbe</span>
+            <input type="color" [name]="'personEventTypeColor-' + eventType.id" [(ngModel)]="eventType.color">
+          </label>
+          <div class="event-type-actions">
+            <button type="button" class="button button-muted" [disabled]="eventTypeSaving" (click)="savePersonEventType(eventType)">Speichern</button>
+            <button type="button" class="button button-muted" [disabled]="eventTypeSaving" (click)="deletePersonEventType(eventType)">Löschen</button>
+          </div>
+        </div>
+      }
+      @if (!eventTypesLoading && personEventTypes.length === 0) {
+        <p class="muted-message">Für diese Person sind noch keine Fächer/Eventarten angelegt.</p>
+      }
+    </section>
+
+    @if (selectedPlan && scheduleEntries.length > 0 && !assignmentLoading) {
+      <p class="plan-intro">
+        Jede Stunde wird unabhängig aus der persönlichen Fachliste ausgewählt; die Kalenderfarbe kommt automatisch aus dem Eintrag.
+      </p>
+      @if (personEventTypes.length === 0) {
+        <p class="muted-message">Lege zuerst in der persönlichen Fachliste mindestens ein Fach oder eine Eventart an.</p>
+      }
+      <label class="assignment-title">
+        <span>Titel der Plan-Zuordnung</span>
+        <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" maxlength="100" required>
+      </label>
+      <div class="schedule-table-wrapper">
+        <table class="schedule-table school-timetable">
+          <thead>
+            <tr>
+              <th scope="col">Stunde</th>
+              <th scope="col">Zeit</th>
+              @for (day of scheduleDays; track day) {
+                <th scope="col">{{ day }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (period of schedulePeriods; track period) {
+              @let timeEntry = getScheduleEntry(scheduleDays[0], period);
+              <tr>
+                <th scope="row">{{ period }}.</th>
+                <td class="schedule-time">
+                  @if (timeEntry) {
+                    {{ timeEntry.start_time }}–{{ timeEntry.end_time }}
+                  }
+                </td>
+                @for (day of scheduleDays; track day) {
+                  @let entry = getScheduleEntry(day, period);
+                  <td class="event-type-cell">
+                    @if (entry) {
+                      <div class="event-type-selection">
+                        <select
+                          [name]="'event-type-' + day + '-' + period"
+                          [(ngModel)]="entry.event_type_id"
+                          [attr.aria-label]="day + ' ' + period + ' Fach oder Eventart'"
+                          [disabled]="eventTypesLoading || personEventTypes.length === 0"
+                          [style.background-color]="getEventTypeColor(entry.event_type_id)"
+                          [style.color]="getEventTypeTextColor(entry.event_type_id)"
+                          required>
+                          <option [ngValue]="null">Bitte auswählen</option>
+                          @for (eventType of personEventTypes; track eventType.id) {
+                            <option [ngValue]="eventType.id">{{ eventType.name }}</option>
+                          }
+                        </select>
+                        <button
+                          type="button"
+                          class="visibility-toggle"
+                          [class.visibility-hidden]="!entry.visible"
+                          [disabled]="entry.visibilitySaving"
+                          [attr.aria-label]="entry.visible ? day + ', ' + period + '. Stunde ausblenden' : day + ', ' + period + '. Stunde einblenden'"
+                          [attr.aria-pressed]="entry.visible"
+                          (click)="toggleScheduleEventVisibility(entry)">
+                          {{ entry.visible ? '👁️' : '🙈' }}
+                        </button>
+                      </div>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+      <div class="conflict-backdrop" [hidden]="!conflictDialogOpen">
+      <section class="conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="conflict-heading">
+        <h6 id="conflict-heading">Überschneidungen lösen</h6>
+        <p [hidden]="conflicts.length === 0">Diese bestehenden Blöcke von {{ user.name }} überschneiden sich mit dem Plan. Verschiebe oder lösche jeden betroffenen Block. Die Events anderer Personen bleiben unverändert.</p>
+        @for (conflict of conflicts; track conflict.id) {
+          <div class="conflict-row">
+            <div class="conflict-summary">
+              <strong>{{ conflict.title }}</strong>
+              <span>{{ conflict.day_of_week }}, {{ conflict.start_time }}–{{ conflict.end_time }}</span>
+            </div>
+            <label>
+              <span>Aktion</span>
+              <select [name]="'conflict-action-' + conflict.id" [(ngModel)]="conflict.action">
+                <option value="">Bitte entscheiden</option>
+                <option value="move">Zeit ändern</option>
+                <option value="delete">Löschen</option>
+              </select>
+            </label>
+            @if (conflict.action === 'move') {
+              <label>
+                <span>Tag</span>
+                <select [name]="'conflict-day-' + conflict.id" [(ngModel)]="conflict.newDay">
+                  @for (day of daysOfWeek; track day) {
+                    <option [value]="day">{{ day }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Beginn</span>
+                <input type="time" [name]="'conflict-start-' + conflict.id" [(ngModel)]="conflict.newStart" required>
+              </label>
+              <label>
+                <span>Ende</span>
+                <input type="time" [name]="'conflict-end-' + conflict.id" [(ngModel)]="conflict.newEnd" required>
+              </label>
+            }
+          </div>
+        }
+        <p class="error-message" role="alert" [hidden]="!planError">{{ planError }}</p>
+        <div class="conflict-dialog-actions">
+          <button type="button" class="button button-muted" (click)="closeConflictDialog()">Abbrechen</button>
+          <button
+            type="button"
+            class="button button-primary"
+            [hidden]="conflicts.length === 0"
+            [disabled]="planApplying || !conflictDecisionsValid"
+            (click)="applyPlan()">
+            {{ planApplying ? 'Speichert …' : 'Konflikte lösen und speichern' }}
+          </button>
+        </div>
+      </section>
+      </div>
+
+    <p class="error-message" role="alert" [hidden]="!planError">{{ planError }}</p>
+    <p class="success-message" role="status" [hidden]="!planMessage">{{ planMessage }}</p>
+    <button
+      type="button"
+      class="button button-primary"
+      [disabled]="planApplying || plansLoading || assignmentLoading || !selectedPlan || scheduleEntries.length === 0"
+      (click)="applyPlan()">
+      {{ planApplying ? 'Speichert …' : 'Plan speichern' }}
+    </button>
+  </section>
+</section>
