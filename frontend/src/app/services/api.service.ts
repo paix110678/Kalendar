@@ -90,6 +90,19 @@ export interface SystemConfigLocationResult {
   location_error: string | null;
 }
 
+export interface WeatherLocation {
+  id: number;
+  name: string;
+  weather_city: string;
+  weather_plz: string;
+  weather_latitude: number | null;
+  weather_longitude: number | null;
+  weather_service: 'open_meteo' | 'weather_api';
+  api_key?: string;
+  is_active: boolean;
+  location_error?: string | null;
+}
+
 export interface Holiday {
   state_code: string;
   year: number;
@@ -108,6 +121,17 @@ export interface HolidayStateData {
 export interface SavedHolidayData {
   states: string[];
   holidays: Holiday[];
+}
+
+export interface DatabaseBackup {
+  id: string;
+  created_at: string;
+  size_bytes: number;
+}
+
+export interface DatabaseBackupList {
+  backups: DatabaseBackup[];
+  errors: Array<{ file: string; error: string }>;
 }
 
 export const GERMAN_STATES = [
@@ -158,7 +182,11 @@ export class ApiService {
   passTuev(id: number): Observable<{ current_points: number }> { return this.http.post<{ current_points: number }>(this.apiBase + '/users/' + id + '/tuev-passed', {}); }
 
   getCategories(): Observable<Category[]> { return this.http.get<Category[]>(this.apiBase + '/blocks/categories'); }
+  createCategory(category: { value: string; label: string; color: string; default_short: string }): Observable<Category> {
+    return this.http.post<Category>(`${this.apiBase}/blocks/categories`, category);
+  }
   updateCategory(id: number, label: string, color: string, short: string): Observable<any> { return this.http.put(`${this.apiBase}/blocks/categories/${id}`, { label, color, default_short: short }); }
+  deleteCategory(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/blocks/categories/${id}`); }
   getAllBlocks(): Observable<TimeBlock[]> { return this.http.get<TimeBlock[]>(this.apiBase + '/blocks/all'); }
   addTimeBlock(block: any): Observable<any> { return this.http.post(this.apiBase + '/blocks', block); }
   deleteTimeBlock(id: number): Observable<any> { return this.http.delete(this.apiBase + '/blocks/' + id); }
@@ -171,6 +199,26 @@ export class ApiService {
   // NEU: Datenbank-Katalog-Abfragen
   getDatabaseTables(): Observable<string[]> { return this.http.get<string[]>(`${this.apiBase}/blocks/db/tables`); }
   getTableData(tableName: string): Observable<{columns: string[], rows: any[]}> { return this.http.get<any>(`${this.apiBase}/blocks/db/tables/${tableName}`); }
+  getDatabaseBackups(): Observable<DatabaseBackupList> {
+    return this.http.get<DatabaseBackupList>(`${this.apiBase}/backups`);
+  }
+  createDatabaseBackup(): Observable<DatabaseBackup> {
+    return this.http.post<DatabaseBackup>(`${this.apiBase}/backups`, {});
+  }
+  downloadDatabaseBackup(backupId: string): Observable<Blob> {
+    return this.http.get(`${this.apiBase}/backups/${encodeURIComponent(backupId)}/download`, {
+      responseType: 'blob',
+    });
+  }
+  deleteDatabaseBackup(backupId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/backups/${encodeURIComponent(backupId)}`);
+  }
+  restoreDatabaseBackup(backupId: string): Observable<{ restored_backup_id: string; recovery_backup_id: string }> {
+    return this.http.post<{ restored_backup_id: string; recovery_backup_id: string }>(
+      `${this.apiBase}/backups/${encodeURIComponent(backupId)}/restore`,
+      {},
+    );
+  }
 
   getPlans(): Observable<PlanDefinition[]> { return this.http.get<PlanDefinition[]>(`${this.apiBase}/plans`); }
   createPlan(plan: Omit<PlanDefinition, 'id'>): Observable<PlanDefinition> { return this.http.post<PlanDefinition>(`${this.apiBase}/plans`, plan); }
@@ -186,6 +234,9 @@ export class ApiService {
     return this.http.post<HolidayStateData>(`${this.apiBase}/holidays/states`, {
       state_code: stateCode,
     });
+  }
+  deleteHolidayState(stateCode: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/holidays/states/${encodeURIComponent(stateCode)}`);
   }
   getHolidays(stateCode: string): Observable<Holiday[]> {
     return this.http.get<Holiday[]>(
@@ -214,6 +265,24 @@ export class ApiService {
   getSystemConfig(): Observable<SystemConfig> { return this.http.get<SystemConfig>(this.apiBase + '/config'); }
   getSystemConfigSettings(): Observable<SystemConfig> {
     return this.http.get<SystemConfig>(`${this.apiBase}/config/settings`);
+  }
+  getWeatherLocations(): Observable<WeatherLocation[]> {
+    return this.http.get<WeatherLocation[]>(`${this.apiBase}/config/locations`);
+  }
+  getWeatherLocation(locationId: number): Observable<WeatherLocation> {
+    return this.http.get<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}`);
+  }
+  createWeatherLocation(location: Pick<WeatherLocation, 'name' | 'weather_plz' | 'weather_service' | 'api_key'>): Observable<WeatherLocation> {
+    return this.http.post<WeatherLocation>(`${this.apiBase}/config/locations`, location);
+  }
+  updateWeatherLocation(locationId: number, location: Pick<WeatherLocation, 'name' | 'weather_plz' | 'weather_service' | 'api_key'>): Observable<WeatherLocation> {
+    return this.http.put<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}`, location);
+  }
+  activateWeatherLocation(locationId: number): Observable<WeatherLocation> {
+    return this.http.put<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}/active`, {});
+  }
+  deleteWeatherLocation(locationId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/config/locations/${locationId}`);
   }
   resolveWeatherLocation(): Observable<SystemConfigLocationResult> {
     return this.http.post<SystemConfigLocationResult>(this.apiBase + '/config/location', {});

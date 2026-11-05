@@ -8,10 +8,12 @@
           <h4>{{ user.name }}</h4>
           <span>{{ roleLabel(user.role) }}</span>
         </div>
-        <button type="button" class="btn-delete" (click)="deleteUser(user.id)">Löschen</button>
       </div>
       @defer (when selectedUserId === user.id) {
-        <app-member-details [user]="user" (close)="memberClosed.emit()"></app-member-details>
+        <app-member-details
+          [user]="user"
+          (editorActionsChange)="onMemberActionsChanged($event)">
+        </app-member-details>
       } @placeholder {
         <p>Mitgliedseinstellungen werden geladen …</p>
       }
@@ -19,14 +21,14 @@
   } @else {
     <div class="inline-create-card">
       <h4>Neues Familienmitglied hinzufügen</h4>
-      <div class="input-row">
-        <input type="text" [(ngModel)]="createUserName" placeholder="Name eintragen..." aria-label="Name des neuen Mitglieds">
-        <select [(ngModel)]="createUserGroup" aria-label="Gruppe">
+      <form class="input-row" (ngSubmit)="$event.preventDefault()">
+        <input type="text" [(ngModel)]="createUserName" (ngModelChange)="publishEditorActions()" name="createUserName" placeholder="Name eintragen..." aria-label="Name des neuen Mitglieds">
+        <select [(ngModel)]="createUserGroup" (ngModelChange)="publishEditorActions()" name="createUserGroup" aria-label="Gruppe">
           <option value="adult">Erwachsene</option>
           <option value="child">Kinder</option>
         </select>
-        <button type="button" class="btn-action-add" (click)="submitNewUser()">Hinzufügen</button>
-      </div>
+      </form>
     </div>
   }
+  <p class="error-message" role="alert" [hidden]="!userActionError">{{ userActionError }}</p>
 </section>

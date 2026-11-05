@@ -2,7 +2,7 @@ import threading
 import time
 import logging
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import database
 import requests
 from datetime import datetime
@@ -36,8 +36,91 @@ class ConfigUpdate(BaseModel):
     weather_longitude: float | None = None
 
 
+class WeatherLocationCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    weather_plz: str = Field(..., min_length=1, max_length=20)
+    weather_service: str = Field(default="open_meteo", pattern="^(open_meteo|weather_api)$")
+    api_key: str = ""
+
+
+class WeatherLocationUpdate(WeatherLocationCreate):
+    pass
+
+
 class LocationLookupError(Exception):
     pass
+
+
+def _serialize_weather_location(row, include_api_key=True):
+    location = {
+        "id": row["id"],
+        "name": row["name"],
+        "weather_city": row["weather_city"] or "",
+        "weather_plz": row["weather_plz"] or "",
+        "weather_service": row["weather_service"] or "open_meteo",
+        "weather_latitude": row["weather_latitude"],
+        "weather_longitude": row["weather_longitude"],
+        "is_active": bool(row["is_active"]),
+    }
+    if include_api_key:
+        location["api_key"] = row["api_key"] or ""
+    return location
+
+
+def _sync_active_weather_location(conn):
+    config = conn.execute(
+        "SELECT * FROM system_config ORDER BY id ASC LIMIT 1"
+    ).fetchone()
+    if config is None:
+        return
+    active = conn.execute(
+        "SELECT id FROM weather_locations WHERE is_active = 1 ORDER BY id LIMIT 1"
+    ).fetchone()
+    if active is None:
+        return
+    conn.execute(
+        """
+        UPDATE weather_locations
+        SET weather_city = ?, weather_plz = ?, weather_service = ?, api_key = ?,
+            weather_latitude = ?, weather_longitude = ?
+        WHERE id = ?
+        """,
+        (
+            config["weather_city"] or "",
+            config["weather_plz"] or "",
+            config["weather_service"] or "open_meteo",
+            config["api_key"] or "",
+            config["weather_latitude"],
+            config["weather_longitude"],
+            active["id"],
+        ),
+    )
+
+
+def _lookup_weather_location(postal_code: str) -> tuple[str, float, float]:
+    url_zippopotam = "".join(["https://", "api.", "zippopotam", ".us/de/"])
+    try:
+        response = requests.get(f"{url_zippopotam}{postal_code}", timeout=5)
+        response.raise_for_status()
+        location_data = response.json()
+        if not isinstance(location_data, dict):
+            raise ValueError("Die Antwort für diese Postleitzahl ist ungültig.")
+        places = location_data.get("places")
+        if not isinstance(places, list) or not places:
+            raise ValueError("Keine Orte für diese Postleitzahl gefunden.")
+        place = places[0]
+        city_name = place.get("place name")
+        latitude = float(place["latitude"])
+        longitude = float(place["longitude"])
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise ValueError("Die Koordinaten der Postleitzahl sind ungültig.")
+        if not isinstance(city_name, str) or not city_name.strip():
+            raise ValueError("Die Ortsangabe der Postleitzahl ist ungültig.")
+        return city_name.strip(), latitude, longitude
+    except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+        raise LocationLookupError(
+            f"Ort und Koordinaten konnten für PLZ {postal_code} nicht ermittelt werden."
+        ) from error
 
 
 def ensure_weather_location() -> bool:
@@ -104,6 +187,8 @@ def ensure_weather_location() -> bool:
                     cfg["weather_plz"],
                 ),
             )
+            conn.commit()
+            _sync_active_weather_location(conn)
             conn.commit()
         finally:
             conn.close()
@@ -265,6 +350,245 @@ def get_config():
     return fetch_live_weather_pure_ram()
 
 
+@router.get("/locations")
+def get_weather_locations():
+    conn = database.get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM weather_locations ORDER BY is_active DESC, name COLLATE NOCASE, id"
+        ).fetchall()
+        return [_serialize_weather_location(row, include_api_key=False) for row in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/locations/{location_id}")
+def get_weather_location(location_id: int):
+    conn = database.get_db_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Standort nicht gefunden.")
+        return _serialize_weather_location(row)
+    finally:
+        conn.close()
+
+
+@router.post("/locations")
+def create_weather_location(payload: WeatherLocationCreate):
+    name = payload.name.strip()
+    postal_code = payload.weather_plz.strip()
+    if not name or not postal_code:
+        raise HTTPException(status_code=422, detail="Name und PLZ dürfen nicht leer sein.")
+
+    city = ""
+    latitude = None
+    longitude = None
+    location_error = None
+    try:
+        city, latitude, longitude = _lookup_weather_location(postal_code)
+    except LocationLookupError as error:
+        location_error = str(error)
+        logger.warning("%s", location_error)
+
+    conn = database.get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        active_exists = conn.execute(
+            "SELECT 1 FROM weather_locations WHERE is_active = 1"
+        ).fetchone() is not None
+        cursor = conn.execute(
+            """
+            INSERT INTO weather_locations (
+                name, weather_city, weather_plz, weather_service, api_key,
+                weather_latitude, weather_longitude, is_active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                name,
+                city,
+                postal_code,
+                payload.weather_service,
+                payload.api_key,
+                latitude,
+                longitude,
+                0 if active_exists else 1,
+            ),
+        )
+        if not active_exists:
+            _activate_weather_location(conn, cursor.lastrowid)
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+        result = _serialize_weather_location(row)
+        result["location_error"] = location_error
+        if result["is_active"]:
+            _invalidate_weather_cache()
+        return result
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@router.put("/locations/{location_id}")
+def update_weather_location(location_id: int, payload: WeatherLocationUpdate):
+    name = payload.name.strip()
+    postal_code = payload.weather_plz.strip()
+    if not name or not postal_code:
+        raise HTTPException(status_code=422, detail="Name und PLZ dürfen nicht leer sein.")
+
+    conn = database.get_db_connection()
+    try:
+        current = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        if current is None:
+            raise HTTPException(status_code=404, detail="Standort nicht gefunden.")
+
+        location_changed = postal_code != str(current["weather_plz"] or "").strip()
+        city = "" if location_changed else current["weather_city"] or ""
+        latitude = None if location_changed else current["weather_latitude"]
+        longitude = None if location_changed else current["weather_longitude"]
+        location_error = None
+        if location_changed:
+            try:
+                city, latitude, longitude = _lookup_weather_location(postal_code)
+            except LocationLookupError as error:
+                location_error = str(error)
+                logger.warning("%s", location_error)
+
+        conn.execute(
+            """
+            UPDATE weather_locations
+            SET name = ?, weather_city = ?, weather_plz = ?, weather_service = ?,
+                api_key = ?, weather_latitude = ?, weather_longitude = ?
+            WHERE id = ?
+            """,
+            (
+                name,
+                city,
+                postal_code,
+                payload.weather_service,
+                payload.api_key,
+                latitude,
+                longitude,
+                location_id,
+            ),
+        )
+        if current["is_active"]:
+            _activate_weather_location(conn, location_id)
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        result = _serialize_weather_location(row)
+        result["location_error"] = location_error
+        if result["is_active"]:
+            _invalidate_weather_cache()
+        return result
+    finally:
+        conn.close()
+
+
+def _activate_weather_location(conn, location_id: int):
+    location = conn.execute(
+        "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+    ).fetchone()
+    if location is None:
+        raise HTTPException(status_code=404, detail="Standort nicht gefunden.")
+    conn.execute("UPDATE weather_locations SET is_active = 0")
+    conn.execute("UPDATE weather_locations SET is_active = 1 WHERE id = ?", (location_id,))
+    config_id = conn.execute(
+        "SELECT id FROM system_config ORDER BY id ASC LIMIT 1"
+    ).fetchone()
+    values = (
+        location["weather_city"],
+        location["weather_plz"],
+        location["weather_service"],
+        location["api_key"],
+        location["weather_latitude"],
+        location["weather_longitude"],
+    )
+    if config_id is None:
+        conn.execute(
+            """
+            INSERT INTO system_config (
+                weather_city, weather_plz, weather_service, api_key,
+                weather_latitude, weather_longitude
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            values,
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE system_config
+            SET weather_city = ?, weather_plz = ?, weather_service = ?, api_key = ?,
+                weather_latitude = ?, weather_longitude = ?
+            WHERE id = ?
+            """,
+            (*values, config_id["id"]),
+        )
+
+
+@router.put("/locations/{location_id}/active")
+def activate_weather_location(location_id: int):
+    conn = database.get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        _activate_weather_location(conn, location_id)
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        result = _serialize_weather_location(row)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    _invalidate_weather_cache()
+    return result
+
+
+@router.delete("/locations/{location_id}")
+def delete_weather_location(location_id: int):
+    conn = database.get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        current = conn.execute(
+            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        if current is None:
+            raise HTTPException(status_code=404, detail="Standort nicht gefunden.")
+        if conn.execute("SELECT COUNT(*) FROM weather_locations").fetchone()[0] <= 1:
+            raise HTTPException(
+                status_code=409,
+                detail="Der letzte Wetterstandort kann nicht gelöscht werden.",
+            )
+        conn.execute("DELETE FROM weather_locations WHERE id = ?", (location_id,))
+        if current["is_active"]:
+            next_location = conn.execute(
+                "SELECT id FROM weather_locations ORDER BY id LIMIT 1"
+            ).fetchone()
+            _activate_weather_location(conn, next_location["id"])
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    _invalidate_weather_cache()
+    return {"status": "success"}
+
+
 @router.get("/settings")
 def get_config_settings():
     conn = database.get_db_connection()
@@ -358,6 +682,8 @@ def update_config(payload: ConfigUpdate):
                 weather_latitude = ?, weather_longitude = ?
             WHERE id = (SELECT id FROM system_config ORDER BY id ASC LIMIT 1)
         """, (city, new_plz, final_service, payload.api_key, latitude, longitude))
+        conn.commit()
+        _sync_active_weather_location(conn)
         conn.commit()
     finally:
         conn.close()

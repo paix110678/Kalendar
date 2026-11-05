@@ -4,19 +4,18 @@
       <h4>Einstellungen für {{ user.name }}</h4>
       <p>Profil, Status und persönlicher Stundenplan</p>
     </div>
-    <button type="button" class="button button-muted" (click)="close.emit()">Schließen</button>
   </header>
 
-  <form class="settings-form" (ngSubmit)="saveProfile()">
+  <form class="settings-form" (ngSubmit)="$event.preventDefault()">
     <h5>Mitgliedseinstellungen</h5>
     <div class="settings-grid">
       <label>
         <span>Name</span>
-        <input type="text" name="memberName" [(ngModel)]="name" maxlength="100" required>
+        <input type="text" name="memberName" [(ngModel)]="name" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
       <label>
         <span>Rolle</span>
-        <select name="memberRole" [(ngModel)]="role">
+        <select name="memberRole" [(ngModel)]="role" (ngModelChange)="publishEditorActions()">
           @for (option of roles; track option.value) {
             <option [ngValue]="option.value">{{ option.label }}</option>
           }
@@ -24,29 +23,29 @@
       </label>
       <label>
         <span>Farbe</span>
-        <input type="color" name="memberColor" [(ngModel)]="colorCode">
+        <input type="color" name="memberColor" [(ngModel)]="colorCode" (ngModelChange)="publishEditorActions()">
       </label>
       <label>
         <span>Sterne</span>
-        <input type="number" name="memberPoints" min="0" step="1" [(ngModel)]="currentPoints" required>
+        <input type="number" name="memberPoints" min="0" step="1" [(ngModel)]="currentPoints" (ngModelChange)="publishEditorActions()" required>
       </label>
       <label>
         <span>Schulstatus</span>
-        <select name="schoolStatus" [(ngModel)]="schoolStatus">
+        <select name="schoolStatus" [(ngModel)]="schoolStatus" (ngModelChange)="publishEditorActions()">
           <option value="GREEN">Grün</option>
           <option value="RED">Rot</option>
         </select>
       </label>
       <label>
         <span>Sportstatus</span>
-        <select name="sportStatus" [(ngModel)]="sportStatus">
+        <select name="sportStatus" [(ngModel)]="sportStatus" (ngModelChange)="publishEditorActions()">
           <option value="BASE">Basis</option>
           <option value="SILBER">Silber</option>
         </select>
       </label>
       <label>
         <span>Bundesland für Ferien und Feiertage</span>
-        <select name="memberState" [(ngModel)]="stateCode">
+        <select name="memberState" [(ngModel)]="stateCode" (ngModelChange)="publishEditorActions()">
           <option [ngValue]="null">Nicht ausgewählt</option>
           @for (bundesland of bundeslaender; track bundesland.code) {
             <option [ngValue]="bundesland.code">{{ bundesland.name }}</option>
@@ -58,9 +57,6 @@
     <div class="form-actions">
       <p class="error-message" role="alert" [hidden]="!profileError">{{ profileError }}</p>
       <p class="success-message" role="status" [hidden]="!profileMessage">{{ profileMessage }}</p>
-      <button type="submit" class="button button-primary" [disabled]="profileSaving">
-        {{ profileSaving ? 'Speichert …' : 'Einstellungen speichern' }}
-      </button>
     </div>
   </form>
 
@@ -96,34 +92,29 @@
       @if (eventTypesLoading) {
         <p class="muted-message">Persönliche Fachliste wird geladen …</p>
       }
-      <form class="event-type-create" (ngSubmit)="createPersonEventType()">
+      <form class="event-type-create" (ngSubmit)="$event.preventDefault()">
         <label>
           <span>Name</span>
-          <input type="text" name="personEventTypeName" [(ngModel)]="eventTypeName" maxlength="100" required>
+          <input type="text" name="personEventTypeName" [(ngModel)]="eventTypeName" (ngModelChange)="publishEditorActions()" maxlength="100">
         </label>
         <label class="event-type-color">
           <span>Farbe</span>
-          <input type="color" name="personEventTypeColor" [(ngModel)]="eventTypeColor">
+          <input type="color" name="personEventTypeColor" [(ngModel)]="eventTypeColor" (ngModelChange)="publishEditorActions()">
         </label>
-        <button type="submit" class="button button-primary" [disabled]="eventTypeSaving">Hinzufügen</button>
       </form>
       <p class="error-message" role="alert" [hidden]="!eventTypeError">{{ eventTypeError }}</p>
       <p class="success-message" role="status" [hidden]="!eventTypeMessage">{{ eventTypeMessage }}</p>
       @for (eventType of personEventTypes; track eventType.id) {
-        <div class="person-event-type-row">
+        <div class="person-event-type-row" [class.person-event-type-selected]="selectedEventTypeId === eventType.id" (click)="selectEventType(eventType)">
           <span class="event-type-id">ID {{ eventType.id }}</span>
           <label>
             <span>Name</span>
-            <input type="text" [name]="'personEventTypeName-' + eventType.id" [(ngModel)]="eventType.name" maxlength="100" required>
+            <input type="text" [name]="'personEventTypeName-' + eventType.id" [(ngModel)]="eventType.name" (ngModelChange)="publishEditorActions()" maxlength="100" required>
           </label>
           <label class="event-type-color">
             <span>Farbe</span>
-            <input type="color" [name]="'personEventTypeColor-' + eventType.id" [(ngModel)]="eventType.color">
+            <input type="color" [name]="'personEventTypeColor-' + eventType.id" [(ngModel)]="eventType.color" (ngModelChange)="publishEditorActions()">
           </label>
-          <div class="event-type-actions">
-            <button type="button" class="button button-muted" [disabled]="eventTypeSaving" (click)="savePersonEventType(eventType)">Speichern</button>
-            <button type="button" class="button button-muted" [disabled]="eventTypeSaving" (click)="deletePersonEventType(eventType)">Löschen</button>
-          </div>
         </div>
       }
       @if (!eventTypesLoading && personEventTypes.length === 0) {
@@ -140,7 +131,7 @@
       }
       <label class="assignment-title">
         <span>Titel der Plan-Zuordnung</span>
-        <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" maxlength="100" required>
+        <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
       <div class="schedule-table-wrapper">
         <table class="schedule-table school-timetable">
@@ -171,6 +162,7 @@
                         <select
                           [name]="'event-type-' + day + '-' + period"
                           [(ngModel)]="entry.event_type_id"
+                          (ngModelChange)="publishEditorActions()"
                           [attr.aria-label]="day + ' ' + period + ' Fach oder Eventart'"
                           [disabled]="eventTypesLoading || personEventTypes.length === 0"
                           [style.background-color]="getEventTypeColor(entry.event_type_id)"
@@ -214,7 +206,7 @@
             </div>
             <label>
               <span>Aktion</span>
-              <select [name]="'conflict-action-' + conflict.id" [(ngModel)]="conflict.action">
+              <select [name]="'conflict-action-' + conflict.id" [(ngModel)]="conflict.action" (ngModelChange)="publishEditorActions()">
                 <option value="">Bitte entscheiden</option>
                 <option value="move">Zeit ändern</option>
                 <option value="delete">Löschen</option>
@@ -223,7 +215,7 @@
             @if (conflict.action === 'move') {
               <label>
                 <span>Tag</span>
-                <select [name]="'conflict-day-' + conflict.id" [(ngModel)]="conflict.newDay">
+                <select [name]="'conflict-day-' + conflict.id" [(ngModel)]="conflict.newDay" (ngModelChange)="publishEditorActions()">
                   @for (day of daysOfWeek; track day) {
                     <option [value]="day">{{ day }}</option>
                   }
@@ -231,38 +223,23 @@
               </label>
               <label>
                 <span>Beginn</span>
-                <input type="time" [name]="'conflict-start-' + conflict.id" [(ngModel)]="conflict.newStart" required>
+                <input type="time" [name]="'conflict-start-' + conflict.id" [(ngModel)]="conflict.newStart" (ngModelChange)="publishEditorActions()" required>
               </label>
               <label>
                 <span>Ende</span>
-                <input type="time" [name]="'conflict-end-' + conflict.id" [(ngModel)]="conflict.newEnd" required>
+                <input type="time" [name]="'conflict-end-' + conflict.id" [(ngModel)]="conflict.newEnd" (ngModelChange)="publishEditorActions()" required>
               </label>
             }
           </div>
         }
         <p class="error-message" role="alert" [hidden]="!planError">{{ planError }}</p>
         <div class="conflict-dialog-actions">
-          <button type="button" class="button button-muted" (click)="closeConflictDialog()">Abbrechen</button>
-          <button
-            type="button"
-            class="button button-primary"
-            [hidden]="conflicts.length === 0"
-            [disabled]="planApplying || !conflictDecisionsValid"
-            (click)="applyPlan()">
-            {{ planApplying ? 'Speichert …' : 'Konflikte lösen und speichern' }}
-          </button>
+          <button type="button" class="button button-muted" (click)="closeConflictDialog()">Dialog schließen</button>
         </div>
       </section>
       </div>
 
     <p class="error-message" role="alert" [hidden]="!planError">{{ planError }}</p>
     <p class="success-message" role="status" [hidden]="!planMessage">{{ planMessage }}</p>
-    <button
-      type="button"
-      class="button button-primary"
-      [disabled]="planApplying || plansLoading || assignmentLoading || !selectedPlan || scheduleEntries.length === 0"
-      (click)="applyPlan()">
-      {{ planApplying ? 'Speichert …' : 'Plan speichern' }}
-    </button>
   </section>
 </section>

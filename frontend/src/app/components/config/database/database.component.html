@@ -1,6 +1,53 @@
 <div class="admin-section">
   <h3>🗄️ Relationaler SQLite Tabellen-Inspektor</h3>
   <p style="color: #868e96; font-size: 13px; margin: -10px 0 10px 0;">Klicke auf eine Systemtabelle, um Schema und Zeilen live auszulesen</p>
+
+  <details class="backup-inspector" open>
+    <summary>Datenbank-Backups ({{ backups.length }})</summary>
+    <div class="backup-content">
+      <p class="backup-description">JSON-Vollbackups aller Datenbanktabellen und ihres Schemas. Speicherort: backend\backups</p>
+      <div class="backup-actions">
+        <button type="button" class="backup-button" [disabled]="backupsLoading" (click)="refreshBackups()">
+          Aktualisieren
+        </button>
+      </div>
+      <p class="backup-message backup-error" role="alert" [hidden]="!backupError">{{ backupError }}</p>
+      <p class="backup-message backup-success" role="status" [hidden]="!backupMessage">{{ backupMessage }}</p>
+      @if (backupsLoading) {
+        <p class="backup-empty" role="status">Backups werden geladen …</p>
+      } @else if (backups.length === 0 && backupErrors.length === 0) {
+        <p class="backup-empty">Noch keine Backups vorhanden.</p>
+      }
+      @if (backupErrors.length > 0) {
+        <div class="backup-error-list" role="alert">
+          @for (error of backupErrors; track error.file) {
+            <p>{{ error.file }}: {{ error.error }}</p>
+          }
+        </div>
+      }
+      @for (backup of backups; track backup.id) {
+        <div
+          class="backup-row"
+          [id]="'database-backup-' + backup.id"
+          [class.backup-row-selected]="selectedBackupId === backup.id">
+          <div class="backup-info">
+            <strong>{{ formatBackupDate(backup.created_at) }}</strong>
+            <span>{{ backup.id }} · {{ formatBackupSize(backup.size_bytes) }}</span>
+          </div>
+          <div class="backup-row-actions">
+            <button type="button" class="backup-button" (click)="downloadBackup(backup)">JSON herunterladen</button>
+            <button
+              type="button"
+              class="backup-button backup-restore"
+              [disabled]="restoringBackupId !== null"
+              (click)="restoreBackup(backup)">
+              {{ restoringBackupId === backup.id ? 'Wird wiederhergestellt …' : 'Wiederherstellen' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </details>
   
   <div class="db-tables-grid">
     <button *ngFor="let table of dbTables" 

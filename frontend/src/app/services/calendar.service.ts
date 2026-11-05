@@ -106,7 +106,14 @@ export class CalendarService {
       }),
     );
   }
-  public loadCategories(): void { this.apiService.getCategories().subscribe((c: Category[]) => this.categoriesSubject.next(c)); }
+  public reloadCategories(): Observable<Category[]> {
+    return this.apiService.getCategories().pipe(tap((categories) => this.categoriesSubject.next(categories)));
+  }
+  public loadCategories(): void {
+    this.reloadCategories().subscribe({
+      error: (error: unknown) => console.error('Kategorien konnten nicht geladen werden:', error),
+    });
+  }
   public loadSystemConfig(): void {
     this.apiService.getSystemConfigSettings().subscribe({
       next: (config: SystemConfig) => {
@@ -169,6 +176,9 @@ export class CalendarService {
   }
   private loadUsers(): void { this.apiService.getUsers().subscribe((users: User[]) => this.usersSubject.next(users)); }
   public refreshUsers(): void { this.loadUsers(); }
+  public reloadUsers(): Observable<User[]> {
+    return this.apiService.getUsers().pipe(tap((users) => this.usersSubject.next(users)));
+  }
   private loadRewards(): void { this.apiService.getRewards().subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards)); }
   public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code'>): Observable<UpdateUserProfileResult> {
     return this.apiService.updateUserProfile(userId, profile).pipe(tap(({ user, blocks_changed }) => {

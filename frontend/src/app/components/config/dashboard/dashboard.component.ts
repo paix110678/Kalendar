@@ -1,8 +1,8 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition } from '../../../services/api.service';
-import { CalendarService } from '../../../services/calendar.service';
+import { ApiService, DatabaseBackup, DatabaseBackupList, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition, WeatherLocation } from '../../../services/api.service';
+import { CalendarService, Category } from '../../../services/calendar.service';
 import { Subscription } from 'rxjs';
 
 // Importpfade matchen exakt zu euren neuen, sauberen Geschwister-Ordnern
@@ -13,6 +13,7 @@ import { DatabaseComponent } from '../database/database.component';
 import { PlansComponent } from '../plans/plans.component';
 import { HolidaysComponent } from '../holidays/holidays.component';
 import { User } from '../../../services/calendar.service';
+import { AdminEditorActions } from '../admin-editor-actions';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -53,14 +54,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public holidaysLoading = false;
   public holidaysLoadError = '';
   public dbTables: string[] = [];
+  public databaseBackups: DatabaseBackup[] = [];
+  public databaseBackupErrors: Array<{ file: string; error: string }> = [];
+  public databaseBackupsLoading = false;
+  public databaseBackupsError = '';
+  public selectedDatabaseBackupId: string | null = null;
+  public weatherLocations: WeatherLocation[] = [];
+  public weatherLocationsLoading = false;
+  public weatherLocationsError = '';
+  public selectedWeatherLocationId: number | null = null;
+  public calendarCategories: Category[] = [];
+  public selectedCategoryId: number | null = null;
+  public expandedSections: Record<'plans' | 'holidays' | 'categories' | 'system' | 'database', boolean> = {
+    plans: false,
+    holidays: false,
+    categories: false,
+    system: false,
+    database: false,
+  };
+  public editorActions: AdminEditorActions | null = null;
+  public editorMessage = '';
+  public editorError = false;
   private readonly subscriptions = new Subscription();
 
   constructor(private apiService: ApiService, private calendarService: CalendarService) {}
 
   ngOnInit(): void {
-    this.apiService.getDatabaseTables().subscribe((tables: string[]) => {
-      this.dbTables = tables;
-    });
+    this.subscriptions.add(this.calendarService.categories$.subscribe((categories) => {
+      this.calendarCategories = categories;
+      if (this.selectedCategoryId !== null
+        && !categories.some((category) => category.id === this.selectedCategoryId)) {
+        this.selectedCategoryId = null;
+      }
+    }));
     this.subscriptions.add(this.calendarService.savedPlansState$.subscribe((state) => {
       if (state.data !== null) this.savedPlans = state.data;
       this.plansLoading = state.loading;
@@ -81,12 +107,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openPlans(): void {
+    this.editorActions = null;
+    const shouldExpand = !this.expandedSections.plans;
+    this.expandedSections.plans = shouldExpand;
     this.activeTab = 'plans';
     this.selectedPlanId = null;
+    if (shouldExpand) this.refreshSavedPlans();
     this.plansComponent?.resetForm();
   }
 
   openSavedPlan(planId: number): void {
+    this.editorActions = null;
+    this.expandedSections.plans = true;
     this.activeTab = 'plans';
     this.selectedPlanId = planId;
     setTimeout(() => {
@@ -109,15 +141,150 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openHolidays(stateCode: string | null = null): void {
+    this.editorActions = null;
+    const shouldExpand = stateCode !== null || !this.expandedSections.holidays;
+    this.expandedSections.holidays = shouldExpand;
     this.activeTab = 'holidays';
     this.selectedHolidayState = stateCode;
+    if (stateCode === null && shouldExpand) this.refreshSavedHolidays();
+  }
+
+  openCategories(categoryId: number | null = null): void {
+    this.editorActions = null;
+    this.activeTab = 'categories';
+    this.selectedCategoryId = categoryId;
+    if (categoryId === null) this.toggleSection('categories');
+    else this.expandedSections.categories = true;
   }
 
   refreshSavedHolidays(): void {
     this.calendarService.loadSavedHolidayData();
   }
 
+  openDatabase(backupId: string | null = null): void {
+    this.editorActions = null;
+    this.activeTab = 'database';
+    this.selectedDatabaseBackupId = backupId;
+    if (backupId === null) this.toggleSection('database');
+    else this.expandedSections.database = true;
+  }
+
+  openWeatherConfig(): void {
+    this.editorActions = null;
+    this.activeTab = 'system';
+    this.toggleSection('system');
+    this.selectedWeatherLocationId = null;
+  }
+
+  toggleSection(section: 'plans' | 'holidays' | 'categories' | 'system' | 'database'): void {
+    this.editorActions = null;
+    const shouldExpand = !this.expandedSections[section];
+    this.expandedSections[section] = shouldExpand;
+    if (!shouldExpand) return;
+
+    if (section === 'plans') this.refreshSavedPlans();
+    else if (section === 'holidays') this.refreshSavedHolidays();
+    else if (section === 'categories') this.calendarService.loadCategories();
+    else if (section === 'system') this.refreshWeatherLocations();
+    else {
+      this.apiService.getDatabaseTables().subscribe({
+        next: (tables) => this.dbTables = tables,
+        error: (error: unknown) => console.error('Datenbanktabellen konnten nicht geladen werden:', error),
+      });
+      this.refreshDatabaseBackups();
+    }
+  }
+
+  openWeatherLocation(locationId: number): void {
+    this.editorActions = null;
+    this.expandedSections.system = true;
+    this.activeTab = 'system';
+    this.selectedWeatherLocationId = locationId;
+  }
+
+  refreshWeatherLocations(): void {
+    this.weatherLocationsLoading = true;
+    this.weatherLocationsError = '';
+    this.apiService.getWeatherLocations().subscribe({
+      next: (locations) => {
+        this.weatherLocations = locations;
+        this.weatherLocationsLoading = false;
+        this.weatherLocationsError = '';
+      },
+      error: (error: unknown) => {
+        console.error('Wetterstandorte im Navigationstree konnten nicht geladen werden:', error);
+        this.weatherLocationsLoading = false;
+        this.weatherLocationsError = 'Wetterstandorte konnten nicht geladen werden.';
+      },
+    });
+  }
+
+  onWeatherLocationsChanged(locations: WeatherLocation[]): void {
+    this.weatherLocations = locations;
+    this.weatherLocationsLoading = false;
+    this.weatherLocationsError = '';
+    if (this.selectedWeatherLocationId !== null
+      && !locations.some((location) => location.id === this.selectedWeatherLocationId)) {
+      this.selectedWeatherLocationId = locations.find((location) => location.is_active)?.id ?? null;
+    }
+  }
+
+  onWeatherLocationSelected(locationId: number): void {
+    this.selectedWeatherLocationId = locationId;
+  }
+
+  onEditorActionsChanged(actions: AdminEditorActions): void {
+    this.editorActions = actions;
+  }
+
+  saveEditorChanges(): void {
+    if (!this.editorActions || (!this.editorActions.dirty && !this.editorActions.showSave) || this.editorActions.busy) return;
+    this.editorMessage = '';
+    this.editorActions.save();
+  }
+
+  cancelEditorChanges(): void {
+    if (!this.editorActions?.dirty || this.editorActions.busy) return;
+    this.editorMessage = '';
+    this.editorActions.cancel();
+  }
+
+  deleteEditorItem(): void {
+    if (!this.editorActions?.canDelete || this.editorActions.busy) return;
+    this.editorActions.delete?.();
+  }
+
+  refreshDatabaseBackups(): void {
+    this.databaseBackupsLoading = true;
+    this.databaseBackupsError = '';
+    this.apiService.getDatabaseBackups().subscribe({
+      next: (result) => this.onDatabaseBackupsChanged(result),
+      error: (error: unknown) => {
+        console.error('Datenbankbackups im Navigationstree konnten nicht geladen werden:', error);
+        this.databaseBackupsLoading = false;
+        this.databaseBackupsError = 'Backups konnten nicht geladen werden.';
+      },
+    });
+  }
+
+  onDatabaseBackupsChanged(result: DatabaseBackupList): void {
+    this.databaseBackups = result.backups;
+    this.databaseBackupErrors = result.errors;
+    this.databaseBackupsLoading = false;
+    this.databaseBackupsError = '';
+  }
+
+  databaseBackupLabel(backup: DatabaseBackup): string {
+    const date = new Date(backup.created_at);
+    if (Number.isNaN(date.getTime())) return backup.id;
+    return `${new Intl.DateTimeFormat('de-DE', {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+    }).format(date)} · ${backup.id.slice(-6)}`;
+  }
+
   onHolidayStateAdded(data: HolidayStateData): void {
+    this.expandedSections.holidays = true;
     this.savedHolidayStates = [...new Set([...this.savedHolidayStates, data.state_code])].sort();
     this.savedHolidays = [
       ...this.savedHolidays.filter((holiday) => holiday.state_code !== data.state_code),
@@ -130,16 +297,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  onSavedHolidayDataChanged(data: { states: string[]; holidays: Holiday[] }): void {
+    this.savedHolidayStates = data.states;
+    this.savedHolidays = data.holidays;
+    this.calendarService.setSavedHolidayData(data);
+    if (this.selectedHolidayState && !data.states.includes(this.selectedHolidayState)) {
+      this.selectedHolidayState = null;
+    }
+  }
+
   holidayStateName(code: string): string {
     return GERMAN_STATES.find((state) => state.code === code)?.name ?? code;
   }
 
   selectMembers(): void {
+    this.editorActions = null;
     this.activeTab = 'users';
     this.selectedMemberId = null;
   }
 
   selectMember(userId: number): void {
+    this.editorActions = null;
     this.activeTab = 'users';
     this.selectedMemberId = userId;
   }

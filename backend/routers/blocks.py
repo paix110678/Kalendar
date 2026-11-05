@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
+import sqlite3
 import database
 
 router = APIRouter(prefix="/api/blocks", tags=["Blocks"])
@@ -33,6 +34,10 @@ class CategoryUpdate(BaseModel):
     label: str
     color: str
     default_short: str
+
+
+class CategoryCreate(CategoryUpdate):
+    value: str = Field(..., min_length=1, max_length=50)
 
 
 def reject_plan_event_mutation(block):
@@ -72,6 +77,48 @@ def update_category(cat_id: int, payload: CategoryUpdate):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+
+@router.post("/categories", status_code=status.HTTP_201_CREATED)
+def create_category(payload: CategoryCreate):
+    conn = database.get_db_connection()
+    try:
+        conn.execute(
+            "INSERT INTO categories (value, label, color, default_short) VALUES (?, ?, ?, ?)",
+            (payload.value, payload.label.strip(), payload.color, payload.default_short.strip()),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM categories WHERE value = ?", (payload.value,)).fetchone()
+        return dict(row)
+    except sqlite3.IntegrityError as error:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail="Kategorie-Kürzel ist bereits vorhanden.") from error
+    finally:
+        conn.close()
+
+
+@router.delete("/categories/{cat_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(cat_id: int):
+    conn = database.get_db_connection()
+    try:
+        category = conn.execute("SELECT value FROM categories WHERE id = ?", (cat_id,)).fetchone()
+        if category is None:
+            raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+        if conn.execute(
+            "SELECT 1 FROM time_blocks WHERE type = ? LIMIT 1", (category["value"],)
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Kategorie wird noch in Kalenderterminen verwendet und kann nicht gelöscht werden.",
+            )
+        conn.execute("DELETE FROM categories WHERE id = ?", (cat_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return None
 
 @router.get("/all")
 def get_all_blocks():

@@ -1,40 +1,52 @@
 <div class="admin-section">
   <h3>🌤️ Wetter &amp; Standort konfigurieren</h3>
-  <div class="inline-create-card" *ngIf="localConfig">
+  <div class="location-actions">
+    <button type="button" class="btn-save-config-submit" (click)="startCreatingLocation()">＋ Standort hinzufügen</button>
+  </div>
+  <p *ngIf="loading" role="status">Standort wird geladen …</p>
+
+  <div class="inline-create-card" *ngIf="!loading && (editingLocationId !== null || creatingLocation)">
+    <h4>{{ creatingLocation ? 'Neuen Standort anlegen' : locationForm.name }}</h4>
     <div class="form-grid-config">
       <div class="field-item">
-        <label>Eindeutige Postleitzahl (PLZ):</label>
-        <input type="text" [(ngModel)]="localConfig.weather_plz" style="width: 140px;">
+        <label for="weather-location-name">Standortname:</label>
+        <input id="weather-location-name" type="text" [(ngModel)]="locationForm.name" (ngModelChange)="publishEditorActions()" maxlength="100">
+      </div>
+      <div class="field-item">
+        <label for="weather-location-plz">Postleitzahl (PLZ):</label>
+        <input id="weather-location-plz" type="text" [(ngModel)]="locationForm.weather_plz" (ngModelChange)="publishEditorActions()" maxlength="20">
       </div>
       <div class="field-item">
         <label>Erkannter Ort:</label>
-        <input type="text" [value]="localConfig.weather_city || 'Noch nicht ermittelt'" style="width: 180px;" readonly>
+        <input type="text" [value]="locationForm.weather_city || 'Noch nicht ermittelt'" readonly>
       </div>
       <div class="field-item">
         <label>Gespeicherte Koordinaten:</label>
         <input
           type="text"
-          [value]="localConfig.weather_latitude !== null && localConfig.weather_longitude !== null
-            ? localConfig.weather_latitude + ', ' + localConfig.weather_longitude
+          [value]="locationForm.weather_latitude !== null && locationForm.weather_longitude !== null
+            ? locationForm.weather_latitude + ', ' + locationForm.weather_longitude
             : 'Noch nicht ermittelt'"
-          style="width: 200px;"
           readonly>
       </div>
       <div class="field-item">
-        <label>Wetterdienst (API):</label>
-        <select [(ngModel)]="localConfig.weather_service">
+        <label for="weather-location-service">Wetterdienst (API):</label>
+        <select id="weather-location-service" [(ngModel)]="locationForm.weather_service" (ngModelChange)="publishEditorActions()">
           <option value="open_meteo">🌦️ Open-Meteo (Kostenlos)</option>
           <option value="weather_api">🌀 WeatherAPI (Schlüssel benötigt)</option>
         </select>
       </div>
-      <div class="field-item" *ngIf="localConfig.weather_service === 'weather_api'">
-        <label>WeatherAPI Key:</label>
-        <input type="text" [(ngModel)]="localConfig.api_key" style="width: 250px;">
+      <div class="field-item" *ngIf="locationForm.weather_service === 'weather_api'">
+        <label for="weather-location-api-key">WeatherAPI Key:</label>
+        <input id="weather-location-api-key" type="password" [(ngModel)]="locationForm.api_key" (ngModelChange)="publishEditorActions()">
       </div>
     </div>
+    <p *ngIf="locationForm.is_active" role="status">Aktiver Standort für die Wetteranzeige</p>
     <p class="error-text-msg" role="alert" *ngIf="configMessage && configError">{{ configMessage }}</p>
     <p role="status" *ngIf="configMessage && !configError">{{ configMessage }}</p>
-    <button class="btn-save-config-submit" (click)="triggerConfigUpdateProtection()">💾 Sichern</button>
+    <div class="location-actions">
+      <button *ngIf="!creatingLocation && !locationForm.is_active" class="btn-save-config-submit" (click)="triggerAction('activate')">Als Wetter-Standort verwenden</button>
+    </div>
   </div>
 </div>
 
@@ -45,7 +57,7 @@
     <input type="password" [(ngModel)]="passwordInput" (keyup.enter)="verifyAdminAction()" placeholder="Passwort eingeben...">
     <p class="error-text-msg" *ngIf="passwordError">{{ passwordError }}</p>
     <div class="modal-buttons">
-      <button class="btn-modal-cancel" (click)="showPasswordPrompt = false">Abbrechen</button>
+      <button class="btn-modal-cancel" (click)="cancelPasswordPrompt()">Dialog schließen</button>
       <button class="btn-modal-confirm" (click)="verifyAdminAction()">Bestätigen</button>
     </div>
   </div>

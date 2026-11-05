@@ -8,13 +8,20 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 2. BEHOBEN: Wir greifen jetzt direkt auf die kalender.db IM backend-Ordner zu!
 DB_FILE = os.path.join(BASE_DIR, "kalender.db")
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
+def get_db_connection(db_file=None):
+    conn = sqlite3.connect(db_file or DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
-    conn = get_db_connection()
+def init_db(db_file=None):
+    conn = get_db_connection(db_file)
+    try:
+        _init_db_connection(conn)
+    finally:
+        conn.close()
+
+
+def _init_db_connection(conn):
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -81,6 +88,20 @@ def init_db():
             api_url_open_meteo TEXT,
             api_url_weather_api TEXT,
             api_url_zippopotam TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS weather_locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            weather_city TEXT NOT NULL DEFAULT '',
+            weather_plz TEXT NOT NULL DEFAULT '',
+            weather_service TEXT NOT NULL DEFAULT 'open_meteo',
+            api_key TEXT NOT NULL DEFAULT '',
+            weather_latitude REAL,
+            weather_longitude REAL,
+            is_active INTEGER NOT NULL DEFAULT 0
         )
     """)
 
@@ -420,8 +441,37 @@ def init_db():
         """)
         conn.commit()
 
+    location_count = cursor.execute("SELECT COUNT(*) FROM weather_locations").fetchone()[0]
+    if location_count == 0:
+        legacy_config = cursor.execute(
+            """
+            SELECT weather_city, weather_plz, weather_service, api_key,
+                   weather_latitude, weather_longitude
+            FROM system_config ORDER BY id ASC LIMIT 1
+            """
+        ).fetchone()
+        if legacy_config:
+            cursor.execute(
+                """
+                INSERT INTO weather_locations (
+                    name, weather_city, weather_plz, weather_service, api_key,
+                    weather_latitude, weather_longitude, is_active
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                """,
+                (
+                    legacy_config["weather_city"] or "",
+                    legacy_config["weather_city"] or "",
+                    legacy_config["weather_plz"] or "",
+                    legacy_config["weather_service"] or "open_meteo",
+                    legacy_config["api_key"] or "",
+                    legacy_config["weather_latitude"],
+                    legacy_config["weather_longitude"],
+                ),
+            )
+            conn.commit()
+
     cursor.execute("DROP TABLE IF EXISTS holiday_settings")
     conn.commit()
 
-    conn.close()
     print("✅ System-Datenbank erfolgreich geprüft!")

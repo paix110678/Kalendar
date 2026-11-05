@@ -14,3 +14,7 @@
   .admin-section { padding: 14px; }
   .input-row { align-items: stretch; flex-wrap: wrap; }
 }
+.error-message {
+  color: #c92a2a;
+  font-size: 13px;
+}

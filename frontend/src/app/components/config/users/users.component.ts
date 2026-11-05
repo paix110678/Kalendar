@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CalendarService, User } from '../../../services/calendar.service';
 import { MemberDetailsComponent } from './member-details/member-details.component';
+import { AdminEditorActions } from '../admin-editor-actions';
 
 @Component({
   selector: 'app-users',
@@ -11,17 +12,24 @@ import { MemberDetailsComponent } from './member-details/member-details.componen
   templateUrl: './users.component.html',
   styleUrl: './users.component.css'
 })
-export class UsersComponent {
+export class UsersComponent implements OnChanges {
   @Input() activeUsers: User[] = [];
   @Input() selectedUserId: number | null = null;
   @Output() memberClosed = new EventEmitter<void>();
+  @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
   private calendarService = inject(CalendarService);
+  public saving = false;
+  public userActionError = '';
 
   public createUserName = '';
   public createUserGroup: 'adult' | 'child' = 'child';
 
   get selectedUser(): User | undefined {
     return this.activeUsers.find(user => user.id === this.selectedUserId);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedUserId'] || changes['activeUsers']) this.publishEditorActions();
   }
 
   roleLabel(role: User['role']): string {
@@ -36,16 +44,76 @@ export class UsersComponent {
 
   submitNewUser(): void {
     const name = this.createUserName.trim();
-    if (!name) return;
+    if (!name) {
+      this.userActionError = 'Bitte einen Namen eingeben.';
+      return;
+    }
     const finalRole = this.createUserGroup === 'adult' ? 'adult' : 'child_10';
-    this.calendarService.addUser(name, finalRole, '#228be6').subscribe(() => {
-      this.createUserName = '';
+    this.saving = true;
+    this.userActionError = '';
+    this.publishEditorActions();
+    this.calendarService.addUser(name, finalRole, '#228be6').subscribe({
+      next: () => {
+        this.createUserName = '';
+        this.saving = false;
+        this.publishEditorActions();
+      },
+      error: (error: unknown) => {
+        console.error('Familienmitglied konnte nicht hinzugefügt werden:', error);
+        this.userActionError = 'Familienmitglied konnte nicht hinzugefügt werden.';
+        this.saving = false;
+        this.publishEditorActions();
+      },
+    });
+  }
+
+  publishEditorActions(): void {
+    const user = this.selectedUser;
+    this.editorActionsChange.emit({
+      dirty: !user && (this.createUserName.trim() !== '' || this.createUserGroup !== 'child'),
+      canDelete: user !== undefined,
+      busy: this.saving,
+      save: () => this.submitNewUser(),
+      cancel: () => {
+        this.createUserName = '';
+        this.createUserGroup = 'child';
+        this.userActionError = '';
+        this.publishEditorActions();
+      },
+      delete: () => {
+        if (user) this.deleteUser(user.id);
+      },
     });
   }
 
   deleteUser(userId: number): void {
-    if(confirm('Mitglied wirklich löschen?')) {
-      this.calendarService.deleteUser(userId).subscribe(() => this.memberClosed.emit());
-    }
+    if (!confirm('Mitglied wirklich löschen?')) return;
+    this.saving = true;
+    this.publishEditorActions();
+    this.calendarService.deleteUser(userId).subscribe({
+      next: () => {
+        this.saving = false;
+        this.memberClosed.emit();
+      },
+      error: (error: unknown) => {
+        console.error(`Familienmitglied ${userId} konnte nicht gelöscht werden:`, error);
+        this.userActionError = 'Familienmitglied konnte nicht gelöscht werden.';
+        this.saving = false;
+        this.publishEditorActions();
+      },
+    });
+  }
+
+  onMemberActionsChanged(actions: AdminEditorActions): void {
+    const user = this.selectedUser;
+    this.editorActionsChange.emit({
+      ...actions,
+      canDelete: actions.canDelete || user !== undefined,
+      delete: actions.canDelete
+        ? actions.delete
+        : () => {
+          if (user) this.deleteUser(user.id);
+        },
+    });
   }
 }

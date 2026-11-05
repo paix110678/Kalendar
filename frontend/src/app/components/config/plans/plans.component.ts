@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, PlanDefinition, PlanHour } from '../../../services/api.service';
 import { CalendarService } from '../../../services/calendar.service';
 import { catchError, map, of, switchMap, timeout } from 'rxjs';
+import { AdminEditorActions } from '../admin-editor-actions';
 
 @Component({
   selector: 'app-plans',
@@ -20,7 +21,9 @@ export class PlansComponent implements OnChanges {
   private pendingPlanId: number | null = null;
 
   @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
+  @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
   @Input() initialPlans: PlanDefinition[] = [];
+  @Input() selectedPlanId: number | null = null;
 
   readonly daysOfWeek = [
     'Montag',
@@ -45,12 +48,24 @@ export class PlansComponent implements OnChanges {
   saving = false;
   errorMessage = '';
   successMessage = '';
+  private savedFormSnapshot = '';
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['initialPlans']) {
       this.plans = this.initialPlans;
       this.loading = false;
+      if (this.selectedPlanId !== null) {
+        const selected = this.plans.find((plan) => plan.id === this.selectedPlanId);
+        if (selected) this.editPlan(selected);
+      } else {
+        this.savedFormSnapshot = this.formSnapshot();
+      }
+      this.publishEditorActions();
       this.changeDetector.markForCheck();
+    }
+    if (changes['selectedPlanId'] && !changes['selectedPlanId'].firstChange) {
+      if (this.selectedPlanId === null) this.resetForm();
+      else this.openPlan(this.selectedPlanId);
     }
   }
 
@@ -73,6 +88,7 @@ export class PlansComponent implements OnChanges {
             this.errorMessage = 'Der ausgewählte Plan konnte nicht gefunden werden.';
           }
         }
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: () => {
@@ -90,6 +106,7 @@ export class PlansComponent implements OnChanges {
     this.hours = Array.from({ length: count }, (_, index) =>
       this.hours[index] ?? defaultHours[index],
     );
+    this.publishEditorActions();
   }
 
   savePlan(): void {
@@ -120,6 +137,7 @@ export class PlansComponent implements OnChanges {
     };
 
     this.saving = true;
+    this.publishEditorActions();
     const editingPlanId = this.editingPlanId;
     const updatingPlan = editingPlanId !== null;
     const request = editingPlanId === null
@@ -153,8 +171,10 @@ export class PlansComponent implements OnChanges {
           savedPlan,
         ].sort((first, second) => first.id - second.id);
         this.plansChanged.emit(this.plans);
-        this.resetForm();
+        if (updatingPlan) this.editPlan(savedPlan);
+        else this.resetForm();
         this.loadPlans();
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: (error: unknown) => {
@@ -177,6 +197,8 @@ export class PlansComponent implements OnChanges {
     this.excludePublicHolidays = plan.exclude_public_holidays;
     this.successMessage = '';
     this.errorMessage = '';
+    this.savedFormSnapshot = this.formSnapshot();
+    this.publishEditorActions();
   }
 
   openPlan(planId: number): void {
@@ -200,6 +222,8 @@ export class PlansComponent implements OnChanges {
 
     this.errorMessage = '';
     this.successMessage = '';
+    this.saving = true;
+    this.publishEditorActions();
     this.apiService.deletePlan(plan.id).pipe(
       switchMap(() => this.calendarService.refreshAllBlocks().pipe(
         timeout({ first: 15000 }),
@@ -211,6 +235,7 @@ export class PlansComponent implements OnChanges {
       )),
     ).subscribe({
       next: (calendarRefreshed) => {
+        this.saving = false;
         this.plans = this.plans.filter((item) => item.id !== plan.id);
         this.plansChanged.emit(this.plans);
         this.calendarService.refreshUsers();
@@ -220,10 +245,13 @@ export class PlansComponent implements OnChanges {
         this.successMessage = calendarRefreshed
           ? 'Plan und zugehörige wiederkehrende Termine wurden gelöscht.'
           : 'Plan wurde gelöscht, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: () => {
+        this.saving = false;
         this.errorMessage = 'Plan konnte nicht gelöscht werden.';
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
     });
@@ -239,6 +267,57 @@ export class PlansComponent implements OnChanges {
     this.hours = this.createDefaultHours(this.hoursCount);
     this.excludeSchoolHolidays = false;
     this.excludePublicHolidays = false;
+    this.savedFormSnapshot = this.formSnapshot();
+    this.publishEditorActions();
+  }
+
+  cancelChanges(): void {
+    this.loading = true;
+    this.apiService.getPlans().pipe(timeout({ first: 15000 })).subscribe({
+      next: (plans) => {
+        this.plans = plans;
+        this.plansChanged.emit(plans);
+        const savedPlan = plans.find((plan) => plan.id === this.selectedPlanId);
+        if (savedPlan) this.editPlan(savedPlan);
+        else this.resetForm();
+        this.loading = false;
+        this.publishEditorActions();
+        this.changeDetector.markForCheck();
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Der gespeicherte Stand konnte nicht neu geladen werden.';
+        this.publishEditorActions();
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  private formSnapshot(): string {
+    return JSON.stringify({
+      planName: this.planName,
+      startDay: this.startDay,
+      endDay: this.endDay,
+      hoursCount: this.hoursCount,
+      hours: this.hours,
+      excludeSchoolHolidays: this.excludeSchoolHolidays,
+      excludePublicHolidays: this.excludePublicHolidays,
+    });
+  }
+
+  publishEditorActions(): void {
+    const dirty = this.formSnapshot() !== this.savedFormSnapshot;
+    const selected = this.plans.find((plan) => plan.id === this.selectedPlanId);
+    this.editorActionsChange.emit({
+      dirty,
+      canDelete: selected !== undefined,
+      busy: this.saving,
+      save: () => this.savePlan(),
+      cancel: () => this.cancelChanges(),
+      delete: () => {
+        if (selected) this.deletePlan(selected);
+      },
+    });
   }
 
   private createDefaultHours(count: number): PlanHour[] {

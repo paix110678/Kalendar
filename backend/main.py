@@ -6,10 +6,11 @@ import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import database
+import backup_service
 import uvicorn
 
 # Router-Imports
-from routers import users, blocks, rewards, config, plans, holidays
+from routers import users, blocks, rewards, config, plans, holidays, backups
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -41,6 +42,12 @@ async def hourly_weather_cron_task():
 async def lifespan(_: FastAPI):
     logger.info("Familien-Kalender API wird gestartet.")
     database.init_db()
+    backup_migration_failures = backup_service.migrate_backup_files()
+    if backup_migration_failures:
+        logger.error(
+            "%s Datenbankbackup(s) konnten nicht auf das aktuelle Schema migriert werden.",
+            len(backup_migration_failures),
+        )
     weather_task = asyncio.create_task(hourly_weather_cron_task())
     logger.info("Datenbank initialisiert; Wetteraktualisierung geplant.")
     try:
@@ -74,6 +81,7 @@ app.include_router(rewards.router)
 app.include_router(config.router)
 app.include_router(plans.router)
 app.include_router(holidays.router)
+app.include_router(backups.router)
 
 @app.get("/")
 def read_root():

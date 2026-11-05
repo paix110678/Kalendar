@@ -2,9 +2,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EMPTY, asyncScheduler, catchError, finalize, observeOn, switchMap, timeout } from 'rxjs';
+import { EMPTY, asyncScheduler, catchError, finalize, firstValueFrom, observeOn, switchMap, timeout } from 'rxjs';
 import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../services/api.service';
 import { CalendarService, User } from '../../../../services/calendar.service';
+import { AdminEditorActions } from '../../admin-editor-actions';
 
 type ConflictAction = '' | 'delete' | 'move';
 
@@ -32,7 +33,7 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 })
 export class MemberDetailsComponent implements OnChanges {
   @Input({ required: true }) user!: User;
-  @Output() close = new EventEmitter<void>();
+  @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
 
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
@@ -76,6 +77,10 @@ export class MemberDetailsComponent implements OnChanges {
   profileError = '';
   planMessage = '';
   planError = '';
+  selectedEventTypeId: number | null = null;
+  private savedProfileSnapshot = '';
+  private savedEventTypesSnapshot = '';
+  private savedAssignmentSnapshot = '';
 
   private loadedUserId: number | null = null;
 
@@ -88,6 +93,8 @@ export class MemberDetailsComponent implements OnChanges {
     this.schoolStatus = this.user.status_school;
     this.sportStatus = this.user.status_sport;
     this.stateCode = this.user.state_code;
+    this.savedProfileSnapshot = this.profileSnapshot();
+    this.savedAssignmentSnapshot = this.assignmentSnapshot();
     if (this.loadedUserId === this.user.id) return;
     this.loadedUserId = this.user.id;
     this.selectedPlanId = this.user.assigned_plan_id;
@@ -99,6 +106,7 @@ export class MemberDetailsComponent implements OnChanges {
     this.eventTypeMessage = '';
     this.loadPersonEventTypes(this.user.id);
     this.loadPlans();
+    this.publishEditorActions();
   }
 
   get selectedPlan(): PlanDefinition | undefined {
@@ -139,7 +147,9 @@ export class MemberDetailsComponent implements OnChanges {
         } else {
           this.selectedPlanId = null;
           this.scheduleEntries = [];
+          this.savedAssignmentSnapshot = this.assignmentSnapshot();
         }
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: () => {
@@ -157,101 +167,16 @@ export class MemberDetailsComponent implements OnChanges {
       next: (eventTypes) => {
         if (this.user.id !== userId) return;
         this.personEventTypes = eventTypes;
+        this.savedEventTypes = eventTypes.map((eventType) => ({ ...eventType }));
+        this.savedEventTypesSnapshot = this.eventTypesSnapshot();
         this.eventTypesLoading = false;
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: () => {
         if (this.user.id !== userId) return;
         this.eventTypesLoading = false;
         this.eventTypeError = 'Die persönliche Fachliste konnte nicht geladen werden.';
-        this.changeDetector.markForCheck();
-      },
-    });
-  }
-
-  createPersonEventType(): void {
-    const name = this.eventTypeName.trim();
-    if (!name) {
-      this.eventTypeError = 'Bitte einen Namen für das Fach oder die Eventart eingeben.';
-      return;
-    }
-
-    const userId = this.user.id;
-    this.eventTypeSaving = true;
-    this.eventTypeError = '';
-    this.eventTypeMessage = '';
-    this.apiService.createPersonEventType(userId, name, this.eventTypeColor).pipe(timeout({ first: 15000 })).subscribe({
-      next: (eventType) => {
-        if (this.user.id !== userId) return;
-        this.personEventTypes = [...this.personEventTypes, eventType].sort((first, second) => first.id - second.id);
-        this.eventTypeName = '';
-        this.eventTypeColor = '#fd7e14';
-        this.eventTypeSaving = false;
-        this.eventTypeMessage = `„${eventType.name}“ wurde für ${this.user.name} angelegt.`;
-        this.changeDetector.markForCheck();
-      },
-      error: (error: unknown) => {
-        if (this.user.id !== userId) return;
-        this.eventTypeSaving = false;
-        this.eventTypeError = this.getEventTypeErrorMessage(error);
-        this.changeDetector.markForCheck();
-      },
-    });
-  }
-
-  savePersonEventType(eventType: PersonEventType): void {
-    const name = eventType.name.trim();
-    if (!name) {
-      this.eventTypeError = 'Der Name eines Fachs darf nicht leer sein.';
-      return;
-    }
-
-    const userId = this.user.id;
-    this.eventTypeSaving = true;
-    this.eventTypeError = '';
-    this.eventTypeMessage = '';
-    this.apiService.updatePersonEventType(userId, eventType.id, name, eventType.color).pipe(
-      timeout({ first: 15000 }),
-    ).subscribe({
-      next: (savedEventType) => {
-        if (this.user.id !== userId) return;
-        this.personEventTypes = this.personEventTypes.map((current) =>
-          current.id === savedEventType.id ? savedEventType : current,
-        );
-        this.eventTypeSaving = false;
-        this.eventTypeMessage = 'Persönliches Fach wurde aktualisiert.';
-        this.calendarService.refreshAllBlocks().subscribe({
-          error: (error: unknown) => console.error('Kalender konnte nach Aktualisierung des persönlichen Fachs nicht aktualisiert werden:', error),
-        });
-        this.changeDetector.markForCheck();
-      },
-      error: (error: unknown) => {
-        if (this.user.id !== userId) return;
-        this.eventTypeSaving = false;
-        this.eventTypeError = this.getEventTypeErrorMessage(error);
-        this.changeDetector.markForCheck();
-      },
-    });
-  }
-
-  deletePersonEventType(eventType: PersonEventType): void {
-    if (!confirm(`„${eventType.name}“ aus der Fachliste von ${this.user.name} löschen?`)) return;
-    const userId = this.user.id;
-    this.eventTypeSaving = true;
-    this.eventTypeError = '';
-    this.eventTypeMessage = '';
-    this.apiService.deletePersonEventType(userId, eventType.id).pipe(timeout({ first: 15000 })).subscribe({
-      next: () => {
-        if (this.user.id !== userId) return;
-        this.personEventTypes = this.personEventTypes.filter((current) => current.id !== eventType.id);
-        this.eventTypeSaving = false;
-        this.eventTypeMessage = 'Persönliches Fach wurde gelöscht.';
-        this.changeDetector.markForCheck();
-      },
-      error: (error: unknown) => {
-        if (this.user.id !== userId) return;
-        this.eventTypeSaving = false;
-        this.eventTypeError = this.getEventTypeErrorMessage(error);
         this.changeDetector.markForCheck();
       },
     });
@@ -266,6 +191,7 @@ export class MemberDetailsComponent implements OnChanges {
     } else {
       this.selectPlan(planId);
     }
+    this.publishEditorActions();
   }
 
   private loadSavedPlanAssignment(userId: number, planId: number): void {
@@ -291,6 +217,8 @@ export class MemberDetailsComponent implements OnChanges {
           end_time: entry.end_time,
           blockId: entry.id,
         }));
+        this.savedAssignmentSnapshot = this.assignmentSnapshot();
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: () => {
@@ -333,26 +261,12 @@ export class MemberDetailsComponent implements OnChanges {
         });
       });
     }
+    this.publishEditorActions();
   }
 
   toggleScheduleEventVisibility(entry: ScheduleEntry): void {
-    const visible = !entry.visible;
-    if (entry.blockId === undefined) {
-      entry.visible = visible;
-      return;
-    }
-
-    entry.visibilitySaving = true;
-    this.calendarService.setPlanEventVisibility(entry.blockId, visible).subscribe({
-      next: ({ is_visible }) => {
-        entry.visible = is_visible;
-        entry.visibilitySaving = false;
-      },
-      error: () => {
-        entry.visibilitySaving = false;
-        this.planError = `Die Sichtbarkeit der ${entry.day_of_week}, ${entry.period}. Stunde konnte nicht gespeichert werden.`;
-      },
-    });
+    entry.visible = !entry.visible;
+    this.publishEditorActions();
   }
 
   closeConflictDialog(): void {
@@ -370,43 +284,172 @@ export class MemberDetailsComponent implements OnChanges {
     );
   }
 
-  saveProfile(): void {
+  async saveChanges(): Promise<void> {
     this.profileError = '';
     this.profileMessage = '';
-    if (!this.name.trim()) {
-      this.profileError = 'Bitte einen Namen eingeben.';
-      return;
-    }
-
-    this.profileSaving = true;
-    const profile = {
-      name: this.name.trim(),
-      role: this.role,
-      color_code: this.colorCode,
-      current_points: this.currentPoints,
-      status_school: this.schoolStatus,
-      status_sport: this.sportStatus,
-      state_code: this.stateCode,
-    };
-    const saveProfile = () => this.calendarService.updateUserProfile(this.user.id, profile);
-    const saveRequest = this.stateCode
-      ? this.calendarService.ensureHolidayState(this.stateCode).pipe(
-        timeout({ first: 30000 }),
-        switchMap(() => saveProfile()),
-      )
-      : saveProfile();
-
-    saveRequest.subscribe({
-      next: () => {
-        this.profileSaving = false;
+    try {
+      if (this.profileSnapshot() !== this.savedProfileSnapshot) {
+        if (!this.name.trim()) {
+          this.profileError = 'Bitte einen Namen eingeben.';
+          return;
+        }
+        this.profileSaving = true;
+        this.publishEditorActions();
+        const profile = {
+          name: this.name.trim(),
+          role: this.role,
+          color_code: this.colorCode,
+          current_points: this.currentPoints,
+          status_school: this.schoolStatus,
+          status_sport: this.sportStatus,
+          state_code: this.stateCode,
+        };
+        if (this.stateCode) {
+          await firstValueFrom(this.calendarService.ensureHolidayState(this.stateCode).pipe(timeout({ first: 30000 })));
+        }
+        await firstValueFrom(this.calendarService.updateUserProfile(this.user.id, profile));
+        this.savedProfileSnapshot = this.profileSnapshot();
         this.profileMessage = this.stateCode
           ? 'Einstellungen gespeichert; Ferien und Feiertage wurden aktualisiert.'
           : 'Einstellungen gespeichert.';
+      }
+
+      for (const eventType of this.personEventTypes) {
+        const saved = this.savedEventTypes.find((item) => item.id === eventType.id);
+        if (saved && (saved.name !== eventType.name || saved.color !== eventType.color)) {
+          const updated = await firstValueFrom(
+            this.apiService.updatePersonEventType(this.user.id, eventType.id, eventType.name.trim(), eventType.color)
+              .pipe(timeout({ first: 15000 })),
+          );
+          this.personEventTypes = this.personEventTypes.map((current) =>
+            current.id === updated.id ? updated : current,
+          );
+        }
+      }
+      if (this.eventTypeName.trim()) {
+        const created = await firstValueFrom(
+          this.apiService.createPersonEventType(this.user.id, this.eventTypeName.trim(), this.eventTypeColor)
+            .pipe(timeout({ first: 15000 })),
+        );
+        this.personEventTypes = [...this.personEventTypes, created].sort((a, b) => a.id - b.id);
+        this.eventTypeName = '';
+      }
+      this.savedEventTypes = this.personEventTypes.map((eventType) => ({ ...eventType }));
+      this.savedEventTypesSnapshot = this.eventTypesSnapshot();
+      this.eventTypeMessage = 'Persönliche Fachliste wurde gespeichert.';
+      if (this.assignmentSnapshot() !== this.savedAssignmentSnapshot) {
+        this.applyPlan();
+      }
+    } catch (error: unknown) {
+      this.profileError = 'Änderungen konnten nicht vollständig gespeichert werden. Bitte prüfen und erneut versuchen.';
+      this.eventTypeError = this.getEventTypeErrorMessage(error);
+    } finally {
+      this.profileSaving = false;
+      this.eventTypeSaving = false;
+      this.publishEditorActions();
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  cancelChanges(): void {
+    this.profileError = '';
+    this.eventTypeError = '';
+    this.calendarService.reloadUsers().subscribe({
+      next: (users) => {
+        const savedUser = users.find((item) => item.id === this.user.id);
+        if (!savedUser) return;
+        this.user = savedUser;
+        this.name = savedUser.name;
+        this.role = savedUser.role;
+        this.colorCode = savedUser.color_code;
+        this.currentPoints = savedUser.current_points;
+        this.schoolStatus = savedUser.status_school;
+        this.sportStatus = savedUser.status_sport;
+        this.stateCode = savedUser.state_code;
+        this.savedProfileSnapshot = this.profileSnapshot();
+        this.eventTypeName = '';
+        this.selectedEventTypeId = null;
+        this.loadPersonEventTypes(savedUser.id);
+        this.selectedPlanId = savedUser.assigned_plan_id;
+        this.loadPlans();
+        this.publishEditorActions();
       },
-      error: () => {
-        this.profileSaving = false;
-        this.profileError = 'Einstellungen oder Ferien und Feiertage für das Bundesland konnten nicht gespeichert werden.';
+      error: (error: unknown) => {
+        console.error('Mitgliedsdaten konnten beim Abbrechen nicht neu geladen werden:', error);
+        this.profileError = 'Der gespeicherte Stand konnte nicht neu geladen werden.';
       },
+    });
+  }
+
+  publishEditorActions(): void {
+    const dirty = this.profileSnapshot() !== this.savedProfileSnapshot
+      || this.eventTypesSnapshot() !== this.savedEventTypesSnapshot
+      || this.eventTypeName.trim() !== ''
+      || this.assignmentSnapshot() !== this.savedAssignmentSnapshot;
+    this.editorActionsChange.emit({
+      dirty,
+      canDelete: this.selectedEventTypeId !== null,
+      busy: this.profileSaving || this.eventTypeSaving || this.planApplying,
+      save: () => { void this.saveChanges(); },
+      cancel: () => this.cancelChanges(),
+      delete: () => this.deleteSelectedEventType(),
+    });
+  }
+
+  selectEventType(eventType: PersonEventType): void {
+    this.selectedEventTypeId = eventType.id;
+    this.publishEditorActions();
+  }
+
+  private deleteSelectedEventType(): void {
+    const eventType = this.personEventTypes.find((item) => item.id === this.selectedEventTypeId);
+    if (!eventType || !confirm(`„${eventType.name}“ aus der Fachliste von ${this.user.name} löschen?`)) return;
+    this.eventTypeSaving = true;
+    this.apiService.deletePersonEventType(this.user.id, eventType.id).pipe(timeout({ first: 15000 })).subscribe({
+      next: () => {
+        this.personEventTypes = this.personEventTypes.filter((item) => item.id !== eventType.id);
+        this.savedEventTypes = this.personEventTypes.map((item) => ({ ...item }));
+        this.savedEventTypesSnapshot = this.eventTypesSnapshot();
+        this.selectedEventTypeId = null;
+        this.eventTypeSaving = false;
+        this.calendarService.refreshAllBlocks().subscribe({
+          error: (error: unknown) => console.error('Kalender konnte nach Löschen des persönlichen Fachs nicht aktualisiert werden:', error),
+        });
+        this.publishEditorActions();
+      },
+      error: (error: unknown) => {
+        this.eventTypeSaving = false;
+        this.eventTypeError = this.getEventTypeErrorMessage(error);
+        this.publishEditorActions();
+      },
+    });
+  }
+
+  private get savedEventTypes(): PersonEventType[] {
+    return this.savedEventTypesCache;
+  }
+  private set savedEventTypes(value: PersonEventType[]) {
+    this.savedEventTypesCache = value;
+  }
+  private savedEventTypesCache: PersonEventType[] = [];
+
+  private profileSnapshot(): string {
+    return JSON.stringify([
+      this.name, this.role, this.colorCode, this.currentPoints,
+      this.schoolStatus, this.sportStatus, this.stateCode,
+    ]);
+  }
+
+  private eventTypesSnapshot(): string {
+    return JSON.stringify(this.personEventTypes.map(({ id, name, color }) => ({ id, name, color })));
+  }
+
+  private assignmentSnapshot(): string {
+    return JSON.stringify({
+      planId: this.selectedPlanId,
+      title: this.assignmentTitle,
+      entries: this.scheduleEntries.map(({ day_of_week, period, event_type_id, visible }) =>
+        ({ day_of_week, period, event_type_id, visible })),
     });
   }
 
@@ -459,6 +502,7 @@ export class MemberDetailsComponent implements OnChanges {
 
     const userId = this.user.id;
     this.planApplying = true;
+    this.publishEditorActions();
     this.calendarService.applyPlan(userId, plan.id, this.assignmentTitle.trim(), subjects, resolutions).pipe(
       observeOn(asyncScheduler),
       catchError((error: HttpErrorResponse) => {
@@ -467,6 +511,7 @@ export class MemberDetailsComponent implements OnChanges {
       }),
       finalize(() => {
         this.planApplying = false;
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       }),
     ).subscribe({
@@ -476,6 +521,7 @@ export class MemberDetailsComponent implements OnChanges {
         this.conflictDialogOpen = false;
         this.planMessage = `${result.created_blocks} Kalenderblöcke wurden gespeichert und „${this.assignmentTitle.trim()}“ zugeordnet (Zuordnungs-ID ${result.assignment_id}).`;
         this.loadSavedPlanAssignment(userId, plan.id);
+        this.publishEditorActions();
       },
     });
   }

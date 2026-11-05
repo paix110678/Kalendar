@@ -236,6 +236,30 @@ def add_holiday_state(payload: HolidayStateCreate):
     }
 
 
+@router.delete("/states/{state_code}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_holiday_state(state_code: str):
+    state = state_code.strip().upper()
+    if state not in STATE_SUBDIVISIONS:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Ungültiges Bundesland.")
+    conn = database.get_db_connection()
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM holiday_states WHERE state_code = ?", (state,)
+        ).fetchone()
+        if exists is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bundesland nicht gefunden.")
+        conn.execute("DELETE FROM holidays WHERE state_code = ?", (state,))
+        conn.execute("DELETE FROM holiday_years WHERE state_code = ?", (state,))
+        conn.execute("DELETE FROM holiday_states WHERE state_code = ?", (state,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return None
+
+
 @router.get("/states/{state_code}/holidays")
 def list_holidays(
     state_code: str,

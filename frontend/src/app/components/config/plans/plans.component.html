@@ -6,7 +6,7 @@
     </div>
   </header>
 
-  <form class="plan-form" (ngSubmit)="savePlan()">
+  <form class="plan-form" (ngSubmit)="$event.preventDefault()">
     <div class="form-grid">
       <label class="field field-name">
         <span>Name des Plans</span>
@@ -14,6 +14,7 @@
           type="text"
           name="planName"
           [(ngModel)]="planName"
+          (ngModelChange)="publishEditorActions()"
           maxlength="100"
           placeholder="z. B. Stundenplan Kay"
           required>
@@ -21,7 +22,7 @@
 
       <label class="field">
         <span>Erster Tag</span>
-        <select name="startDay" [(ngModel)]="startDay">
+        <select name="startDay" [(ngModel)]="startDay" (ngModelChange)="publishEditorActions()">
           @for (day of daysOfWeek; track day) {
             <option [value]="day">{{ day }}</option>
           }
@@ -30,7 +31,7 @@
 
       <label class="field">
         <span>Letzter Tag</span>
-        <select name="endDay" [(ngModel)]="endDay">
+        <select name="endDay" [(ngModel)]="endDay" (ngModelChange)="publishEditorActions()">
           @for (day of daysOfWeek; track day) {
             <option [value]="day">{{ day }}</option>
           }
@@ -55,14 +56,16 @@
         <input
           type="checkbox"
           name="excludeSchoolHolidays"
-          [(ngModel)]="excludeSchoolHolidays">
+          [(ngModel)]="excludeSchoolHolidays"
+          (ngModelChange)="publishEditorActions()">
         <span>Schulferientage aus dem Plan ausklammern</span>
       </label>
       <label>
         <input
           type="checkbox"
           name="excludePublicHolidays"
-          [(ngModel)]="excludePublicHolidays">
+          [(ngModel)]="excludePublicHolidays"
+          (ngModelChange)="publishEditorActions()">
         <span>Gesetzliche Feiertage aus dem Plan ausklammern</span>
       </label>
       <p>Die passenden Tage werden bei Mitgliedern mit ausgewähltem Bundesland nicht als Plantermine angezeigt.</p>
@@ -86,6 +89,7 @@
               type="time"
               [name]="'hourStart' + index"
               [(ngModel)]="hour.start_time"
+              (ngModelChange)="publishEditorActions()"
               required>
           </label>
           <label class="field">
@@ -94,6 +98,7 @@
               type="time"
               [name]="'hourEnd' + index"
               [(ngModel)]="hour.end_time"
+              (ngModelChange)="publishEditorActions()"
               required>
           </label>
         </div>
@@ -103,44 +108,7 @@
     <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
     <p class="form-message form-success" role="status" [hidden]="!successMessage">{{ successMessage }}</p>
 
-    <div class="form-actions">
-      <button
-        type="button"
-        class="button button-secondary"
-        [hidden]="editingPlanId === null"
-        (click)="resetForm()">Abbrechen</button>
-      <button type="submit" class="button button-primary" [disabled]="saving">
-        {{ saving ? 'Wird gespeichert …' : editingPlanId === null ? 'Plan speichern' : 'Änderungen speichern' }}
-      </button>
-    </div>
   </form>
 
-  <section class="saved-plans">
-    <div class="saved-plans-heading">
-      <h4>Gespeicherte Pläne</h4>
-      <div class="saved-plans-controls">
-        <span [hidden]="!loading">Wird geladen …</span>
-        <button type="button" class="button button-secondary" [disabled]="loading" (click)="loadPlans()">
-          Aktualisieren
-        </button>
-      </div>
-    </div>
-
-    <p class="form-message form-error" role="alert" [hidden]="loading || !errorMessage">{{ errorMessage }}</p>
-    <p class="empty-state" [hidden]="loading || plans.length !== 0 || !!errorMessage">Noch keine Pläne gespeichert.</p>
-
-    @for (plan of plans; track plan.id) {
-      <article class="plan-card">
-        <div class="plan-details">
-          <strong>{{ plan.name }}</strong>
-          <span>ID {{ plan.id }} · {{ plan.start_day }} bis {{ plan.end_day }} · {{ plan.hours_count }} Stunden</span>
-        </div>
-        <div class="plan-actions">
-          <button type="button" class="button button-secondary" (click)="editPlan(plan)">Bearbeiten</button>
-          <button type="button" class="button button-danger" (click)="deletePlan(plan)">Löschen</button>
-        </div>
-      </article>
-    }
-  </section>
 
 </section>

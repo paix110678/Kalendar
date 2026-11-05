@@ -6,10 +6,10 @@
     </div>
   </header>
 
-  <form class="holidays-form" (ngSubmit)="addState()">
+  <form class="holidays-form" (ngSubmit)="$event.preventDefault()">
     <label class="field">
       <span>Bundesland hinzufügen</span>
-      <select name="stateCode" [(ngModel)]="newStateCode" required>
+      <select name="stateCode" [(ngModel)]="newStateCode" (ngModelChange)="publishEditorActions()" required>
         <option value="" disabled>Bundesland auswählen …</option>
         @for (bundesland of availableStates; track bundesland.code) {
           <option [value]="bundesland.code">{{ bundesland.name }}</option>
@@ -17,11 +17,6 @@
       </select>
     </label>
 
-    <div class="form-actions">
-      <button type="submit" class="button button-primary" [disabled]="saving || availableStates.length === 0">
-        {{ saving ? 'Ferien und Feiertage werden geladen …' : 'Bundesland hinzufügen & speichern' }}
-      </button>
-    </div>
   </form>
 
   <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
