@@ -185,6 +185,31 @@ def list_holiday_states():
         conn.close()
 
 
+@router.get("/states/data")
+def list_saved_holiday_data():
+    conn = database.get_db_connection()
+    try:
+        states = [
+            row["state_code"]
+            for row in conn.execute(
+                "SELECT state_code FROM holiday_states ORDER BY state_code"
+            ).fetchall()
+        ]
+        holidays = [
+            dict(row)
+            for row in conn.execute(
+                """
+                SELECT state_code, year, holiday_type, name, start_date, end_date
+                FROM holidays
+                ORDER BY state_code, year, start_date, name
+                """
+            ).fetchall()
+        ]
+        return {"states": states, "holidays": holidays}
+    finally:
+        conn.close()
+
+
 @router.post("/states", status_code=status.HTTP_201_CREATED)
 def add_holiday_state(payload: HolidayStateCreate):
     conn = database.get_db_connection()

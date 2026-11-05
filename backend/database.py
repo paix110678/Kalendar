@@ -26,6 +26,7 @@ def init_db():
             status_school TEXT CHECK(status_school IN ('GREEN', 'RED')) DEFAULT 'GREEN',
             status_sport TEXT CHECK(status_sport IN ('BASE', 'SILBER')) DEFAULT 'BASE',
             color_code TEXT DEFAULT '#228be6',
+            state_code TEXT,
             assigned_plan_id INTEGER
         )
     """)
@@ -90,9 +91,22 @@ def init_db():
             start_day TEXT NOT NULL,
             end_day TEXT NOT NULL,
             hours_count INTEGER NOT NULL,
-            hours_json TEXT NOT NULL
+            hours_json TEXT NOT NULL,
+            exclude_school_holidays INTEGER NOT NULL DEFAULT 0,
+            exclude_public_holidays INTEGER NOT NULL DEFAULT 0
         )
     """)
+
+    cursor.execute("PRAGMA table_info(plans)")
+    plan_columns = {row["name"] for row in cursor.fetchall()}
+    if "exclude_school_holidays" not in plan_columns:
+        cursor.execute(
+            "ALTER TABLE plans ADD COLUMN exclude_school_holidays INTEGER NOT NULL DEFAULT 0"
+        )
+    if "exclude_public_holidays" not in plan_columns:
+        cursor.execute(
+            "ALTER TABLE plans ADD COLUMN exclude_public_holidays INTEGER NOT NULL DEFAULT 0"
+        )
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS holiday_states (
@@ -197,6 +211,8 @@ def init_db():
 
     cursor.execute("PRAGMA table_info(users)")
     user_cols = [row["name"] for row in cursor.fetchall()]
+    if "state_code" not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN state_code TEXT")
     if "assigned_plan_id" not in user_cols:
         cursor.execute("ALTER TABLE users ADD COLUMN assigned_plan_id INTEGER")
     

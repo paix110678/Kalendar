@@ -42,6 +42,40 @@
   gap: 14px;
 }
 
+.holiday-options {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 14px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.holiday-options legend {
+  padding: 0 6px;
+  color: #495057;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.holiday-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #495057;
+  font-size: 13px;
+}
+
+.holiday-options input {
+  margin: 0;
+}
+
+.holiday-options p {
+  margin: 0;
+  color: #868e96;
+  font-size: 12px;
+}
+
 .field {
   display: flex;
   min-width: 0;

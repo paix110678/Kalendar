@@ -49,6 +49,25 @@
       </label>
     </div>
 
+    <fieldset class="holiday-options">
+      <legend>Kalendertage aus dem Plan ausklammern</legend>
+      <label>
+        <input
+          type="checkbox"
+          name="excludeSchoolHolidays"
+          [(ngModel)]="excludeSchoolHolidays">
+        <span>Schulferientage aus dem Plan ausklammern</span>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          name="excludePublicHolidays"
+          [(ngModel)]="excludePublicHolidays">
+        <span>Gesetzliche Feiertage aus dem Plan ausklammern</span>
+      </label>
+      <p>Die passenden Tage werden bei Mitgliedern mit ausgewähltem Bundesland nicht als Plantermine angezeigt.</p>
+    </fieldset>
+
     <div class="hours-heading">
       <div>
         <h4>Stundenzeiten</h4>

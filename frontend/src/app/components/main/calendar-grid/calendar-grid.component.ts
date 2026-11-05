@@ -1,13 +1,17 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   CalendarResource,
   CalendarEvent,
+  DayAnnotation,
   GridCalendar,
   GridConfig,
+  GridLabels,
   GridTheme,
   GridViewMode,
+  VisibleRange,
 } from '@swbpapk_acmtemu/grid-calendar';
+import { PlanDefinition } from '../../../services/api.service';
 import { CalendarService, TimeBlock, User } from '../../../services/calendar.service';
 import { BlockEditorComponent } from '../block-editor/block-editor.component';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -31,6 +35,52 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   public activeUsersSignal = toSignal(this.calendarService.users$, { initialValue: [] as User[] });
   public currentBlocksSignal = toSignal(this.calendarService.blocks$, { initialValue: [] as TimeBlock[] });
   public activeRewardsSignal = toSignal(this.calendarService.rewards$, { initialValue: [] as any[] });
+  private readonly savedPlansSignal = toSignal(this.calendarService.savedPlansState$, {
+    initialValue: { data: null, loading: false, error: null },
+  });
+  private readonly savedHolidayDataSignal = toSignal(this.calendarService.savedHolidayDataState$, {
+    initialValue: { data: null, loading: false, error: null },
+  });
+  public readonly calendarDayAnnotations = computed(() => {
+    const holidays = this.savedHolidayDataSignal().data?.holidays ?? [];
+    const dates = this.visibleDates().map((date) => this.toDateKey(date));
+    const resourceIds = this.visibleUserIds();
+    const usersById = new Map(this.activeUsersSignal().map((user) => [user.id, user]));
+    const annotationsByPersonAndDate = new Map<string, DayAnnotation>();
+
+    for (const holiday of holidays) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(holiday.start_date) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(holiday.end_date) ||
+          holiday.end_date < holiday.start_date) {
+        console.error('Ungültiger Ferien- oder Feiertagszeitraum:', holiday);
+        continue;
+      }
+
+      const type = holiday.holiday_type === 'school' ? 'vacation' : 'holiday';
+      for (const date of dates) {
+        if (date < holiday.start_date || date > holiday.end_date) continue;
+        for (const resourceId of resourceIds) {
+          if (usersById.get(resourceId)?.state_code !== holiday.state_code) continue;
+          const key = `${resourceId}:${date}:${type}`;
+          const current = annotationsByPersonAndDate.get(key);
+          if (!current || holiday.name.localeCompare(current.label) < 0) {
+            annotationsByPersonAndDate.set(key, {
+              date,
+              resourceId,
+              type,
+              label: holiday.name,
+            });
+          }
+        }
+      }
+    }
+
+    return [...annotationsByPersonAndDate.values()].sort((left, right) =>
+      left.date.localeCompare(right.date)
+      || left.resourceId - right.resourceId
+      || (left.type === right.type ? 0 : left.type === 'vacation' ? -1 : 1),
+    );
+  });
   public calendarEvents: CalendarEvent[] = [];
   public selectedUser: User | null = null;
   public showAdminPage = false;
@@ -38,7 +88,8 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   public showRewardPage = false;
   public isEditingExisting = false;
   public currentViewMode: 'day' | '3days' | 'week' = 'day';
-  public filteredDays: TimeBlock['day_of_week'][] = [];
+  public readonly visibleDates = signal<Date[]>([]);
+  private readonly visibleUserIds = signal<number[]>([]);
   public hiddenUserIds: { [userId: number]: boolean } = {};
   public currentDayName!: TimeBlock['day_of_week'];
   public daysOfWeek: TimeBlock['day_of_week'][] = [
@@ -66,18 +117,34 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     colorHourLine: '#495057',
     fontFamily: 'system-ui, sans-serif',
   };
+  public readonly calendarLabels: Partial<GridLabels> = {
+    today: 'Heute',
+    previous: 'Vorheriger Zeitraum',
+    next: 'Nächster Zeitraum',
+  };
   public readonly anchorDate = this.getTodayAtMidnight();
+  private visibleAnchorDate = new Date(this.anchorDate);
   private readonly blockSubscription = new Subscription();
 
   ngOnInit(): void {
     (window as any).hiddenUserIdsCache = this.hiddenUserIds;
-    this.currentDayName = this.getDayName(this.anchorDate);
+    this.currentDayName = this.getDayName(this.visibleAnchorDate);
     this.blockSubscription.add(
       this.calendarService.blocks$.subscribe(() => this.syncCalendarEvents()),
     );
     this.blockSubscription.add(
-      this.calendarService.users$.subscribe(() => this.syncCalendarEvents()),
+      this.calendarService.users$.subscribe(() => {
+        this.updateVisibleUserIds();
+        this.syncCalendarEvents();
+      }),
     );
+    this.blockSubscription.add(
+      this.calendarService.savedPlansState$.subscribe(() => this.syncCalendarEvents()),
+    );
+    this.blockSubscription.add(
+      this.calendarService.savedHolidayDataState$.subscribe(() => this.syncCalendarEvents()),
+    );
+    this.updateVisibleUserIds();
     this.updateViewTimeline();
   }
 
@@ -102,24 +169,32 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     this.updateViewTimeline();
   }
 
-  private updateViewTimeline(): void {
-    const startIdx = this.daysOfWeek.indexOf(this.currentDayName);
-    
-    if (this.currentViewMode === 'day') {
-      this.filteredDays = [this.currentDayName];
-    } else if (this.currentViewMode === '3days') {
-      this.filteredDays = [
-        this.daysOfWeek[startIdx % 7], 
-        this.daysOfWeek[(startIdx + 1) % 7], 
-        this.daysOfWeek[(startIdx + 2) % 7]
-      ];
-    } else {
-      const rotated: TimeBlock['day_of_week'][] = [];
-      for (let i = 0; i < 7; i++) {
-        rotated.push(this.daysOfWeek[(startIdx + i) % 7]);
-      }
-      this.filteredDays = rotated;
+  public onVisibleRangeChange(range: VisibleRange): void {
+    if (!this.isValidDate(range.from) || !this.isValidDate(range.to) || range.to < range.from) {
+      console.error('Der Kalender hat einen ungültigen sichtbaren Zeitraum gemeldet:', range);
+      return;
     }
+
+    this.visibleAnchorDate = new Date(
+      range.from.getFullYear(),
+      range.from.getMonth(),
+      range.from.getDate(),
+    );
+    this.currentDayName = this.getDayName(this.visibleAnchorDate);
+    this.updateViewTimeline();
+  }
+
+  private updateViewTimeline(): void {
+    const visibleDayCount = this.currentViewMode === 'day'
+      ? 1
+      : this.currentViewMode === '3days'
+        ? 3
+        : 7;
+    this.visibleDates.set(Array.from({ length: visibleDayCount }, (_, index) => {
+      const date = new Date(this.visibleAnchorDate);
+      date.setDate(date.getDate() + index);
+      return date;
+    }));
     this.syncCalendarEvents();
     this.cdr.detectChanges();
   }
@@ -165,6 +240,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.hiddenUserIds[userId] = !this.hiddenUserIds[userId];
     (window as any).hiddenUserIdsCache = this.hiddenUserIds;
+    this.updateVisibleUserIds();
     this.syncCalendarEvents();
     this.cdr.detectChanges();
   }
@@ -262,15 +338,22 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
 
   private syncCalendarEvents(): void {
     const visibleUserIds = new Set(this.getVisibleUsers().map((user) => user.id));
+    const usersById = new Map(this.activeUsersSignal().map((user) => [user.id, user]));
+    const plansById = new Map(
+      (this.savedPlansSignal().data ?? []).map((plan: PlanDefinition) => [plan.id, plan]),
+    );
+    const holidays = this.savedHolidayDataSignal().data?.holidays ?? [];
     const pendingDrafts = this.calendarEvents.filter((event) => event.id < 0);
     const events = this.currentBlocksSignal()
       .filter((block) => visibleUserIds.has(block.user_id) && block.is_visible !== false)
       .flatMap((block) =>
-        this.filteredDays
-          .filter((day) => day === block.day_of_week)
-          .map((day) => {
-            const date = this.getDateForDay(day);
-            const dayIndex = this.daysOfWeek.indexOf(day);
+        this.visibleDates()
+          .filter((date) =>
+            this.getDayName(date) === block.day_of_week
+            && !this.isExcludedPlanDate(block, date, usersById, plansById, holidays),
+          )
+          .map((date) => {
+            const dayIndex = this.daysOfWeek.indexOf(this.getDayName(date));
             const endCrossesMidnight = block.end_time === '00:00'
               && block.start_time !== '00:00';
 
@@ -290,6 +373,34 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
       );
 
     this.calendarEvents = [...events, ...pendingDrafts];
+  }
+
+  private isExcludedPlanDate(
+    block: TimeBlock,
+    date: Date,
+    usersById: Map<number, User>,
+    plansById: Map<number, PlanDefinition>,
+    holidays: Array<{ state_code: string; holiday_type: 'school' | 'public'; start_date: string; end_date: string }>,
+  ): boolean {
+    if (block.plan_assignment_id == null) return false;
+    const user = usersById.get(block.user_id);
+    const plan = user?.assigned_plan_id == null ? undefined : plansById.get(user.assigned_plan_id);
+    if (!user?.state_code || !plan) return false;
+
+    const dateKey = this.toDateKey(date);
+    return holidays.some((holiday) =>
+      holiday.state_code === user.state_code
+      && dateKey >= holiday.start_date
+      && dateKey <= holiday.end_date
+      && (
+        (holiday.holiday_type === 'school' && plan.exclude_school_holidays)
+        || (holiday.holiday_type === 'public' && plan.exclude_public_holidays)
+      ),
+    );
+  }
+
+  private updateVisibleUserIds(): void {
+    this.visibleUserIds.set(this.getVisibleUsers().map((user) => user.id));
   }
 
   private persistCalendarEvent(event: CalendarEvent): void {
@@ -343,17 +454,16 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     return block.is_locked || block.plan_assignment_id != null;
   }
 
-  private getDateForDay(day: TimeBlock['day_of_week']): Date {
-    const date = new Date(this.anchorDate);
-    const anchorDayIndex = this.daysOfWeek.indexOf(this.currentDayName);
-    const targetDayIndex = this.daysOfWeek.indexOf(day);
-    date.setDate(date.getDate() + ((targetDayIndex - anchorDayIndex + 7) % 7));
-    return date;
-  }
-
   private getTodayAtMidnight(): Date {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }
+
+  private toDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private getDayName(date: Date): TimeBlock['day_of_week'] {

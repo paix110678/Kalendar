@@ -2,8 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EMPTY, asyncScheduler, catchError, finalize, observeOn, timeout } from 'rxjs';
-import { ApiService, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../services/api.service';
+import { EMPTY, asyncScheduler, catchError, finalize, observeOn, switchMap, timeout } from 'rxjs';
+import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../services/api.service';
 import { CalendarService, User } from '../../../../services/calendar.service';
 
 type ConflictAction = '' | 'delete' | 'move';
@@ -39,6 +39,7 @@ export class MemberDetailsComponent implements OnChanges {
   private readonly changeDetector = inject(ChangeDetectorRef);
 
   readonly daysOfWeek = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+  readonly bundeslaender = GERMAN_STATES;
   readonly roles: Array<{ value: User['role']; label: string }> = [
     { value: 'adult', label: 'Erwachsene' },
     { value: 'child_10', label: 'Kind (10+)' },
@@ -52,6 +53,7 @@ export class MemberDetailsComponent implements OnChanges {
   currentPoints = 0;
   schoolStatus: User['status_school'] = 'GREEN';
   sportStatus: User['status_sport'] = 'BASE';
+  stateCode: string | null = null;
 
   plans: PlanDefinition[] = [];
   personEventTypes: PersonEventType[] = [];
@@ -85,6 +87,7 @@ export class MemberDetailsComponent implements OnChanges {
     this.currentPoints = this.user.current_points;
     this.schoolStatus = this.user.status_school;
     this.sportStatus = this.user.status_sport;
+    this.stateCode = this.user.state_code;
     if (this.loadedUserId === this.user.id) return;
     this.loadedUserId = this.user.id;
     this.selectedPlanId = this.user.assigned_plan_id;
@@ -376,21 +379,33 @@ export class MemberDetailsComponent implements OnChanges {
     }
 
     this.profileSaving = true;
-    this.calendarService.updateUserProfile(this.user.id, {
+    const profile = {
       name: this.name.trim(),
       role: this.role,
       color_code: this.colorCode,
       current_points: this.currentPoints,
       status_school: this.schoolStatus,
       status_sport: this.sportStatus,
-    }).subscribe({
+      state_code: this.stateCode,
+    };
+    const saveProfile = () => this.calendarService.updateUserProfile(this.user.id, profile);
+    const saveRequest = this.stateCode
+      ? this.calendarService.ensureHolidayState(this.stateCode).pipe(
+        timeout({ first: 30000 }),
+        switchMap(() => saveProfile()),
+      )
+      : saveProfile();
+
+    saveRequest.subscribe({
       next: () => {
         this.profileSaving = false;
-        this.profileMessage = 'Einstellungen gespeichert.';
+        this.profileMessage = this.stateCode
+          ? 'Einstellungen gespeichert; Ferien und Feiertage wurden aktualisiert.'
+          : 'Einstellungen gespeichert.';
       },
       error: () => {
         this.profileSaving = false;
-        this.profileError = 'Einstellungen konnten nicht gespeichert werden.';
+        this.profileError = 'Einstellungen oder Ferien und Feiertage für das Bundesland konnten nicht gespeichert werden.';
       },
     });
   }

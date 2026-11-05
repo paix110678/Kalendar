@@ -35,6 +35,10 @@ class UserProfileUpdate(BaseModel):
     current_points: int = Field(..., ge=0)
     status_school: str = Field(..., pattern="^(GREEN|RED)$")
     status_sport: str = Field(..., pattern="^(BASE|SILBER)$")
+    state_code: Optional[str] = Field(
+        default=None,
+        pattern="^(BW|BY|BE|BB|HB|HH|HE|MV|NI|NW|RP|SL|SN|ST|SH|TH)$",
+    )
 
 class PlanSubject(BaseModel):
     day_of_week: str = Field(..., pattern="^(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)$")
@@ -247,11 +251,16 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
 
         previous_school_status = user["status_school"]
         previous_sport_status = user["status_sport"]
+        state_code = (
+            payload.state_code
+            if "state_code" in payload.model_fields_set
+            else user["state_code"]
+        )
         conn.execute(
             """
             UPDATE users
             SET name = ?, role = ?, color_code = ?, current_points = ?,
-                status_school = ?, status_sport = ?
+                status_school = ?, status_sport = ?, state_code = ?
             WHERE id = ?
             """,
             (
@@ -261,6 +270,7 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
                 payload.current_points,
                 payload.status_school,
                 payload.status_sport,
+                state_code,
                 user_id,
             ),
         )

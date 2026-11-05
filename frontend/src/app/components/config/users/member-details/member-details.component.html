@@ -44,6 +44,16 @@
           <option value="SILBER">Silber</option>
         </select>
       </label>
+      <label>
+        <span>Bundesland für Ferien und Feiertage</span>
+        <select name="memberState" [(ngModel)]="stateCode">
+          <option [ngValue]="null">Nicht ausgewählt</option>
+          @for (bundesland of bundeslaender; track bundesland.code) {
+            <option [ngValue]="bundesland.code">{{ bundesland.name }}</option>
+          }
+        </select>
+        <small class="muted-message">Ferien und Feiertage werden angezeigt, wenn das Bundesland in der Ferienverwaltung gespeichert ist.</small>
+      </label>
     </div>
     <div class="form-actions">
       <p class="error-message" role="alert" [hidden]="!profileError">{{ profileError }}</p>

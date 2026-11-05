@@ -1,106 +1,147 @@
-<div class="editor-form-wrapper">
-  
-  <div class="editor-header-title">
-    <span>✏️</span> {{ editingBlockId ? 'Zeitblock bearbeiten' : 'Neuer Zeitblock' }}
-  </div>
+<section class="editor-panel" aria-labelledby="editor-title">
+  <header class="editor-header">
+    <div>
+      <p class="editor-eyebrow">{{ editingBlockId ? 'Zeitplan' : 'Kalender' }}</p>
+      <h2 id="editor-title">{{ editingBlockId ? 'Zeitblock bearbeiten' : 'Neuer Zeitblock' }}</h2>
+    </div>
+  </header>
 
-  <div class="editor-card-box">
-    
-    <!-- FÜR WEN -->
-    <div class="form-group">
-      <label class="form-label">Für wen?</label>
-      <div class="input-icon-wrapper">
-        <select class="form-select" [(ngModel)]="targetUserId" (change)="onTimeChange()">
+  <form class="editor-form" (ngSubmit)="saveBlock()">
+    <div class="editor-fields">
+      <div class="form-row">
+        <label class="form-label" for="block-user">Person</label>
+        <select
+          id="block-user"
+          class="form-control"
+          name="targetUserId"
+          [(ngModel)]="targetUserId"
+          (change)="onTimeChange()"
+          required>
           @for (user of activeUsers; track user.id) {
-            <option [value]="user.id">👤 {{ user.name }}</option>
+            <option [ngValue]="user.id">{{ user.name }}</option>
           }
         </select>
       </div>
-    </div>
 
-    <!-- AUFGABEN-TITEL -->
-    <div class="form-group">
-      <label class="form-label">Aufgaben-Titel</label>
-      <input 
-        type="text" 
-        class="form-input" 
-        [(ngModel)]="blockTitle" 
-        placeholder="z.B. Hausaufgaben machen"
-        (ngModelChange)="onTimeChange()">
-    </div>
+      <div class="form-row">
+        <label class="form-label" for="block-title">Titel</label>
+        <input
+          id="block-title"
+          name="blockTitle"
+          type="text"
+          class="form-control"
+          [(ngModel)]="blockTitle"
+          placeholder="z. B. Hausaufgaben"
+          autocomplete="off"
+          maxlength="120"
+          required
+          (ngModelChange)="onTimeChange()">
+      </div>
 
-    <!-- KURZZEICHEN -->
-    <div class="form-group">
-      <label class="form-label">Kurzzeichen (Wochenansicht)</label>
-      <input 
-        type="text" 
-        class="form-input" 
-        [(ngModel)]="blockShortTitle" 
-        placeholder="z.B. HA"
-        (ngModelChange)="onTimeChange()">
-    </div>
+      <div class="form-row">
+        <label class="form-label" for="block-short-title">Kurzzeichen</label>
+        <input
+          id="block-short-title"
+          name="blockShortTitle"
+          type="text"
+          class="form-control"
+          [(ngModel)]="blockShortTitle"
+          placeholder="z. B. HA"
+          autocomplete="off"
+          maxlength="30"
+          required
+          (ngModelChange)="onTimeChange()">
+      </div>
 
-    <!-- REPARIERT: Echtes, aufklappbares Custom-Dropdown mit runden Farbkreisen -->
-    <div class="form-group">
-      <label class="form-label">Kategorie wählen</label>
-      <div class="custom-dropdown-container">
-        
-        <!-- Der geschlossene Zustand (Das sichtbare Hauptfeld) -->
-        <button type="button" class="custom-dropdown-trigger" (click)="isDropdownOpen = !isDropdownOpen">
-          <span class="category-circle-indicator" [style.background-color]="getSelectedCategoryColor()" *ngIf="blockType"></span>
-          <span class="trigger-label-text">{{ getSelectedCategoryLabel() }}</span>
-          <span class="trigger-arrow-icon" [class.is-inverted]="isDropdownOpen">▼</span>
-        </button>
-
-        <!-- Das aufgeklappte Dropdown-Menü -->
-        @if (isDropdownOpen) {
-          <div class="custom-dropdown-menu">
-            @for (cat of categories; track cat.id) {
-              <button 
-                type="button" 
-                class="dropdown-menu-row"
-                [class.is-selected]="blockType === cat.value"
-                (click)="selectCategory(cat.value)">
-                
-                <span class="category-circle-indicator" [style.background-color]="cat.color"></span>
-                <span class="dropdown-row-text">{{ cat.label }}</span>
-                <span class="dropdown-check-mark">✓</span>
-                
-              </button>
+      <div class="form-row">
+        <label class="form-label" id="block-category-label">Kategorie</label>
+        <div class="category-picker">
+          <button
+            type="button"
+            class="form-control category-trigger"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="isDropdownOpen"
+            aria-labelledby="block-category-label"
+            (click)="isDropdownOpen = !isDropdownOpen">
+            @if (blockType) {
+              <span class="category-swatch" [style.background-color]="getSelectedCategoryColor()" aria-hidden="true"></span>
             }
-          </div>
-        }
+            <span class="category-trigger-label">{{ getSelectedCategoryLabel() }}</span>
+            <span class="category-chevron" [class.is-open]="isDropdownOpen" aria-hidden="true"></span>
+          </button>
 
+          @if (isDropdownOpen) {
+            <div class="category-menu" role="listbox" aria-labelledby="block-category-label">
+              @for (cat of categories; track cat.id) {
+                <button
+                  type="button"
+                  class="category-option"
+                  role="option"
+                  [attr.aria-selected]="blockType === cat.value"
+                  [class.is-selected]="blockType === cat.value"
+                  (click)="selectCategory(cat.value)">
+                  <span class="category-swatch" [style.background-color]="cat.color" aria-hidden="true"></span>
+                  <span>{{ cat.label }}</span>
+                  @if (blockType === cat.value) {
+                    <span class="category-check" aria-hidden="true">✓</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
       </div>
+
+      <fieldset class="time-row">
+        <legend class="form-label">Zeitraum</legend>
+        <div class="time-inputs">
+          <label class="time-field" for="block-start-time">
+            <span>Von</span>
+            <input
+              id="block-start-time"
+              name="startTime"
+              type="time"
+              class="form-control"
+              [(ngModel)]="startTime"
+              (change)="onTimeChange()"
+              required>
+          </label>
+          <label class="time-field" for="block-end-time">
+            <span>Bis</span>
+            <input
+              id="block-end-time"
+              name="endTime"
+              type="time"
+              class="form-control"
+              [(ngModel)]="endTime"
+              (change)="onTimeChange()"
+              required>
+          </label>
+        </div>
+      </fieldset>
     </div>
 
-    <!-- ZEIT-SLOTS NEBENEINANDER -->
-    <div class="form-time-row">
-      <div class="form-group flex-1">
-        <label class="form-label">Startzeit</label>
-        <input 
-          type="time" 
-          class="form-input-time" 
-          [(ngModel)]="startTime" 
-          (change)="onTimeChange()">
-      </div>
-
-      <div class="form-group flex-1">
-        <label class="form-label">Endzeit</label>
-        <input 
-          type="time" 
-          class="form-input-time" 
-          [(ngModel)]="endTime" 
-          (change)="onTimeChange()">
-      </div>
-    </div>
-
-  </div>
-
-  <!-- AKTIONS-BUTTONS -->
-  <div class="editor-action-buttons">
-    <button class="btn-editor-save" [disabled]="!isFormValid()" (click)="saveBlock()">Speichern ⭐</button>
-    <button class="btn-editor-cancel" (click)="cancelAndReset()">Abbrechen</button>
-  </div>
-
-</div>
+    <footer class="editor-actions">
+      <button
+        type="submit"
+        class="action-button save-button"
+        [disabled]="!isFormValid()"
+        [attr.aria-label]="editingBlockId ? 'Änderungen speichern' : 'Zeitblock speichern'"
+        [title]="editingBlockId ? 'Änderungen speichern' : 'Zeitblock speichern'">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m5 12.5 4.5 4.5L19 7" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="action-button cancel-button"
+        aria-label="Abbrechen"
+        title="Abbrechen"
+        (click)="cancelAndReset()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m6 6 12 12M18 6 6 18" />
+        </svg>
+      </button>
+    </footer>
+  </form>
+</section>

@@ -45,8 +45,10 @@
 
     @if (!selectedStateCode) {
       <p class="empty-state">Wähle links ein gespeichertes Bundesland aus, um Ferien und Feiertage anzuzeigen.</p>
-    } @else if (loading) {
+    } @else if (loadingSavedHolidays) {
       <p class="empty-state" role="status">Gespeicherte Ferien werden geladen …</p>
+    } @else if (savedHolidaysError) {
+      <p class="empty-state form-error" role="alert">{{ savedHolidaysError }}</p>
     } @else if (holidays.length === 0 && !errorMessage) {
       <p class="empty-state">Für dieses Bundesland sind keine Ferien oder Feiertage gespeichert.</p>
     } @else {

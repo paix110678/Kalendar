@@ -33,6 +33,8 @@ class PlanPayload(BaseModel):
     end_day: str
     hours_count: int = Field(ge=1, le=24)
     hours: list[PlanHour]
+    exclude_school_holidays: bool = False
+    exclude_public_holidays: bool = False
 
     @model_validator(mode="after")
     def validate_plan(self):
@@ -63,6 +65,8 @@ def serialize_plan(row):
         "end_day": row["end_day"],
         "hours_count": row["hours_count"],
         "hours": json.loads(row["hours_json"]),
+        "exclude_school_holidays": bool(row["exclude_school_holidays"]),
+        "exclude_public_holidays": bool(row["exclude_public_holidays"]),
     }
 
 
@@ -89,8 +93,11 @@ def create_plan(payload: PlanPayload):
     try:
         cursor = conn.execute(
             """
-            INSERT INTO plans (name, start_day, end_day, hours_count, hours_json)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO plans (
+                name, start_day, end_day, hours_count, hours_json,
+                exclude_school_holidays, exclude_public_holidays
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.name.strip(),
@@ -98,6 +105,8 @@ def create_plan(payload: PlanPayload):
                 payload.end_day,
                 payload.hours_count,
                 json.dumps([hour.model_dump() for hour in payload.hours]),
+                payload.exclude_school_holidays,
+                payload.exclude_public_holidays,
             ),
         )
         conn.commit()
@@ -190,7 +199,8 @@ def update_plan(plan_id: int, payload: PlanPayload):
         cursor = conn.execute(
             """
             UPDATE plans
-            SET name = ?, start_day = ?, end_day = ?, hours_count = ?, hours_json = ?
+            SET name = ?, start_day = ?, end_day = ?, hours_count = ?, hours_json = ?,
+                exclude_school_holidays = ?, exclude_public_holidays = ?
             WHERE id = ?
             """,
             (
@@ -199,6 +209,8 @@ def update_plan(plan_id: int, payload: PlanPayload):
                 payload.end_day,
                 payload.hours_count,
                 json.dumps([hour.model_dump() for hour in payload.hours]),
+                payload.exclude_school_holidays,
+                payload.exclude_public_holidays,
                 plan_id,
             ),
         )

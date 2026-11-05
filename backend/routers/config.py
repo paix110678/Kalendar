@@ -265,6 +265,56 @@ def get_config():
     return fetch_live_weather_pure_ram()
 
 
+@router.get("/settings")
+def get_config_settings():
+    conn = database.get_db_connection()
+    try:
+        cfg = conn.execute(
+            """
+            SELECT weather_city, weather_plz, weather_service, api_key,
+                   weather_latitude, weather_longitude, live_temp, live_rain
+            FROM system_config ORDER BY id ASC LIMIT 1
+            """
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if cfg is None:
+        raise HTTPException(status_code=404, detail="Systemkonfiguration nicht gefunden.")
+
+    result = {
+        "weather_city": cfg["weather_city"] or "",
+        "weather_plz": cfg["weather_plz"] or "",
+        "weather_latitude": cfg["weather_latitude"],
+        "weather_longitude": cfg["weather_longitude"],
+        "weather_service": cfg["weather_service"] or "open_meteo",
+        "api_key": cfg["api_key"] or "",
+        "live_temp": cfg["live_temp"] or "--",
+        "live_rain": cfg["live_rain"] or "--",
+        "high_temp": "--",
+        "low_temp": "--",
+    }
+
+    if _weather_cache_lock.acquire(blocking=False):
+        try:
+            cache_key = (
+                database.DB_FILE,
+                cfg["weather_plz"],
+                cfg["weather_service"],
+                cfg["api_key"],
+                cfg["weather_latitude"],
+                cfg["weather_longitude"],
+            )
+            if _weather_cache is not None and _weather_cache_key == cache_key:
+                result.update({
+                    key: _weather_cache[key]
+                    for key in ("live_temp", "live_rain", "high_temp", "low_temp")
+                })
+        finally:
+            _weather_cache_lock.release()
+    return result
+
+
 @router.post("/location")
 def resolve_weather_location():
     try:

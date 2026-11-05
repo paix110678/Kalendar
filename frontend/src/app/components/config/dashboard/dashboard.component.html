@@ -104,15 +104,27 @@
           (memberClosed)="selectedMemberId = null">
         </app-users>
       }
-      @if (activeTab === 'plans') { <app-plans (plansChanged)="onPlansChanged($event)"></app-plans> }
-      @if (activeTab === 'holidays') {
-        @defer {
+      @defer (on immediate) {
+        @if (activeTab === 'plans') {
+          <app-plans
+            [initialPlans]="savedPlans"
+            (plansChanged)="onPlansChanged($event)">
+          </app-plans>
+        }
+        @if (activeTab === 'holidays') {
           <app-holidays
             [selectedStateCode]="selectedHolidayState"
             [savedStateCodes]="savedHolidayStates"
+            [savedHolidays]="savedHolidays"
+            [loadingSavedHolidays]="holidaysLoading"
+            [savedHolidaysError]="holidaysLoadError"
             (stateAdded)="onHolidayStateAdded($event)">
           </app-holidays>
-        } @placeholder {
+        }
+      } @placeholder {
+        @if (activeTab === 'plans') {
+          <p role="status">Pläne werden geladen …</p>
+        } @else if (activeTab === 'holidays') {
           <p role="status">Ferien und Feiertage werden geladen …</p>
         }
       }

@@ -15,6 +15,8 @@ export interface PlanDefinition {
   end_day: string;
   hours_count: number;
   hours: PlanHour[];
+  exclude_school_holidays: boolean;
+  exclude_public_holidays: boolean;
 }
 
 export interface PlanSubject {
@@ -103,6 +105,11 @@ export interface HolidayStateData {
   holidays: Holiday[];
 }
 
+export interface SavedHolidayData {
+  states: string[];
+  holidays: Holiday[];
+}
+
 export const GERMAN_STATES = [
   { code: 'BW', name: 'Baden-Württemberg' },
   { code: 'BY', name: 'Bayern' },
@@ -130,7 +137,7 @@ export class ApiService {
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
   addUser(name: string, role: string, color: string): Observable<any> { return this.http.post(this.apiBase + '/users', { name, role, color_code: color }); }
   updateUser(id: number, name: string, role: string, color: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id, { name, role, color_code: color }); }
-  updateUserProfile(id: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport'>): Observable<UpdateUserProfileResult> {
+  updateUserProfile(id: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code'>): Observable<UpdateUserProfileResult> {
     return this.http.put<UpdateUserProfileResult>(`${this.apiBase}/users/${id}/profile`, profile);
   }
   applyPlan(userId: number, planId: number, title: string, subjects: PlanSubject[], resolutions: PlanConflictResolution[] = []): Observable<ApplyPlanResult> {
@@ -172,6 +179,9 @@ export class ApiService {
   getHolidayStates(): Observable<string[]> {
     return this.http.get<string[]>(`${this.apiBase}/holidays/states`);
   }
+  getSavedHolidayData(): Observable<SavedHolidayData> {
+    return this.http.get<SavedHolidayData>(`${this.apiBase}/holidays/states/data`);
+  }
   addHolidayState(stateCode: string): Observable<HolidayStateData> {
     return this.http.post<HolidayStateData>(`${this.apiBase}/holidays/states`, {
       state_code: stateCode,
@@ -202,6 +212,9 @@ export class ApiService {
   claimReward(uid: number, rid: number): Observable<{ remaining_points: number }> { return this.http.post<{ remaining_points: number }>(this.apiBase + '/rewards/claim', { user_id: uid, reward_id: rid }); }
 
   getSystemConfig(): Observable<SystemConfig> { return this.http.get<SystemConfig>(this.apiBase + '/config'); }
+  getSystemConfigSettings(): Observable<SystemConfig> {
+    return this.http.get<SystemConfig>(`${this.apiBase}/config/settings`);
+  }
   resolveWeatherLocation(): Observable<SystemConfigLocationResult> {
     return this.http.post<SystemConfigLocationResult>(this.apiBase + '/config/location', {});
   }

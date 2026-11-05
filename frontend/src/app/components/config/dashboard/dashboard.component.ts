@@ -1,7 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService, GERMAN_STATES, HolidayStateData, PlanDefinition } from '../../../services/api.service';
+import { ApiService, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition } from '../../../services/api.service';
+import { CalendarService } from '../../../services/calendar.service';
+import { Subscription } from 'rxjs';
 
 // Importpfade matchen exakt zu euren neuen, sauberen Geschwister-Ordnern
 import { UsersComponent } from '../users/users.component';
@@ -28,7 +30,7 @@ import { User } from '../../../services/calendar.service';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   @Input() activeUsers: User[] = [];
   @Input() activeRewards: any[] = [];
   
@@ -46,30 +48,42 @@ export class DashboardComponent implements OnInit {
   public plansLoading = false;
   public plansLoadError = '';
   public savedHolidayStates: string[] = [];
+  public savedHolidays: Holiday[] = [];
   public selectedHolidayState: string | null = null;
   public holidaysLoading = false;
   public holidaysLoadError = '';
   public dbTables: string[] = [];
+  private readonly subscriptions = new Subscription();
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private calendarService: CalendarService) {}
 
   ngOnInit(): void {
     this.apiService.getDatabaseTables().subscribe((tables: string[]) => {
       this.dbTables = tables;
     });
-    this.refreshSavedPlans();
-    this.refreshSavedHolidays();
+    this.subscriptions.add(this.calendarService.savedPlansState$.subscribe((state) => {
+      if (state.data !== null) this.savedPlans = state.data;
+      this.plansLoading = state.loading;
+      this.plansLoadError = state.error ?? '';
+    }));
+    this.subscriptions.add(this.calendarService.savedHolidayDataState$.subscribe((state) => {
+      if (state.data !== null) {
+        this.savedHolidayStates = state.data.states;
+        this.savedHolidays = state.data.holidays;
+      }
+      this.holidaysLoading = state.loading;
+      this.holidaysLoadError = state.error ?? '';
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   openPlans(): void {
     this.activeTab = 'plans';
     this.selectedPlanId = null;
     this.plansComponent?.resetForm();
-    setTimeout(() => {
-      if (this.activeTab === 'plans') {
-        this.plansComponent?.loadPlans();
-      }
-    }, 50);
   }
 
   openSavedPlan(planId: number): void {
@@ -83,24 +97,12 @@ export class DashboardComponent implements OnInit {
   }
 
   refreshSavedPlans(): void {
-    this.plansLoading = true;
-    this.plansLoadError = '';
-    this.apiService.getPlans().subscribe({
-      next: (plans) => {
-        this.savedPlans = plans;
-        this.plansLoading = false;
-      },
-      error: () => {
-        this.plansLoading = false;
-        this.plansLoadError = 'Gespeicherte Pläne konnten nicht geladen werden.';
-      },
-    });
+    this.calendarService.loadSavedPlans();
   }
 
   onPlansChanged(plans: PlanDefinition[]): void {
     this.savedPlans = plans;
-    this.plansLoading = false;
-    this.plansLoadError = '';
+    this.calendarService.setSavedPlans(plans);
     if (this.selectedPlanId !== null && !plans.some((plan) => plan.id === this.selectedPlanId)) {
       this.selectedPlanId = null;
     }
@@ -112,25 +114,20 @@ export class DashboardComponent implements OnInit {
   }
 
   refreshSavedHolidays(): void {
-    this.holidaysLoading = true;
-    this.holidaysLoadError = '';
-    this.apiService.getHolidayStates().subscribe({
-      next: (states) => {
-        this.savedHolidayStates = states;
-        this.holidaysLoading = false;
-      },
-      error: () => {
-        this.holidaysLoading = false;
-        this.holidaysLoadError = 'Gespeicherte Bundesländer konnten nicht geladen werden.';
-      },
-    });
+    this.calendarService.loadSavedHolidayData();
   }
 
   onHolidayStateAdded(data: HolidayStateData): void {
     this.savedHolidayStates = [...new Set([...this.savedHolidayStates, data.state_code])].sort();
+    this.savedHolidays = [
+      ...this.savedHolidays.filter((holiday) => holiday.state_code !== data.state_code),
+      ...data.holidays,
+    ];
     this.selectedHolidayState = data.state_code;
-    this.holidaysLoading = false;
-    this.holidaysLoadError = '';
+    this.calendarService.setSavedHolidayData({
+      states: this.savedHolidayStates,
+      holidays: this.savedHolidays,
+    });
   }
 
   holidayStateName(code: string): string {

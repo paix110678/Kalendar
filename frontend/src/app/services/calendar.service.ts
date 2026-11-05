@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, switchMap, tap } from 'rxjs';
-import { ApiService, PlanConflictResolution, PlanSubject, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import { ApiService, PlanConflictResolution, PlanDefinition, PlanSubject, SavedHolidayData, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
 
-export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; assigned_plan_id: number | null; }
+export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; state_code: string | null; assigned_plan_id: number | null; }
 export interface Category { id: number; value: string; label: string; color: string; default_short: string; } 
 export interface TimeBlock { id: number; user_id: number; title: string; short_title?: string; day_of_week: 'Montag' | 'Dienstag' | 'Mittwoch' | 'Donnerstag' | 'Freitag' | 'Samstag' | 'Sonntag'; start_time: string; end_time: string; type: string; is_locked: boolean; color?: string | null; plan_assignment_id?: number | null; plan_period?: number | null; person_event_type_id?: number | null; is_visible?: boolean; }
 export interface Reward { id: number; title: string; point_cost: number; type: 'snack' | 'extra_time' | 'cash'; }
 export interface SystemConfig { weather_city: string; weather_plz: string; weather_latitude: number | null; weather_longitude: number | null; weather_service: 'open_meteo' | 'weather_api'; api_key: string; live_temp: string; live_rain: string; high_temp: string; low_temp: string; }
+export interface SettingsDataState<T> { data: T | null; loading: boolean; error: string | null; }
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
@@ -25,6 +27,10 @@ export class CalendarService {
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
   private configSubject = new BehaviorSubject<SystemConfig>({ weather_city: 'Bremen', weather_plz: '28790', weather_latitude: null, weather_longitude: null, weather_service: 'open_meteo', api_key: '', live_temp: '--', live_rain: '--', high_temp: '--', low_temp: '--' });
   public config$: Observable<SystemConfig> = this.configSubject.asObservable();
+  private savedPlansState = new BehaviorSubject<SettingsDataState<PlanDefinition[]>>({ data: null, loading: false, error: null });
+  public savedPlansState$ = this.savedPlansState.asObservable();
+  private savedHolidayDataState = new BehaviorSubject<SettingsDataState<SavedHolidayData>>({ data: null, loading: false, error: null });
+  public savedHolidayDataState$ = this.savedHolidayDataState.asObservable();
 
   public readonly START_HOUR = 6; public readonly END_HOUR = 24; public readonly ROW_HEIGHT_PIXELS = 4.5;
   constructor(private apiService: ApiService) { this.loadInitialData(); }
@@ -41,16 +47,116 @@ export class CalendarService {
     this.loadAllBlocks();
     this.loadRewards();
     this.loadInitialSystemConfig();
+    this.loadSavedPlans();
+    this.loadSavedHolidayData();
+  }
+  public loadSavedPlans(): void {
+    this.savedPlansState.next({ ...this.savedPlansState.value, loading: true, error: null });
+    this.apiService.getPlans().subscribe({
+      next: (data) => this.savedPlansState.next({ data, loading: false, error: null }),
+      error: (error: unknown) => {
+        console.error('Gespeicherte Pläne konnten nicht geladen werden:', error);
+        this.savedPlansState.next({ ...this.savedPlansState.value, loading: false, error: 'Gespeicherte Pläne konnten nicht geladen werden.' });
+      },
+    });
+  }
+  public setSavedPlans(data: PlanDefinition[]): void {
+    this.savedPlansState.next({ data, loading: false, error: null });
+  }
+  public loadSavedHolidayData(): void {
+    this.savedHolidayDataState.next({ ...this.savedHolidayDataState.value, loading: true, error: null });
+    this.apiService.getSavedHolidayData().subscribe({
+      next: (data) => this.savedHolidayDataState.next({ data, loading: false, error: null }),
+      error: (error: unknown) => {
+        console.error('Gespeicherte Ferien und Feiertage konnten nicht geladen werden:', error);
+        this.savedHolidayDataState.next({ ...this.savedHolidayDataState.value, loading: false, error: 'Gespeicherte Bundesländer konnten nicht geladen werden.' });
+      },
+    });
+  }
+  public setSavedHolidayData(data: SavedHolidayData): void {
+    this.savedHolidayDataState.next({ data, loading: false, error: null });
+  }
+  public ensureHolidayState(stateCode: string): Observable<SavedHolidayData> {
+    const savedData = this.savedHolidayDataState.value.data;
+    const savedData$ = savedData
+      ? of(savedData)
+      : this.apiService.getSavedHolidayData().pipe(tap((data) => this.setSavedHolidayData(data)));
+
+    return savedData$.pipe(
+      switchMap((data) => {
+        if (data.states.includes(stateCode)) return of(data);
+        return this.apiService.addHolidayState(stateCode).pipe(
+          map((addedState) => ({
+            states: [...new Set([...data.states, addedState.state_code])].sort(),
+            holidays: [
+              ...data.holidays.filter((holiday) => holiday.state_code !== addedState.state_code),
+              ...addedState.holidays,
+            ],
+          })),
+          tap((updatedData) => this.setSavedHolidayData(updatedData)),
+          catchError((error: unknown) => {
+            if (!(error instanceof HttpErrorResponse) || error.status !== 409) {
+              return throwError(() => error);
+            }
+            return this.apiService.getSavedHolidayData().pipe(
+              tap((updatedData) => this.setSavedHolidayData(updatedData)),
+            );
+          }),
+        );
+      }),
+    );
   }
   public loadCategories(): void { this.apiService.getCategories().subscribe((c: Category[]) => this.categoriesSubject.next(c)); }
-  public loadSystemConfig(): void { this.apiService.getSystemConfig().subscribe((c: SystemConfig) => this.configSubject.next(c)); }
-  private loadInitialSystemConfig(): void {
-    this.apiService.resolveWeatherLocation().subscribe({
-      next: (_result: SystemConfigLocationResult) => this.loadSystemConfig(),
-      error: (error: unknown) => {
-        console.error('Standortprüfung beim Frontend-Start fehlgeschlagen:', error);
-        this.loadSystemConfig();
+  public loadSystemConfig(): void {
+    this.apiService.getSystemConfigSettings().subscribe({
+      next: (config: SystemConfig) => {
+        this.configSubject.next(config);
+        this.refreshWeatherSnapshot();
       },
+      error: (error: unknown) => console.error('Systemkonfiguration konnte nicht geladen werden:', error),
+    });
+  }
+  private loadInitialSystemConfig(): void {
+    this.apiService.getSystemConfigSettings().subscribe({
+      next: (config: SystemConfig) => {
+        this.configSubject.next(config);
+        if (config.weather_latitude !== null && config.weather_longitude !== null) {
+          this.refreshWeatherSnapshot();
+          return;
+        }
+
+        this.apiService.resolveWeatherLocation().subscribe({
+          next: (result: SystemConfigLocationResult) => {
+            if (result.location_error) {
+              console.warn('Standort konnte beim Frontend-Start nicht ermittelt werden:', result.location_error);
+            }
+            if (result.location_resolved) {
+              this.loadSystemConfig();
+            }
+          },
+          error: (error: unknown) => {
+            console.error('Standortprüfung beim Frontend-Start fehlgeschlagen:', error);
+          },
+        });
+      },
+      error: (error: unknown) => {
+        console.error('Systemkonfiguration konnte beim Frontend-Start nicht geladen werden:', error);
+      },
+    });
+  }
+  private refreshWeatherSnapshot(): void {
+    this.apiService.getSystemConfig().subscribe({
+      next: (weather) => {
+        const current = this.configSubject.value;
+        this.configSubject.next({
+          ...current,
+          live_temp: weather.live_temp,
+          live_rain: weather.live_rain,
+          high_temp: weather.high_temp,
+          low_temp: weather.low_temp,
+        });
+      },
+      error: (error: unknown) => console.error('Wetterdaten konnten nicht aktualisiert werden:', error),
     });
   }
   public loadAllBlocks(): void {
@@ -64,7 +170,7 @@ export class CalendarService {
   private loadUsers(): void { this.apiService.getUsers().subscribe((users: User[]) => this.usersSubject.next(users)); }
   public refreshUsers(): void { this.loadUsers(); }
   private loadRewards(): void { this.apiService.getRewards().subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards)); }
-  public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport'>): Observable<UpdateUserProfileResult> {
+  public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code'>): Observable<UpdateUserProfileResult> {
     return this.apiService.updateUserProfile(userId, profile).pipe(tap(({ user, blocks_changed }) => {
       this.usersSubject.next(this.usersSubject.value.map((currentUser) => currentUser.id === userId ? user : currentUser));
       if (blocks_changed) this.loadAllBlocks();

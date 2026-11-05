@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CalendarService, User, TimeBlock, Category } from '../../../services/calendar.service';
-import { take } from 'rxjs/operators'; 
+import { Subscription, take } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -29,13 +29,14 @@ export class BlockEditorComponent implements OnInit, OnChanges, OnDestroy {
 
   public categories: Category[] = [];
   public isDropdownOpen = false; // REPARIERT: Steuert den Aufklapp-Zustand des Custom-Dropdowns
+  private readonly categorySubscription = new Subscription();
 
   constructor(public calendarService: CalendarService) {}
 
   ngOnInit(): void {
-    this.calendarService.categories$.subscribe((cats: Category[]) => {
+    this.categorySubscription.add(this.calendarService.categories$.subscribe((cats: Category[]) => {
       this.categories = cats;
-    });
+    }));
     this.syncEditorData();
   }
 
@@ -182,6 +183,7 @@ export class BlockEditorComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.categorySubscription.unsubscribe();
     this.calendarService.setDrawnCategory('preview_blue');
   }
 }

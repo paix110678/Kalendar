@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, PlanDefinition, PlanHour } from '../../../services/api.service';
@@ -13,13 +13,14 @@ import { catchError, map, of, switchMap, timeout } from 'rxjs';
   templateUrl: './plans.component.html',
   styleUrl: './plans.component.css',
 })
-export class PlansComponent implements OnInit {
+export class PlansComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private pendingPlanId: number | null = null;
 
   @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
+  @Input() initialPlans: PlanDefinition[] = [];
 
   readonly daysOfWeek = [
     'Montag',
@@ -37,14 +38,20 @@ export class PlansComponent implements OnInit {
   endDay = 'Freitag';
   hoursCount = 6;
   hours: PlanHour[] = this.createDefaultHours(this.hoursCount);
+  excludeSchoolHolidays = false;
+  excludePublicHolidays = false;
   editingPlanId: number | null = null;
   loading = false;
   saving = false;
   errorMessage = '';
   successMessage = '';
 
-  ngOnInit(): void {
-    this.loadPlans();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initialPlans']) {
+      this.plans = this.initialPlans;
+      this.loading = false;
+      this.changeDetector.markForCheck();
+    }
   }
 
   loadPlans(preserveError = false): void {
@@ -108,6 +115,8 @@ export class PlansComponent implements OnInit {
       end_day: this.endDay,
       hours_count: this.hoursCount,
       hours: this.hours,
+      exclude_school_holidays: this.excludeSchoolHolidays,
+      exclude_public_holidays: this.excludePublicHolidays,
     };
 
     this.saving = true;
@@ -164,6 +173,8 @@ export class PlansComponent implements OnInit {
     this.endDay = plan.end_day;
     this.hoursCount = plan.hours_count;
     this.hours = plan.hours.map((hour) => ({ ...hour }));
+    this.excludeSchoolHolidays = plan.exclude_school_holidays;
+    this.excludePublicHolidays = plan.exclude_public_holidays;
     this.successMessage = '';
     this.errorMessage = '';
   }
@@ -226,6 +237,8 @@ export class PlansComponent implements OnInit {
     this.endDay = 'Freitag';
     this.hoursCount = 6;
     this.hours = this.createDefaultHours(this.hoursCount);
+    this.excludeSchoolHolidays = false;
+    this.excludePublicHolidays = false;
   }
 
   private createDefaultHours(count: number): PlanHour[] {

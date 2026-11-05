@@ -18,11 +18,13 @@
     <glc-grid-calendar
       style="display: block; width: 100%; height: 100%;"
       [events]="calendarEvents"
+      [dayAnnotations]="calendarDayAnnotations()"
       contentMode="grid"
       [resources]="calendarResources"
       [viewMode]="calendarViewMode"
       columnMode="resource"
       [anchorDate]="anchorDate"
+      [labels]="calendarLabels"
       [config]="calendarConfig"
       [theme]="calendarTheme"
       (eventsChange)="onCalendarEventsChange($event)"
@@ -31,7 +33,8 @@
       (eventEditRequested)="onCalendarEventEdited($event)"
       (eventMoved)="onCalendarEventMoved($event)"
       (eventUpdated)="onCalendarEventUpdated($event)"
-      (eventDeleted)="onCalendarEventDeleted($event)">
+      (eventDeleted)="onCalendarEventDeleted($event)"
+      (visibleRangeChange)="onVisibleRangeChange($event)">
     </glc-grid-calendar>
   </div> <!-- /calendar-scroll-viewport -->
 

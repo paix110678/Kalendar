@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, GERMAN_STATES, Holiday, HolidayStateData } from '../../../services/api.service';
 
@@ -16,18 +16,20 @@ interface HolidayYearGroup {
   templateUrl: './holidays.component.html',
   styleUrl: './holidays.component.css',
 })
-export class HolidaysComponent implements OnInit, OnChanges {
+export class HolidaysComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
 
   @Input() selectedStateCode: string | null = null;
   @Input() savedStateCodes: string[] = [];
+  @Input() savedHolidays: Holiday[] = [];
+  @Input() loadingSavedHolidays = false;
+  @Input() savedHolidaysError = '';
   @Output() stateAdded = new EventEmitter<HolidayStateData>();
 
   readonly bundeslaender = GERMAN_STATES;
 
   newStateCode = '';
   holidays: Holiday[] = [];
-  loading = false;
   saving = false;
   errorMessage = '';
   successMessage = '';
@@ -58,13 +60,11 @@ export class HolidaysComponent implements OnInit, OnChanges {
     })).sort((left, right) => left.year - right.year);
   }
 
-  ngOnInit(): void {
-    this.loadSelectedState();
-  }
-
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['selectedStateCode'] && !changes['selectedStateCode'].firstChange) {
-      this.loadSelectedState();
+    if (changes['selectedStateCode'] || changes['savedHolidays']) {
+      this.holidays = this.selectedStateCode
+        ? this.savedHolidays.filter((holiday) => holiday.state_code === this.selectedStateCode)
+        : [];
     }
   }
 
@@ -103,27 +103,6 @@ export class HolidaysComponent implements OnInit, OnChanges {
 
   stateName(code: string): string {
     return this.bundeslaender.find((state) => state.code === code)?.name ?? code;
-  }
-
-  private loadSelectedState(): void {
-    if (!this.selectedStateCode) {
-      this.holidays = [];
-      return;
-    }
-
-    this.loading = true;
-    this.errorMessage = '';
-    this.apiService.getHolidays(this.selectedStateCode).subscribe({
-      next: (holidays) => {
-        this.holidays = holidays;
-        this.loading = false;
-      },
-      error: (error: unknown) => {
-        this.holidays = [];
-        this.loading = false;
-        this.errorMessage = this.describeError(error, 'Gespeicherte Ferien konnten nicht geladen werden.');
-      },
-    });
   }
 
   private describeError(error: unknown, fallback: string): string {
