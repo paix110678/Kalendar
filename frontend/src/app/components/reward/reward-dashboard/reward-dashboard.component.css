@@ -1,4 +1,4 @@
-.fullscreen-reward-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f8f9fa; z-index: 1000; padding: 40px; display: flex; flex-direction: column; gap: 25px; }
+.fullscreen-reward-overlay { position: fixed; inset: 0 0 auto; height: 100vh; height: 100dvh; background: #f8f9fa; z-index: 1000; padding: 40px; display: flex; flex-direction: column; gap: 25px; }
 .reward-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; }
 .reward-header h2 { margin: 0; font-size: 22px; color: #1a1b1e; font-weight: 800; }
 .btn-close-reward { background: #343a40; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }

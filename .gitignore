@@ -1,2 +1,4 @@
-backend/kalender.db
+__pycache__/
+*.pyc
+kalender.db
 backend/backups/
