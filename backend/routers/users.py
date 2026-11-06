@@ -617,6 +617,7 @@ def delete_user(user_id: int):
     if assignment:
         conn.execute("DELETE FROM time_blocks WHERE plan_assignment_id = ?", (assignment["id"],))
         conn.execute("DELETE FROM user_plan_assignments WHERE id = ?", (assignment["id"],))
+    conn.execute("DELETE FROM task_participants WHERE user_id = ?", (user_id,))
     conn.execute("DELETE FROM person_event_types WHERE user_id = ?", (user_id,))
     conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.execute("DELETE FROM time_blocks WHERE user_id = ?", (user_id,))

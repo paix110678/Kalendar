@@ -1,0 +1,61 @@
+<section class="tasks-page">
+  <header class="tasks-header">
+    <h3>{{ editingTaskId === null ? 'Task hinzufügen' : 'Task bearbeiten' }}</h3>
+  </header>
+
+  <form class="task-form" (ngSubmit)="$event.preventDefault()">
+    <label class="field">
+      <span>Titel</span>
+      <input
+        type="text"
+        name="taskTitle"
+        [(ngModel)]="title"
+        (ngModelChange)="publishEditorActions()"
+        maxlength="100"
+        required>
+    </label>
+
+    <label class="field">
+      <span>Farbe</span>
+      <app-color-picker [value]="color" (valueChange)="color = $event; publishEditorActions()"></app-color-picker>
+    </label>
+
+    <label class="field">
+      <span>Kategorie</span>
+      <select
+        name="taskCategory"
+        [ngModel]="categoryId"
+        (ngModelChange)="categoryId = $event; publishEditorActions()"
+        required>
+        <option [ngValue]="null">Kategorie auswählen …</option>
+        @for (category of categories; track category.id) {
+          <option [ngValue]="category.id">{{ category.label }}</option>
+        }
+      </select>
+    </label>
+
+    @if (categories.length === 0) {
+      <p class="form-message form-error">Lege zuerst unter „Kategorien“ eine Kategorie an.</p>
+    }
+
+    <fieldset class="participants">
+      <legend>Teilnehmende Mitglieder</legend>
+      @if (activeUsers.length === 0) {
+        <p class="empty-state">Es sind keine Familienmitglieder vorhanden.</p>
+      } @else {
+        @for (user of activeUsers; track user.id) {
+          <label class="participant-option">
+            <input
+              type="checkbox"
+              [checked]="memberIds.includes(user.id)"
+              (change)="toggleMember(user.id, $event)">
+            <span class="member-color" [style.background-color]="user.color_code" aria-hidden="true"></span>
+            <span>{{ user.name }}</span>
+          </label>
+        }
+      }
+    </fieldset>
+
+    <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
+  </form>
+</section>

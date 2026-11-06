@@ -1,15 +1,22 @@
 <div class="top-bar-grid-container">
+  <div *ngIf="isCapturingScreenshot" class="screenshot-capture-overlay" role="status" aria-live="polite">
+    <span class="screenshot-spinner" aria-hidden="true"></span>
+    <span>Screenshot wird erstellt …</span>
+  </div>
   
   <!-- ETAGE 1 (Oben links): Das Logo sitzt jetzt geschützt und weiß auf dem farbigen Hintergrund! -->
   <div class="header-logo-row">
     <app-logo></app-logo>
+    <div class="header-actions">
+      <button class="btn-error-report" (click)="openErrorReport()" title="Fehler melden" aria-label="Fehler melden" [disabled]="isCapturingScreenshot">
+        <span aria-hidden="true">🐞</span>
+      </button>
+      <button class="btn-admin-gear" (click)="adminPageOpened.emit()" title="Administration / Einstellungen" aria-label="Einstellungen">⚙️</button>
+    </div>
   </div>
 
   <!-- ETAGE 2 (Direkt darunter): Alle Controls perfekt aufgereiht innerhalb derselben Kapsel -->
   <div class="controls-row">
-    <!-- Großes Verwaltungssystem-Zahnrad ganz links unten -->
-    <button class="btn-admin-gear" (click)="adminPageOpened.emit()" title="Administration / Einstellungen">⚙️</button>
-
     <!-- Symmetrische Ansichts-Buttons in der Mitte -->
     <app-view-mode-buttons 
       [currentViewMode]="currentViewMode" 
@@ -34,3 +41,10 @@
   </div>
 
 </div>
+
+<app-error-report-dialog
+  *ngIf="showErrorReport"
+  [screenshotDataUrl]="screenshotDataUrl"
+  [screenshotError]="screenshotError"
+  (closed)="showErrorReport = false">
+</app-error-report-dialog>

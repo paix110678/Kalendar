@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService, DatabaseBackup, DatabaseBackupList, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition, WeatherLocation } from '../../../services/api.service';
+import { ApiService, DatabaseBackup, DatabaseBackupList, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition, TaskDefinition, WeatherLocation } from '../../../services/api.service';
 import { CalendarService, Category } from '../../../services/calendar.service';
 import { Subscription } from 'rxjs';
 
@@ -12,6 +12,7 @@ import { SystemComponent } from '../weather/system.component';
 import { DatabaseComponent } from '../database/database.component';
 import { PlansComponent } from '../plans/plans.component';
 import { HolidaysComponent } from '../holidays/holidays.component';
+import { TasksComponent } from '../tasks/tasks.component';
 import { User } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
@@ -26,7 +27,8 @@ import { AdminEditorActions } from '../admin-editor-actions';
     SystemComponent, 
     DatabaseComponent,
     PlansComponent,
-    HolidaysComponent
+    HolidaysComponent,
+    TasksComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
@@ -42,7 +44,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
 
-  public activeTab: 'users' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' = 'users';
+  public activeTab: 'users' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' = 'users';
   public selectedMemberId: number | null = null;
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
@@ -65,6 +67,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public selectedWeatherLocationId: number | null = null;
   public calendarCategories: Category[] = [];
   public selectedCategoryId: number | null = null;
+  public tasks: TaskDefinition[] = [];
+  public tasksLoading = false;
+  public tasksLoadError = '';
+  public selectedTaskId: number | null = null;
   public expandedSections: Record<'plans' | 'holidays' | 'categories' | 'system' | 'database', boolean> = {
     plans: false,
     holidays: false,
@@ -153,8 +159,55 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.editorActions = null;
     this.activeTab = 'categories';
     this.selectedCategoryId = categoryId;
+    this.selectedTaskId = null;
+    this.selectedTaskCategoryId = null;
     if (categoryId === null) this.toggleSection('categories');
     else this.expandedSections.categories = true;
+  }
+
+  openTask(taskId: number | null, categoryId: number | null = null): void {
+    this.editorActions = null;
+    this.activeTab = 'tasks';
+    this.selectedTaskId = taskId;
+    this.selectedTaskCategoryId = categoryId;
+    this.expandedSections.categories = true;
+  }
+
+  public selectedTaskCategoryId: number | null = null;
+
+  refreshSavedTasks(): void {
+    this.tasksLoading = true;
+    this.tasksLoadError = '';
+    this.apiService.getTasks().subscribe({
+      next: (tasks) => {
+        this.tasks = tasks;
+        this.tasksLoading = false;
+        this.tasksLoadError = '';
+        if (this.selectedTaskId !== null && !tasks.some((task) => task.id === this.selectedTaskId)) {
+          this.selectedTaskId = null;
+        }
+      },
+      error: (error: unknown) => {
+        console.error('Tasks im Navigationstree konnten nicht geladen werden:', error);
+        this.tasksLoading = false;
+        this.tasksLoadError = 'Tasks konnten nicht geladen werden.';
+      },
+    });
+  }
+
+  onTasksChanged(tasks: TaskDefinition[]): void {
+    this.tasks = tasks;
+    this.tasksLoading = false;
+    this.tasksLoadError = '';
+    if (this.selectedTaskId !== null && !tasks.some((task) => task.id === this.selectedTaskId)) {
+      this.selectedTaskId = null;
+    }
+  }
+
+  getTasksForCategory(categoryId: number): TaskDefinition[] {
+    return this.tasks
+      .filter((task) => task.category_id === categoryId)
+      .sort((left, right) => left.title.localeCompare(right.title, 'de'));
   }
 
   refreshSavedHolidays(): void {
@@ -184,7 +237,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     if (section === 'plans') this.refreshSavedPlans();
     else if (section === 'holidays') this.refreshSavedHolidays();
-    else if (section === 'categories') this.calendarService.loadCategories();
+    else if (section === 'categories') {
+      this.calendarService.loadCategories();
+      this.refreshSavedTasks();
+    }
     else if (section === 'system') this.refreshWeatherLocations();
     else {
       this.apiService.getDatabaseTables().subscribe({

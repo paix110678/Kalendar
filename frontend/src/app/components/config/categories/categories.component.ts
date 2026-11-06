@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../services/api.service';
 import { CalendarService, Category } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
+import { ColorPickerComponent } from '../color-picker/color-picker.component';
 
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColorPickerComponent],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.css'
 })

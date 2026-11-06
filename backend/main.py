@@ -10,7 +10,7 @@ import backup_service
 import uvicorn
 
 # Router-Imports
-from routers import users, blocks, rewards, config, plans, holidays, backups
+from routers import users, blocks, rewards, config, plans, holidays, backups, tasks, error_reports
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -82,6 +82,8 @@ app.include_router(config.router)
 app.include_router(plans.router)
 app.include_router(holidays.router)
 app.include_router(backups.router)
+app.include_router(tasks.router)
+app.include_router(error_reports.router)
 
 @app.get("/")
 def read_root():

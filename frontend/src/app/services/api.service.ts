@@ -33,6 +33,17 @@ export interface PersonEventType {
   color: string;
 }
 
+export interface TaskDefinition {
+  id: number;
+  title: string;
+  color: string;
+  category_id: number;
+  category_label: string;
+  member_ids: number[];
+}
+
+export type TaskPayload = Pick<TaskDefinition, 'title' | 'color' | 'category_id' | 'member_ids'>;
+
 export interface PlanConflict {
   id: number;
   title: string;
@@ -134,6 +145,12 @@ export interface DatabaseBackupList {
   errors: Array<{ file: string; error: string }>;
 }
 
+export interface ErrorReportPayload {
+  description: string;
+  diagnostics: Record<string, string | number>;
+  screenshot: string | null;
+}
+
 export const GERMAN_STATES = [
   { code: 'BW', name: 'Baden-Württemberg' },
   { code: 'BY', name: 'Bayern' },
@@ -155,7 +172,9 @@ export const GERMAN_STATES = [
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly apiBase = 'http://localhost:8000/api';
+  private readonly apiBase = window.location.port === '4200'
+    ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+    : '/api';
   constructor(private http: HttpClient) {}
 
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
@@ -187,6 +206,14 @@ export class ApiService {
   }
   updateCategory(id: number, label: string, color: string, short: string): Observable<any> { return this.http.put(`${this.apiBase}/blocks/categories/${id}`, { label, color, default_short: short }); }
   deleteCategory(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/blocks/categories/${id}`); }
+  getTasks(): Observable<TaskDefinition[]> { return this.http.get<TaskDefinition[]>(`${this.apiBase}/tasks`); }
+  createTask(task: TaskPayload): Observable<TaskDefinition> {
+    return this.http.post<TaskDefinition>(`${this.apiBase}/tasks`, task);
+  }
+  updateTask(id: number, task: TaskPayload): Observable<TaskDefinition> {
+    return this.http.put<TaskDefinition>(`${this.apiBase}/tasks/${id}`, task);
+  }
+  deleteTask(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/tasks/${id}`); }
   getAllBlocks(): Observable<TimeBlock[]> { return this.http.get<TimeBlock[]>(this.apiBase + '/blocks/all'); }
   addTimeBlock(block: any): Observable<any> { return this.http.post(this.apiBase + '/blocks', block); }
   deleteTimeBlock(id: number): Observable<any> { return this.http.delete(this.apiBase + '/blocks/' + id); }
@@ -212,6 +239,9 @@ export class ApiService {
   }
   deleteDatabaseBackup(backupId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiBase}/backups/${encodeURIComponent(backupId)}`);
+  }
+  submitErrorReport(report: ErrorReportPayload): Observable<{ id: number; status: string }> {
+    return this.http.post<{ id: number; status: string }>(`${this.apiBase}/error-reports`, report);
   }
   restoreDatabaseBackup(backupId: string): Observable<{ restored_backup_id: string; recovery_backup_id: string }> {
     return this.http.post<{ restored_backup_id: string; recovery_backup_id: string }>(

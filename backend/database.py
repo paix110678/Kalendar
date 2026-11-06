@@ -2,11 +2,9 @@ import json
 import sqlite3
 import os
 
-# 1. Wir krallen uns den Pfad des aktuellen backend-Ordners
+# 1. Standardmäßig liegt die Datenbank im backend-Ordner; Container können den Pfad überschreiben.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 2. BEHOBEN: Wir greifen jetzt direkt auf die kalender.db IM backend-Ordner zu!
-DB_FILE = os.path.join(BASE_DIR, "kalender.db")
+DB_FILE = os.environ.get("KALENDAR_DB_PATH", os.path.join(BASE_DIR, "kalender.db"))
 
 def get_db_connection(db_file=None):
     conn = sqlite3.connect(db_file or DB_FILE)
@@ -55,6 +53,43 @@ def _init_db_connection(conn):
             label TEXT NOT NULL,
             color TEXT NOT NULL,
             default_short TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            color TEXT NOT NULL,
+            category_id INTEGER NOT NULL,
+            FOREIGN KEY(category_id) REFERENCES categories(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_participants (
+            task_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            PRIMARY KEY(task_id, user_id),
+            FOREIGN KEY(task_id) REFERENCES tasks(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_event_type_migrations (
+            event_type_id INTEGER PRIMARY KEY,
+            task_id INTEGER NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS error_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT NOT NULL,
+            diagnostics TEXT NOT NULL,
+            screenshot BLOB,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
@@ -426,6 +461,88 @@ def _init_db_connection(conn):
         ]
         cursor.executemany("INSERT INTO categories (value, label, color, default_short) VALUES (?, ?, ?, ?)", default_cats)
         conn.commit()
+
+    school_category = cursor.execute(
+        "SELECT id FROM categories WHERE value = 'school' ORDER BY id LIMIT 1"
+    ).fetchone()
+    if school_category is None:
+        school_category = cursor.execute(
+            "SELECT id FROM categories ORDER BY id LIMIT 1"
+        ).fetchone()
+    if school_category is not None:
+        legacy_event_types = cursor.execute(
+            """
+            SELECT person_event_types.id, person_event_types.user_id,
+                   person_event_types.name, person_event_types.color
+            FROM person_event_types
+            LEFT JOIN task_event_type_migrations
+                ON task_event_type_migrations.event_type_id = person_event_types.id
+            WHERE task_event_type_migrations.event_type_id IS NULL
+            ORDER BY person_event_types.id
+            """
+        ).fetchall()
+        for event_type in legacy_event_types:
+            task_cursor = cursor.execute(
+                "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                (event_type["name"], event_type["color"], school_category["id"]),
+            )
+            task_id = task_cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO task_participants (task_id, user_id) VALUES (?, ?)",
+                (task_id, event_type["user_id"]),
+            )
+            cursor.execute(
+                "INSERT INTO task_event_type_migrations (event_type_id, task_id) VALUES (?, ?)",
+                (event_type["id"], task_id),
+            )
+        conn.commit()
+
+    cursor.execute(
+        """
+        UPDATE person_event_types
+        SET name = (
+                SELECT tasks.title
+                FROM task_event_type_migrations
+                JOIN tasks ON tasks.id = task_event_type_migrations.task_id
+                WHERE task_event_type_migrations.event_type_id = person_event_types.id
+            ),
+            color = (
+                SELECT tasks.color
+                FROM task_event_type_migrations
+                JOIN tasks ON tasks.id = task_event_type_migrations.task_id
+                WHERE task_event_type_migrations.event_type_id = person_event_types.id
+            )
+        WHERE id IN (SELECT event_type_id FROM task_event_type_migrations)
+          AND EXISTS (
+              SELECT 1
+              FROM task_event_type_migrations
+              JOIN tasks ON tasks.id = task_event_type_migrations.task_id
+              WHERE task_event_type_migrations.event_type_id = person_event_types.id
+          )
+        """
+    )
+    cursor.execute(
+        """
+        UPDATE time_blocks
+        SET title = (
+                SELECT person_event_types.name
+                FROM person_event_types
+                WHERE person_event_types.id = time_blocks.person_event_type_id
+            ),
+            short_title = (
+                SELECT substr(person_event_types.name, 1, 6)
+                FROM person_event_types
+                WHERE person_event_types.id = time_blocks.person_event_type_id
+            ),
+            color = (
+                SELECT person_event_types.color
+                FROM person_event_types
+                WHERE person_event_types.id = time_blocks.person_event_type_id
+            )
+        WHERE person_event_type_id IN (SELECT event_type_id FROM task_event_type_migrations)
+        """
+    )
+    conn.commit()
 
     config_count = cursor.execute("SELECT COUNT(*) FROM system_config").fetchone()[0]
     if config_count == 0:

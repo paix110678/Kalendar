@@ -23,7 +23,7 @@
       </label>
       <label>
         <span>Farbe</span>
-        <input type="color" name="memberColor" [(ngModel)]="colorCode" (ngModelChange)="publishEditorActions()">
+        <app-color-picker [value]="colorCode" (valueChange)="colorCode = $event; publishEditorActions()"></app-color-picker>
       </label>
       <label>
         <span>Sterne</span>
@@ -84,50 +84,12 @@
       <p class="muted-message" role="status">Die gespeicherte Plan-Zuordnung wird geladen …</p>
     }
 
-    <section class="person-event-types">
-      <div>
-        <h6>Fachliste für {{ user.name }}</h6>
-        <p class="plan-intro">Diese Einträge gehören nur zu dieser Person und können anschließend im Stundenplan ausgewählt werden.</p>
-      </div>
-      @if (eventTypesLoading) {
-        <p class="muted-message">Persönliche Fachliste wird geladen …</p>
-      }
-      <form class="event-type-create" (ngSubmit)="$event.preventDefault()">
-        <label>
-          <span>Name</span>
-          <input type="text" name="personEventTypeName" [(ngModel)]="eventTypeName" (ngModelChange)="publishEditorActions()" maxlength="100">
-        </label>
-        <label class="event-type-color">
-          <span>Farbe</span>
-          <input type="color" name="personEventTypeColor" [(ngModel)]="eventTypeColor" (ngModelChange)="publishEditorActions()">
-        </label>
-      </form>
-      <p class="error-message" role="alert" [hidden]="!eventTypeError">{{ eventTypeError }}</p>
-      <p class="success-message" role="status" [hidden]="!eventTypeMessage">{{ eventTypeMessage }}</p>
-      @for (eventType of personEventTypes; track eventType.id) {
-        <div class="person-event-type-row" [class.person-event-type-selected]="selectedEventTypeId === eventType.id" (click)="selectEventType(eventType)">
-          <span class="event-type-id">ID {{ eventType.id }}</span>
-          <label>
-            <span>Name</span>
-            <input type="text" [name]="'personEventTypeName-' + eventType.id" [(ngModel)]="eventType.name" (ngModelChange)="publishEditorActions()" maxlength="100" required>
-          </label>
-          <label class="event-type-color">
-            <span>Farbe</span>
-            <input type="color" [name]="'personEventTypeColor-' + eventType.id" [(ngModel)]="eventType.color" (ngModelChange)="publishEditorActions()">
-          </label>
-        </div>
-      }
-      @if (!eventTypesLoading && personEventTypes.length === 0) {
-        <p class="muted-message">Für diese Person sind noch keine Fächer/Eventarten angelegt.</p>
-      }
-    </section>
-
     @if (selectedPlan && scheduleEntries.length > 0 && !assignmentLoading) {
       <p class="plan-intro">
-        Jede Stunde wird unabhängig aus der persönlichen Fachliste ausgewählt; die Kalenderfarbe kommt automatisch aus dem Eintrag.
+        Jede Stunde wird unabhängig mit einem Fach oder einer Eventart belegt; die Kalenderfarbe kommt automatisch aus dem Eintrag.
       </p>
       @if (personEventTypes.length === 0) {
-        <p class="muted-message">Lege zuerst in der persönlichen Fachliste mindestens ein Fach oder eine Eventart an.</p>
+        <p class="muted-message">Für diese Person sind noch keine Fächer oder Eventarten für den Stundenplan verfügbar.</p>
       }
       <label class="assignment-title">
         <span>Titel der Plan-Zuordnung</span>

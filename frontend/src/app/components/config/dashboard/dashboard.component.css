@@ -17,6 +17,10 @@
 .member-tree-item-active { background: #e7f5ff; color: #1971c2; font-weight: 700; }
 .member-tree-color { width: 9px; height: 9px; flex: 0 0 9px; border: 1px solid rgba(0,0,0,.15); border-radius: 50%; }
 .plan-tree-navigation { display: grid; gap: 2px; margin: -4px 0 6px 12px; padding-left: 9px; border-left: 1px solid #dee2e6; }
+.category-tree-group { display: grid; gap: 2px; }
+.category-task-navigation { display: grid; gap: 2px; margin: -2px 0 5px 16px; padding-left: 8px; border-left: 1px solid #dee2e6; }
+.category-task-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 8px; font-size: 11px; }
+.category-task-add { padding: 5px 8px; color: #1971c2; font-size: 11px; }
 .plan-tree-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px; font-size: 12px; }
 .plan-tree-item-active { background: #e7f5ff; color: #1971c2; font-weight: 700; }
 .plan-tree-marker { width: 9px; flex: 0 0 9px; color: #868e96; text-align: center; }

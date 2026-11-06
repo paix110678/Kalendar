@@ -1,6 +1,6 @@
 <div class="admin-section">
   <h3>🌤️ Wetter &amp; Standort konfigurieren</h3>
-  <div class="location-actions">
+  <div class="location-actions" *ngIf="selectedLocationId === null">
     <button type="button" class="btn-save-config-submit" (click)="startCreatingLocation()">＋ Standort hinzufügen</button>
   </div>
   <p *ngIf="loading" role="status">Standort wird geladen …</p>

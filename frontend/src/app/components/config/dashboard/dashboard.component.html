@@ -91,18 +91,45 @@
       </button>
       @if (expandedSections.categories) {
       <div class="plan-tree-navigation" aria-label="Kategorien">
+        @if (tasksLoading) {
+          <span class="plan-tree-message">Tasks werden geladen …</span>
+        } @else if (tasksLoadError) {
+          <span class="plan-tree-message plan-tree-error" role="alert">{{ tasksLoadError }}</span>
+          <button type="button" class="plan-tree-retry" (click)="refreshSavedTasks()">Erneut versuchen</button>
+        }
         @if (calendarCategories.length === 0) {
           <span class="plan-tree-message">Keine Kategorien vorhanden</span>
         } @else {
           @for (category of calendarCategories; track category.id) {
-            <button
-              type="button"
-              class="tree-node-btn plan-tree-item"
-              [class.plan-tree-item-active]="activeTab === 'categories' && selectedCategoryId === category.id"
-              (click)="openCategories(category.id)">
-              <span class="member-tree-color" [style.background-color]="category.color" aria-hidden="true"></span>
-              <span class="plan-tree-name">{{ category.label }}</span>
-            </button>
+            <div class="category-tree-group">
+              <button
+                type="button"
+                class="tree-node-btn plan-tree-item"
+                [class.plan-tree-item-active]="activeTab === 'categories' && selectedCategoryId === category.id"
+                (click)="openCategories(category.id)">
+                <span class="member-tree-color" [style.background-color]="category.color" aria-hidden="true"></span>
+                <span class="plan-tree-name">{{ category.label }}</span>
+              </button>
+              <div class="category-task-navigation" [attr.aria-label]="'Tasks in ' + category.label">
+                @for (task of getTasksForCategory(category.id); track task.id) {
+                  <button
+                    type="button"
+                    class="tree-node-btn category-task-item"
+                    [class.plan-tree-item-active]="activeTab === 'tasks' && selectedTaskId === task.id"
+                    (click)="openTask(task.id, category.id)">
+                    <span class="member-tree-color" [style.background-color]="task.color" aria-hidden="true"></span>
+                    <span class="plan-tree-name">{{ task.title }}</span>
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="tree-node-btn category-task-add"
+                  [class.plan-tree-item-active]="activeTab === 'tasks' && selectedTaskId === null && selectedTaskCategoryId === category.id"
+                  (click)="openTask(null, category.id)">
+                  ＋ Task hinzufügen
+                </button>
+              </div>
+            </div>
           }
         }
       </div>
@@ -261,6 +288,18 @@
           (locationsChanged)="onWeatherLocationsChanged($event)"
           (selectedLocationChanged)="onWeatherLocationSelected($event)">
         </app-system>
+      }
+      @if (activeTab === 'tasks') {
+        <app-tasks
+          [activeUsers]="activeUsers"
+          [categories]="calendarCategories"
+          [tasks]="tasks"
+          [selectedTaskId]="selectedTaskId"
+          [defaultCategoryId]="selectedTaskCategoryId"
+          (tasksChanged)="onTasksChanged($event)"
+          (selectedTaskIdChange)="selectedTaskId = $event"
+          (editorActionsChange)="onEditorActionsChanged($event)">
+        </app-tasks>
       }
       @if (activeTab === 'database') {
         <app-database

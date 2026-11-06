@@ -6,6 +6,7 @@ import { EMPTY, asyncScheduler, catchError, finalize, firstValueFrom, observeOn,
 import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../services/api.service';
 import { CalendarService, User } from '../../../../services/calendar.service';
 import { AdminEditorActions } from '../../admin-editor-actions';
+import { ColorPickerComponent } from '../../color-picker/color-picker.component';
 
 type ConflictAction = '' | 'delete' | 'move';
 
@@ -27,7 +28,7 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 @Component({
   selector: 'app-member-details',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColorPickerComponent],
   templateUrl: './member-details.component.html',
   styleUrl: './member-details.component.css',
 })

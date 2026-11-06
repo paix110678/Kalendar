@@ -1,8 +1,10 @@
 <section class="plans-page">
   <header class="plans-header">
     <div>
-      <h3>Pläne erstellen</h3>
-      <p>Lege Tage und individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
+      <h3>{{ editingPlanId === null ? 'Plan hinzufügen' : 'Plan bearbeiten' }}</h3>
+      @if (editingPlanId === null) {
+        <p>Lege Tage und individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
+      }
     </div>
   </header>
 

@@ -49,7 +49,7 @@ export class SystemComponent implements OnChanges {
     if (changes['selectedLocationId']) {
       if (this.locations.length === 0) this.loadLocations();
       else if (this.selectedLocationId !== null) this.loadLocation(this.selectedLocationId);
-      else this.showActiveLocation();
+      else this.startCreatingLocation();
     }
   }
 
@@ -111,8 +111,7 @@ export class SystemComponent implements OnChanges {
         this.loading = false;
         this.locations = locations;
         this.locationsChanged.emit(locations);
-        const selected = this.selectedLocationId ?? locations.find((location) => location.is_active)?.id;
-        if (selected !== undefined && selected !== null) this.loadLocation(selected);
+        if (this.selectedLocationId !== null) this.loadLocation(this.selectedLocationId);
         else this.startCreatingLocation();
         this.publishEditorActions();
       },
@@ -145,12 +144,6 @@ export class SystemComponent implements OnChanges {
         this.publishEditorActions();
       }
     });
-  }
-
-  private showActiveLocation(): void {
-    const activeLocation = this.locations.find((location) => location.is_active);
-    if (activeLocation) this.loadLocation(activeLocation.id);
-    else this.startCreatingLocation();
   }
 
   private createLocation(): void {
@@ -301,7 +294,7 @@ export class SystemComponent implements OnChanges {
         this.locations = locations;
         this.locationsChanged.emit(locations);
         const selected = this.selectedLocationId === null
-          ? locations.find((location) => location.is_active)
+          ? undefined
           : locations.find((location) => location.id === this.selectedLocationId);
         if (selected) {
           this.loadLocation(selected.id);

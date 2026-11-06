@@ -1,5 +1,5 @@
 <div class="admin-section">
-  <h3>🏷️ Kategorien &amp; Farben</h3>
+  <h3>{{ selectedCategoryId === null ? '🏷️ Kategorie hinzufügen' : '🏷️ Kategorie bearbeiten' }}</h3>
   <p class="form-error" role="alert" *ngIf="errorMessage">{{ errorMessage }}</p>
   <div class="inline-edit-form">
     <label>
@@ -12,16 +12,7 @@
     </label>
     <label>
       <span>Farbe</span>
-      <input type="color" [(ngModel)]="tempCatColor" (ngModelChange)="publishEditorActions()" class="color-picker-input">
+      <app-color-picker [value]="tempCatColor" (valueChange)="tempCatColor = $event; publishEditorActions()"></app-color-picker>
     </label>
-  </div>
-  <div class="items-list-wrapper">
-    <div class="list-item-row" *ngFor="let cat of dbCategories" [class.category-selected]="selectedCategoryId === cat.id">
-      <span class="item-name">
-        <span class="color-preview-dot" [style.background-color]="cat.color"></span>
-        <strong>{{ cat.label }}</strong>
-        <span style="color: #868e96; font-size: 13px; margin-left: 8px;">(Kürzel: <strong>{{ cat.default_short }}</strong>)</span>
-      </span>
-    </div>
   </div>
 </div>

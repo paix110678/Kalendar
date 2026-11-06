@@ -1,0 +1,83 @@
+<div class="report-backdrop" (click)="close()">
+  <section
+    class="report-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="report-title"
+    (click)="$event.stopPropagation()">
+    <header class="dialog-header">
+      <div>
+        <h2 id="report-title">{{ submitted ? 'Vielen Dank!' : 'Fehler melden' }}</h2>
+        <p *ngIf="!submitted">Deine Beschreibung hilft uns, das Problem nachzuvollziehen.</p>
+      </div>
+      <button type="button" class="close-button" aria-label="Schließen" (click)="close()">×</button>
+    </header>
+
+    <ng-container *ngIf="submitted; else reportForm">
+      <p class="success-message" role="status">Der Fehlerbericht wurde gespeichert. Vielen Dank für deine Hilfe!</p>
+      <button type="button" class="primary-button" (click)="close()">Schließen</button>
+    </ng-container>
+
+    <ng-template #reportForm>
+      <form (ngSubmit)="submit()">
+        <label class="field-label" for="report-description">Was ist passiert?</label>
+        <textarea
+          id="report-description"
+          name="description"
+          [(ngModel)]="description"
+          maxlength="5000"
+          rows="5"
+          placeholder="Beschreibe die Schritte und was du erwartet hast."></textarea>
+        <div class="character-count">Mindestens 10 Zeichen · {{ description.length }}/5000</div>
+
+        <fieldset class="diagnostics">
+          <legend>Automatisch erfasste technische Angaben</legend>
+          <div class="diagnostics-grid">
+            <span>Browser</span><strong>{{ diagnostics['browser'] }}</strong>
+            <span>Fenster</span><strong>{{ diagnostics['viewport_width'] }} × {{ diagnostics['viewport_height'] }} px</strong>
+            <span>Bildschirm</span><strong>{{ diagnostics['screen_width'] }} × {{ diagnostics['screen_height'] }} px</strong>
+            <span>Sprache / Zeitzone</span><strong>{{ diagnostics['language'] }} · {{ diagnostics['timezone'] }}</strong>
+          </div>
+          <p>Es werden keine URL-Parameter oder Kontodaten erfasst.</p>
+        </fieldset>
+
+        <fieldset class="screenshot-option">
+          <legend>Screenshot</legend>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              name="includeScreenshot"
+              [(ngModel)]="includeScreenshot">
+            <span>Screenshot zusammen mit dem Bericht senden</span>
+          </label>
+          <p *ngIf="screenshotDataUrl">Der Screenshot wird nur mitgesendet, wenn du diese Auswahl aktivierst.</p>
+          <p>Der Screenshot kann persönliche Inhalte aus dem sichtbaren Kalender enthalten. Bitte prüfe die Vorschau.</p>
+          <p *ngIf="screenshotError" class="warning-message" role="status">{{ screenshotError }}</p>
+          <div *ngIf="screenshotDataUrl" class="screenshot-tools">
+            <span>Persönliche Stellen zum Schwärzen antippen oder darüberziehen.</span>
+            <button type="button" class="secondary-button" [disabled]="!screenshotReady" (click)="clearMasks()">Schwärzung zurücksetzen</button>
+          </div>
+          <div *ngIf="screenshotDataUrl" class="screenshot-preview">
+            <canvas
+              #screenshotCanvas
+              aria-label="Screenshot-Vorschau. Ziehe über persönliche Inhalte, um sie zu schwärzen."
+              (pointerdown)="startMask($event)"
+              (pointermove)="continueMask($event)"
+              (pointerup)="stopMask()"
+              (pointercancel)="stopMask()"
+              (lostpointercapture)="stopMask()">
+            </canvas>
+          </div>
+        </fieldset>
+
+        <p *ngIf="errorMessage" class="error-message" role="alert">{{ errorMessage }}</p>
+        <footer class="dialog-actions">
+          <button type="button" class="secondary-button" [disabled]="sending" (click)="close()">Abbrechen</button>
+          <button type="submit" class="primary-button" [disabled]="sending">
+            {{ sending ? 'Wird gesendet…' : 'Bericht senden' }}
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </section>
+</div>

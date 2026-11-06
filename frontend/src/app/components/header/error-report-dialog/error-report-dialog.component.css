@@ -1,0 +1,237 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.report-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.report-dialog {
+  width: min(100%, 600px);
+  max-height: min(90vh, 900px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  color: #212529;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.dialog-header p {
+  margin: 6px 0 0;
+  color: #5c6770;
+}
+
+.close-button {
+  border: 0;
+  background: transparent;
+  color: #495057;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.field-label,
+fieldset legend {
+  font-weight: 700;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #adb5bd;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+textarea:focus {
+  border-color: #228be6;
+  outline: 2px solid rgba(34, 139, 230, 0.2);
+}
+
+.character-count {
+  margin-top: 4px;
+  color: #68737d;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 18px 0 0;
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.4fr) minmax(0, 1fr);
+  gap: 6px 12px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.diagnostics-grid span {
+  color: #68737d;
+}
+
+.diagnostics-grid strong {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.diagnostics p,
+.screenshot-option p {
+  margin: 9px 0 0;
+  color: #68737d;
+  font-size: 0.82rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.screenshot-preview {
+  display: grid;
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #f8f9fa;
+  overflow: auto;
+  touch-action: none;
+}
+
+.screenshot-preview canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.screenshot-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  color: #495057;
+  font-size: 0.82rem;
+}
+
+.screenshot-tools button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 9px;
+  font-size: 0.8rem;
+}
+
+.warning-message {
+  color: #9c5700 !important;
+}
+
+.error-message {
+  color: #c92a2a;
+}
+
+.success-message {
+  margin: 20px 0;
+  color: #2b8a3e;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.dialog-actions button,
+.primary-button,
+.secondary-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-button {
+  border: 1px solid #1971c2;
+  background: #228be6;
+  color: #fff;
+}
+
+.secondary-button {
+  border: 1px solid #ced4da;
+  background: #fff;
+  color: #343a40;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 480px) {
+  .report-backdrop {
+    padding: 10px;
+  }
+
+  .report-dialog {
+    padding: 18px;
+  }
+
+  .diagnostics-grid {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .diagnostics-grid strong {
+    margin-bottom: 6px;
+  }
+
+  .screenshot-tools {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

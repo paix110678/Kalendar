@@ -2,72 +2,69 @@
   <header class="holidays-header">
     <div>
       <h3>Ferien und Feiertage nach Bundesland</h3>
-      <p>Ferien und gesetzliche Feiertage werden beim Hinzufügen eines Bundeslands von OpenHolidays geladen und gespeichert.</p>
+      @if (!selectedStateCode) {
+        <p>Ferien und gesetzliche Feiertage werden beim Hinzufügen eines Bundeslands von OpenHolidays geladen und gespeichert.</p>
+      }
     </div>
   </header>
 
-  <form class="holidays-form" (ngSubmit)="$event.preventDefault()">
-    <label class="field">
-      <span>Bundesland hinzufügen</span>
-      <select name="stateCode" [(ngModel)]="newStateCode" (ngModelChange)="publishEditorActions()" required>
-        <option value="" disabled>Bundesland auswählen …</option>
-        @for (bundesland of availableStates; track bundesland.code) {
-          <option [value]="bundesland.code">{{ bundesland.name }}</option>
-        }
-      </select>
-    </label>
-
-  </form>
+  @if (!selectedStateCode) {
+    <form class="holidays-form" (ngSubmit)="$event.preventDefault()">
+      <label class="field">
+        <span>Bundesland hinzufügen</span>
+        <select name="stateCode" [(ngModel)]="newStateCode" (ngModelChange)="publishEditorActions()" required>
+          <option value="" disabled>Bundesland auswählen …</option>
+          @for (bundesland of availableStates; track bundesland.code) {
+            <option [value]="bundesland.code">{{ bundesland.name }}</option>
+          }
+        </select>
+      </label>
+    </form>
+  }
 
   <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
   <p class="form-message form-success" role="status" [hidden]="!successMessage">{{ successMessage }}</p>
 
-  @if (availableStates.length === 0) {
+  @if (!selectedStateCode && availableStates.length === 0) {
     <p class="empty-state">Alle Bundesländer wurden bereits hinzugefügt.</p>
   }
 
-  <section class="saved-holidays" aria-labelledby="saved-holidays-title">
-    <div class="saved-heading">
-      <h4 id="saved-holidays-title">
-        @if (selectedStateCode) {
-          Gespeicherte Ferien und Feiertage: {{ selectedStateName }}
-        } @else {
-          Gespeicherte Ferien und Feiertage
-        }
-      </h4>
-      <span>{{ holidays.length }} Einträge</span>
-    </div>
+  @if (selectedStateCode) {
+    <section class="saved-holidays" aria-labelledby="saved-holidays-title">
+      <div class="saved-heading">
+        <h4 id="saved-holidays-title">Gespeicherte Ferien und Feiertage: {{ selectedStateName }}</h4>
+        <span>{{ holidays.length }} Einträge</span>
+      </div>
 
-    @if (!selectedStateCode) {
-      <p class="empty-state">Wähle links ein gespeichertes Bundesland aus, um Ferien und Feiertage anzuzeigen.</p>
-    } @else if (loadingSavedHolidays) {
-      <p class="empty-state" role="status">Gespeicherte Ferien werden geladen …</p>
-    } @else if (savedHolidaysError) {
-      <p class="empty-state form-error" role="alert">{{ savedHolidaysError }}</p>
-    } @else if (holidays.length === 0 && !errorMessage) {
-      <p class="empty-state">Für dieses Bundesland sind keine Ferien oder Feiertage gespeichert.</p>
-    } @else {
-      @for (group of holidayGroups; track group.year) {
-        <section class="holiday-year" [attr.aria-label]="'Ferien ' + group.year">
-          <h5>{{ group.year }}</h5>
-          <ul>
-            @for (holiday of group.holidays; track holiday.state_code + holiday.year + holiday.start_date + holiday.name) {
-              <li class="holiday-entry">
-                <span class="holiday-name">
-                  <span class="holiday-type">{{ holiday.holiday_type === 'school' ? 'Schulferien' : 'Feiertag' }}</span>
-                  {{ holiday.name }}
-                </span>
-                <span class="holiday-dates">
-                  {{ formatDate(holiday.start_date) }}
-                  @if (holiday.end_date !== holiday.start_date) {
-                    – {{ formatDate(holiday.end_date) }}
-                  }
-                </span>
-              </li>
-            }
-          </ul>
-        </section>
+      @if (loadingSavedHolidays) {
+        <p class="empty-state" role="status">Gespeicherte Ferien werden geladen …</p>
+      } @else if (savedHolidaysError) {
+        <p class="empty-state form-error" role="alert">{{ savedHolidaysError }}</p>
+      } @else if (holidays.length === 0 && !errorMessage) {
+        <p class="empty-state">Für dieses Bundesland sind keine Ferien oder Feiertage gespeichert.</p>
+      } @else {
+        @for (group of holidayGroups; track group.year) {
+          <section class="holiday-year" [attr.aria-label]="'Ferien ' + group.year">
+            <h5>{{ group.year }}</h5>
+            <ul>
+              @for (holiday of group.holidays; track holiday.state_code + holiday.year + holiday.start_date + holiday.name) {
+                <li class="holiday-entry">
+                  <span class="holiday-name">
+                    <span class="holiday-type">{{ holiday.holiday_type === 'school' ? 'Schulferien' : 'Feiertag' }}</span>
+                    {{ holiday.name }}
+                  </span>
+                  <span class="holiday-dates">
+                    {{ formatDate(holiday.start_date) }}
+                    @if (holiday.end_date !== holiday.start_date) {
+                      – {{ formatDate(holiday.end_date) }}
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
       }
-    }
-  </section>
+    </section>
+  }
 </section>

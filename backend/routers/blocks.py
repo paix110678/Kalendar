@@ -111,6 +111,13 @@ def delete_category(cat_id: int):
                 status_code=409,
                 detail="Kategorie wird noch in Kalenderterminen verwendet und kann nicht gelöscht werden.",
             )
+        if conn.execute(
+            "SELECT 1 FROM tasks WHERE category_id = ? LIMIT 1", (cat_id,)
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Kategorie wird noch in Aufgaben verwendet und kann nicht gelöscht werden.",
+            )
         conn.execute("DELETE FROM categories WHERE id = ?", (cat_id,))
         conn.commit()
     except Exception:

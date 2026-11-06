@@ -1,0 +1,67 @@
+<details class="color-picker">
+  <summary [attr.aria-label]="'Farbe auswählen, aktuell ' + value">
+    <span class="current-color" [style.background-color]="value" aria-hidden="true"></span>
+    <span>{{ value }}</span>
+  </summary>
+  <div class="palette-panel" role="group" aria-label="Farbpalette">
+    <div class="palette-tabs" role="tablist" aria-label="Farbauswahl">
+      <button
+        type="button"
+        role="tab"
+        [class.palette-tab-active]="activeTab === 'standard'"
+        [attr.aria-selected]="activeTab === 'standard'"
+        (click)="setActiveTab('standard')">
+        Standardfarben
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.palette-tab-active]="activeTab === 'created'"
+        [attr.aria-selected]="activeTab === 'created'"
+        (click)="setActiveTab('created')">
+        Erstellte Farben
+      </button>
+    </div>
+    @if (activeTab === 'standard') {
+      <div class="standard-colors" role="tabpanel" aria-label="Standardfarben">
+        @for (color of standardColors; track color.value) {
+          <button
+            type="button"
+            class="standard-color"
+            [style.background-color]="color.value"
+            [class.standard-color-selected]="value.toLowerCase() === color.value"
+            [attr.aria-label]="color.name"
+            [attr.aria-pressed]="value.toLowerCase() === color.value"
+            [title]="color.name"
+            (click)="selectStandardColor(color.value, $event)">
+          </button>
+        }
+        <label class="custom-color">
+          <span>Eigene Farbe</span>
+          <input
+            type="color"
+            [value]="value"
+            (change)="onPaletteChange($event)"
+            aria-label="Eigene Farbe aus der Farbpalette auswählen">
+        </label>
+      </div>
+    } @else {
+      <div class="standard-colors" role="tabpanel" aria-label="Erstellte Farben">
+        @for (color of createdColors; track color) {
+          <button
+            type="button"
+            class="standard-color"
+            [style.background-color]="color"
+            [class.standard-color-selected]="value.toLowerCase() === color"
+            [attr.aria-label]="'Erstellte Farbe ' + color"
+            [attr.aria-pressed]="value.toLowerCase() === color"
+            [title]="color"
+            (click)="selectStandardColor(color, $event)">
+          </button>
+        } @empty {
+          <span class="empty-colors">Noch keine eigenen Farben erstellt</span>
+        }
+      </div>
+    }
+  </div>
+</details>
