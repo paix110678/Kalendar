@@ -15,6 +15,7 @@
 .backup-description, .backup-empty, .backup-message, .backup-error-list p { margin: 0; font-size: 13px; }
 .backup-description, .backup-empty { color: #68717b; }
 .backup-actions, .backup-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.backup-file-input { display: none; }
 .backup-button { min-height: 34px; padding: 7px 10px; border: 1px solid #ced4da; border-radius: 5px; background: #fff; color: #343a40; font: inherit; font-size: 12px; cursor: pointer; }
 .backup-button:disabled { cursor: wait; opacity: .65; }
 .backup-create { border-color: #228be6; background: #228be6; color: #fff; }

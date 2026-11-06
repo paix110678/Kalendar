@@ -120,6 +120,9 @@ def _init_db_connection(conn):
             weather_longitude REAL,
             live_temp TEXT DEFAULT '--',
             live_rain TEXT DEFAULT '--',
+            header_show_users INTEGER NOT NULL DEFAULT 1,
+            header_show_view_mode INTEGER NOT NULL DEFAULT 1,
+            header_show_weather INTEGER NOT NULL DEFAULT 1,
             api_url_open_meteo TEXT,
             api_url_weather_api TEXT,
             api_url_zippopotam TEXT
@@ -432,6 +435,12 @@ def _init_db_connection(conn):
         cursor.execute("ALTER TABLE system_config ADD COLUMN weather_latitude REAL")
     if "weather_longitude" not in cols:
         cursor.execute("ALTER TABLE system_config ADD COLUMN weather_longitude REAL")
+    if "header_show_users" not in cols:
+        cursor.execute("ALTER TABLE system_config ADD COLUMN header_show_users INTEGER NOT NULL DEFAULT 1")
+    if "header_show_view_mode" not in cols:
+        cursor.execute("ALTER TABLE system_config ADD COLUMN header_show_view_mode INTEGER NOT NULL DEFAULT 1")
+    if "header_show_weather" not in cols:
+        cursor.execute("ALTER TABLE system_config ADD COLUMN header_show_weather INTEGER NOT NULL DEFAULT 1")
     
     cursor.execute("""
         UPDATE system_config 

@@ -10,7 +10,22 @@
         <button type="button" class="backup-button" [disabled]="backupsLoading" (click)="refreshBackups()">
           Aktualisieren
         </button>
+        <button
+          type="button"
+          class="backup-button backup-restore"
+          [disabled]="backupUploading || restoringBackupId !== null"
+          (click)="chooseBackupFile()">
+          {{ backupUploading ? 'Datei wird eingespielt …' : 'Backupdatei einspielen' }}
+        </button>
+        <input
+          #backupFileInput
+          class="backup-file-input"
+          type="file"
+          accept=".json,application/json"
+          aria-label="JSON-Backupdatei auswählen"
+          (change)="onBackupFileSelected($event)">
       </div>
+      <p class="backup-description">Wähle ein zuvor heruntergeladenes JSON-Backup. Die aktuelle Serverdatenbank wird ersetzt; davor wird automatisch ein Wiederherstellungsbackup angelegt.</p>
       <p class="backup-message backup-error" role="alert" [hidden]="!backupError">{{ backupError }}</p>
       <p class="backup-message backup-success" role="status" [hidden]="!backupMessage">{{ backupMessage }}</p>
       @if (backupsLoading) {

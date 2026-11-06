@@ -1,0 +1,35 @@
+<div class="header-logo-row">
+  <app-logo></app-logo>
+  <div class="header-actions">
+    <button
+      type="button"
+      class="btn-error-report"
+      (click)="openErrorReport()"
+      title="Fehler melden"
+      aria-label="Fehler melden"
+      [disabled]="isCapturingScreenshot">
+      <span aria-hidden="true">🐞</span>
+    </button>
+    <button
+      *ngIf="showSettingsButton"
+      type="button"
+      class="btn-admin-gear"
+      (click)="adminPageOpened.emit()"
+      title="Administration / Einstellungen"
+      aria-label="Einstellungen">
+      ⚙️
+    </button>
+  </div>
+</div>
+
+<div *ngIf="isCapturingScreenshot" class="screenshot-capture-overlay" role="status" aria-live="polite">
+  <span class="screenshot-spinner" aria-hidden="true"></span>
+  <span>Screenshot wird erstellt …</span>
+</div>
+
+<app-error-report-dialog
+  *ngIf="showErrorReport"
+  [screenshotDataUrl]="screenshotDataUrl"
+  [screenshotError]="screenshotError"
+  (closed)="showErrorReport = false">
+</app-error-report-dialog>

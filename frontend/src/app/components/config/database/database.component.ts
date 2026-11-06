@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, DatabaseBackup, DatabaseBackupList } from '../../../services/api.service';
 import { AdminEditorActions } from '../admin-editor-actions';
@@ -12,6 +12,7 @@ import { AdminEditorActions } from '../admin-editor-actions';
   styleUrl: './database.component.css'
 })
 export class DatabaseComponent implements OnInit, OnChanges {
+  @ViewChild('backupFileInput') private backupFileInput?: ElementRef<HTMLInputElement>;
   @Input() dbTables: string[] = [];
   @Input() selectedBackupId: string | null = null;
   @Output() backupsChanged = new EventEmitter<DatabaseBackupList>();
@@ -29,9 +30,11 @@ export class DatabaseComponent implements OnInit, OnChanges {
   public backupsLoading = false;
   public backupSaving = false;
   public backupDeleting = false;
+  public backupUploading = false;
   public restoringBackupId: string | null = null;
   public backupError = '';
   public backupMessage = '';
+  private readonly maxBackupFileSize = 50 * 1024 * 1024;
 
   ngOnInit(): void {
     this.refreshBackups();
@@ -99,7 +102,8 @@ export class DatabaseComponent implements OnInit, OnChanges {
       canDelete: selected !== undefined,
       showSave: this.selectedBackupId === null,
       saveLabel: 'Backup erstellen',
-      busy: this.backupsLoading || this.backupSaving || this.backupDeleting || this.restoringBackupId !== null,
+      busy: this.backupsLoading || this.backupSaving || this.backupDeleting
+        || this.backupUploading || this.restoringBackupId !== null,
       save: () => this.createBackup(),
       cancel: () => this.refreshBackups(),
       delete: () => this.deleteSelectedBackup(),
@@ -171,6 +175,63 @@ export class DatabaseComponent implements OnInit, OnChanges {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  public chooseBackupFile(): void {
+    this.backupFileInput?.nativeElement.click();
+  }
+
+  public async onBackupFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    this.backupError = '';
+    this.backupMessage = '';
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      this.backupError = 'Bitte wähle ein JSON-Backup aus der Datenbankverwaltung.';
+      return;
+    }
+    if (file.size > this.maxBackupFileSize) {
+      this.backupError = 'Die Backup-Datei darf höchstens 50 MB groß sein.';
+      return;
+    }
+    if (!confirm(
+      `Die Datenbank auf diesem Server wird vollständig durch „${file.name}“ ersetzt. `
+      + 'Vorher wird automatisch ein Wiederherstellungsbackup des aktuellen Stands erstellt. Fortfahren?',
+    )) {
+      return;
+    }
+
+    this.backupUploading = true;
+    this.publishEditorActions();
+    try {
+      const payload: unknown = JSON.parse(await file.text());
+      this.apiService.restoreDatabaseBackupFile(payload).subscribe({
+        next: () => {
+          this.backupUploading = false;
+          this.backupMessage = 'Datei eingespielt. Das vorherige Server-Backup bleibt zur Wiederherstellung erhalten.';
+          this.refreshBackups();
+          this.publishEditorActions();
+          this.cdr.markForCheck();
+          window.setTimeout(() => window.location.reload(), 1500);
+        },
+        error: (error: unknown) => {
+          console.error('Datenbankbackup aus Datei konnte nicht wiederhergestellt werden:', error);
+          this.backupUploading = false;
+          this.backupError = 'Datei konnte nicht eingespielt werden. Die bisherige Datenbank blieb erhalten.';
+          this.publishEditorActions();
+          this.cdr.markForCheck();
+        },
+      });
+    } catch (error) {
+      console.error('Datenbankbackup-Datei konnte nicht gelesen werden:', error);
+      this.backupUploading = false;
+      this.backupError = 'Die Datei konnte nicht gelesen werden. Bitte wähle ein gültiges JSON-Backup.';
+      this.publishEditorActions();
+      this.cdr.markForCheck();
+    }
   }
 
   public formatBackupDate(date: string): string {

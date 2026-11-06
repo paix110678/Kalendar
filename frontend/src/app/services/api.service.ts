@@ -145,6 +145,12 @@ export interface DatabaseBackupList {
   errors: Array<{ file: string; error: string }>;
 }
 
+export interface HeaderPreferences {
+  show_users: boolean;
+  show_view_mode: boolean;
+  show_weather: boolean;
+}
+
 export interface ErrorReportPayload {
   description: string;
   diagnostics: Record<string, string | number>;
@@ -249,6 +255,12 @@ export class ApiService {
       {},
     );
   }
+  restoreDatabaseBackupFile(payload: unknown): Observable<{ restored_backup_id: string; recovery_backup_id: string }> {
+    return this.http.post<{ restored_backup_id: string; recovery_backup_id: string }>(
+      `${this.apiBase}/backups/restore-file`,
+      payload,
+    );
+  }
 
   getPlans(): Observable<PlanDefinition[]> { return this.http.get<PlanDefinition[]>(`${this.apiBase}/plans`); }
   createPlan(plan: Omit<PlanDefinition, 'id'>): Observable<PlanDefinition> { return this.http.post<PlanDefinition>(`${this.apiBase}/plans`, plan); }
@@ -295,6 +307,12 @@ export class ApiService {
   getSystemConfig(): Observable<SystemConfig> { return this.http.get<SystemConfig>(this.apiBase + '/config'); }
   getSystemConfigSettings(): Observable<SystemConfig> {
     return this.http.get<SystemConfig>(`${this.apiBase}/config/settings`);
+  }
+  getHeaderPreferences(): Observable<HeaderPreferences> {
+    return this.http.get<HeaderPreferences>(`${this.apiBase}/config/header-preferences`);
+  }
+  updateHeaderPreferences(preferences: HeaderPreferences): Observable<HeaderPreferences> {
+    return this.http.put<HeaderPreferences>(`${this.apiBase}/config/header-preferences`, preferences);
   }
   getWeatherLocations(): Observable<WeatherLocation[]> {
     return this.http.get<WeatherLocation[]>(`${this.apiBase}/config/locations`);

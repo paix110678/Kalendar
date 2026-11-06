@@ -487,6 +487,28 @@ def delete_backup(backup_id: str) -> None:
 def restore_backup(backup_id: str) -> dict:
     backup_path = download_backup(backup_id)
     payload = _load_backup(backup_path)
+    return _restore_validated_payload(payload, backup_id)
+
+
+def restore_uploaded_backup(payload: object) -> dict:
+    validated_payload = _validate_backup(payload)
+    backup_directory = get_backup_directory()
+    backup_directory.mkdir(parents=True, exist_ok=True)
+    backup_id = (
+        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+        + "_"
+        + uuid.uuid4().hex
+    )
+    backup_path = backup_directory / f"{backup_id}.json"
+    _write_backup(validated_payload, backup_path)
+    try:
+        return _restore_validated_payload(validated_payload, backup_id)
+    except (InvalidBackupError, OSError, sqlite3.Error, TypeError, ValueError):
+        backup_path.unlink(missing_ok=True)
+        raise
+
+
+def _restore_validated_payload(payload: dict, backup_id: str) -> dict:
     live_db_path = Path(database.DB_FILE).resolve()
     staged_db_path = _new_temporary_database(live_db_path.parent)
     try:

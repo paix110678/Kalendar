@@ -36,6 +36,12 @@ class ConfigUpdate(BaseModel):
     weather_longitude: float | None = None
 
 
+class HeaderPreferencesUpdate(BaseModel):
+    show_users: bool
+    show_view_mode: bool
+    show_weather: bool
+
+
 class WeatherLocationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     weather_plz: str = Field(..., min_length=1, max_length=20)
@@ -637,6 +643,55 @@ def get_config_settings():
         finally:
             _weather_cache_lock.release()
     return result
+
+
+@router.get("/header-preferences")
+def get_header_preferences():
+    conn = database.get_db_connection()
+    try:
+        cfg = conn.execute(
+            """
+            SELECT header_show_users, header_show_view_mode, header_show_weather
+            FROM system_config ORDER BY id ASC LIMIT 1
+            """
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if cfg is None:
+        raise HTTPException(status_code=404, detail="Systemkonfiguration nicht gefunden.")
+    return {
+        "show_users": bool(cfg["header_show_users"]),
+        "show_view_mode": bool(cfg["header_show_view_mode"]),
+        "show_weather": bool(cfg["header_show_weather"]),
+    }
+
+
+@router.put("/header-preferences")
+def update_header_preferences(preferences: HeaderPreferencesUpdate):
+    conn = database.get_db_connection()
+    try:
+        cursor = conn.execute(
+            """
+            UPDATE system_config
+            SET header_show_users = ?, header_show_view_mode = ?, header_show_weather = ?
+            WHERE id = (SELECT id FROM system_config ORDER BY id ASC LIMIT 1)
+            """,
+            (
+                int(preferences.show_users),
+                int(preferences.show_view_mode),
+                int(preferences.show_weather),
+            ),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Systemkonfiguration nicht gefunden.")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return preferences.model_dump()
 
 
 @router.post("/location")

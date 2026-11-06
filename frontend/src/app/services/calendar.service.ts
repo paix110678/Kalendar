@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
-import { ApiService, PlanConflictResolution, PlanDefinition, PlanSubject, SavedHolidayData, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
+import { ApiService, HeaderPreferences, PlanConflictResolution, PlanDefinition, PlanSubject, SavedHolidayData, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
 
 export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; state_code: string | null; assigned_plan_id: number | null; }
 export interface Category { id: number; value: string; label: string; color: string; default_short: string; } 
@@ -27,6 +27,12 @@ export class CalendarService {
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
   private configSubject = new BehaviorSubject<SystemConfig>({ weather_city: 'Bremen', weather_plz: '28790', weather_latitude: null, weather_longitude: null, weather_service: 'open_meteo', api_key: '', live_temp: '--', live_rain: '--', high_temp: '--', low_temp: '--' });
   public config$: Observable<SystemConfig> = this.configSubject.asObservable();
+  private headerPreferencesSubject = new BehaviorSubject<HeaderPreferences>({
+    show_users: true,
+    show_view_mode: true,
+    show_weather: true,
+  });
+  public headerPreferences$: Observable<HeaderPreferences> = this.headerPreferencesSubject.asObservable();
   private savedPlansState = new BehaviorSubject<SettingsDataState<PlanDefinition[]>>({ data: null, loading: false, error: null });
   public savedPlansState$ = this.savedPlansState.asObservable();
   private savedHolidayDataState = new BehaviorSubject<SettingsDataState<SavedHolidayData>>({ data: null, loading: false, error: null });
@@ -47,6 +53,7 @@ export class CalendarService {
     this.loadAllBlocks();
     this.loadRewards();
     this.loadInitialSystemConfig();
+    this.loadHeaderPreferences();
     this.loadSavedPlans();
     this.loadSavedHolidayData();
   }
@@ -122,6 +129,17 @@ export class CalendarService {
       },
       error: (error: unknown) => console.error('Systemkonfiguration konnte nicht geladen werden:', error),
     });
+  }
+  public loadHeaderPreferences(): void {
+    this.apiService.getHeaderPreferences().subscribe({
+      next: (preferences) => this.headerPreferencesSubject.next(preferences),
+      error: (error: unknown) => console.error('Kopfzeileneinstellungen konnten nicht geladen werden:', error),
+    });
+  }
+  public updateHeaderPreferences(preferences: HeaderPreferences): Observable<HeaderPreferences> {
+    return this.apiService.updateHeaderPreferences(preferences).pipe(
+      tap((savedPreferences) => this.headerPreferencesSubject.next(savedPreferences)),
+    );
   }
   private loadInitialSystemConfig(): void {
     this.apiService.getSystemConfigSettings().subscribe({

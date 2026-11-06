@@ -13,6 +13,8 @@ import { DatabaseComponent } from '../database/database.component';
 import { PlansComponent } from '../plans/plans.component';
 import { HolidaysComponent } from '../holidays/holidays.component';
 import { TasksComponent } from '../tasks/tasks.component';
+import { HeaderSettingsComponent } from '../header-settings/header-settings.component';
+import { HeaderBrandComponent } from '../../header/header-brand/header-brand.component';
 import { User } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
@@ -28,7 +30,9 @@ import { AdminEditorActions } from '../admin-editor-actions';
     DatabaseComponent,
     PlansComponent,
     HolidaysComponent,
-    TasksComponent
+    TasksComponent,
+    HeaderSettingsComponent,
+    HeaderBrandComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
@@ -44,7 +48,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
 
-  public activeTab: 'users' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' = 'users';
+  public activeTab: 'users' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' = 'users';
   public selectedMemberId: number | null = null;
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
@@ -171,6 +175,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedTaskId = taskId;
     this.selectedTaskCategoryId = categoryId;
     this.expandedSections.categories = true;
+  }
+
+  openHeaderSettings(): void {
+    this.editorActions = null;
+    this.activeTab = 'header';
   }
 
   public selectedTaskCategoryId: number | null = null;

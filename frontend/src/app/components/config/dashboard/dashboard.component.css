@@ -1,5 +1,6 @@
 /* Das übergeordnete, fixierte Vollbild-Layout der Zentrale */
 .fullscreen-admin-page { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f8f9fa; z-index: 500; padding: 40px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; }
+.admin-brand-header { flex: 0 0 auto; padding: 12px 20px; border-radius: 19px; background: linear-gradient(90deg, #3bc9db 0%, #ff922b 100%); }
 .admin-page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #dee2e6; padding-bottom: 15px; flex: 0 0 auto; }
 .btn-back { background: #e9ecef; border: 1px solid #ced4da; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 

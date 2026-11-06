@@ -1,0 +1,25 @@
+<div class="controls-row" *ngIf="preferences.show_view_mode || preferences.show_users || preferences.show_weather">
+  <app-view-mode-buttons
+    *ngIf="preferences.show_view_mode"
+    [currentViewMode]="currentViewMode"
+    (viewModeChanged)="viewModeChanged.emit($event)">
+  </app-view-mode-buttons>
+
+  <app-user-selector
+    *ngIf="preferences.show_users"
+    [activeUsers]="activeUsers"
+    (userVisibilityToggled)="userVisibilityToggled.emit($event)"
+    (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">
+  </app-user-selector>
+
+  <app-weather-widget
+    *ngIf="preferences.show_weather"
+    [config]="{
+      live_temp: config?.live_temp || '--',
+      high_temp: config?.high_temp || '--',
+      low_temp: config?.low_temp || '--',
+      live_rain: config?.live_rain || '--',
+      weather_city: config?.weather_city || 'Bremen'
+    }">
+  </app-weather-widget>
+</div>

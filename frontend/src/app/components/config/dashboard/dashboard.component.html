@@ -1,5 +1,8 @@
 <div class="fullscreen-admin-page">
-  
+  <div class="admin-brand-header">
+    <app-header-brand [showSettingsButton]="false"></app-header-brand>
+  </div>
+
   <div class="admin-page-header">
     <h2>⚙️ System-Zentrale &amp; Server-Konfiguration</h2>
     <button class="btn-back" (click)="closeAdmin.emit()">⬅️ Zurück zum Kalender</button>
@@ -10,6 +13,14 @@
     <!-- LINKER REAKTIVER NAVIGATIONSTREE -->
     <div class="admin-navigation-tree">
       <div class="tree-headline">System-Struktur</div>
+
+      <button
+        type="button"
+        class="tree-node-btn"
+        (click)="openHeaderSettings()"
+        [class.node-active]="activeTab === 'header'">
+        🧭 &nbsp; Kopfzeile &amp; Anzeige
+      </button>
       
       <button class="tree-node-btn" (click)="selectMembers()" [class.node-active]="activeTab === 'users' && selectedMemberId === null">
         👥 &nbsp; Familienmitglieder
@@ -309,6 +320,11 @@
           (selectedBackupIdChange)="selectedDatabaseBackupId = $event"
           (backupsChanged)="onDatabaseBackupsChanged($event)">
         </app-database>
+      }
+      @if (activeTab === 'header') {
+        <app-header-settings
+          (editorActionsChange)="onEditorActionsChanged($event)">
+        </app-header-settings>
       }
     </div>
 
