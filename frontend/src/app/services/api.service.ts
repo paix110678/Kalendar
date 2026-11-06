@@ -186,7 +186,7 @@ export class ApiService {
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
   addUser(name: string, role: string, color: string): Observable<any> { return this.http.post(this.apiBase + '/users', { name, role, color_code: color }); }
   updateUser(id: number, name: string, role: string, color: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id, { name, role, color_code: color }); }
-  updateUserProfile(id: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code'>): Observable<UpdateUserProfileResult> {
+  updateUserProfile(id: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code' | 'is_active'>): Observable<UpdateUserProfileResult> {
     return this.http.put<UpdateUserProfileResult>(`${this.apiBase}/users/${id}/profile`, profile);
   }
   applyPlan(userId: number, planId: number, title: string, subjects: PlanSubject[], resolutions: PlanConflictResolution[] = []): Observable<ApplyPlanResult> {

@@ -32,9 +32,15 @@ def _init_db_connection(conn):
             status_sport TEXT CHECK(status_sport IN ('BASE', 'SILBER')) DEFAULT 'BASE',
             color_code TEXT DEFAULT '#228be6',
             state_code TEXT,
-            assigned_plan_id INTEGER
+            assigned_plan_id INTEGER,
+            is_active INTEGER NOT NULL DEFAULT 1
         )
     """)
+
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = {row["name"] for row in cursor.fetchall()}
+    if "is_active" not in user_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1")
     
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rewards (

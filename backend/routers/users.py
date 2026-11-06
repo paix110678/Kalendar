@@ -35,6 +35,7 @@ class UserProfileUpdate(BaseModel):
     current_points: int = Field(..., ge=0)
     status_school: str = Field(..., pattern="^(GREEN|RED)$")
     status_sport: str = Field(..., pattern="^(BASE|SILBER)$")
+    is_active: Optional[bool] = None
     state_code: Optional[str] = Field(
         default=None,
         pattern="^(BW|BY|BE|BB|HB|HH|HE|MV|NI|NW|RP|SL|SN|ST|SH|TH)$",
@@ -234,8 +235,13 @@ def get_users():
 
     # KORREKTUR: Sortiert die Benutzerliste beim Auslesen knallhart nach der permanenten Reihenfolge!
     users = conn.execute("SELECT * FROM users ORDER BY sort_order ASC").fetchall()
+    result = []
+    for user in users:
+        serialized_user = dict(user)
+        serialized_user["is_active"] = bool(serialized_user["is_active"])
+        result.append(serialized_user)
     conn.close()
-    return [dict(u) for u in users]
+    return result
 
 @router.put("/{user_id}/profile")
 def update_user_profile(user_id: int, payload: UserProfileUpdate):
@@ -256,11 +262,16 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
             if "state_code" in payload.model_fields_set
             else user["state_code"]
         )
+        is_active = (
+            int(payload.is_active)
+            if "is_active" in payload.model_fields_set and payload.is_active is not None
+            else user["is_active"]
+        )
         conn.execute(
             """
             UPDATE users
             SET name = ?, role = ?, color_code = ?, current_points = ?,
-                status_school = ?, status_sport = ?, state_code = ?
+                status_school = ?, status_sport = ?, state_code = ?, is_active = ?
             WHERE id = ?
             """,
             (
@@ -271,6 +282,7 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
                 payload.status_school,
                 payload.status_sport,
                 state_code,
+                is_active,
                 user_id,
             ),
         )
@@ -302,7 +314,9 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
             conn.execute("UPDATE users SET current_points = current_points + 20 WHERE id = ?", (user_id,))
         conn.commit()
         updated_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return {"user": dict(updated_user), "blocks_changed": blocks_changed}
+        serialized_user = dict(updated_user)
+        serialized_user["is_active"] = bool(serialized_user["is_active"])
+        return {"user": serialized_user, "blocks_changed": blocks_changed}
     finally:
         conn.close()
 

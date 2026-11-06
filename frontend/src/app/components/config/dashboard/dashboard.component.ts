@@ -14,9 +14,9 @@ import { PlansComponent } from '../plans/plans.component';
 import { HolidaysComponent } from '../holidays/holidays.component';
 import { TasksComponent } from '../tasks/tasks.component';
 import { HeaderSettingsComponent } from '../header-settings/header-settings.component';
-import { HeaderBrandComponent } from '../../header/header-brand/header-brand.component';
 import { User } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
+import { EditorActionsFooterComponent } from '../editor-actions-footer/editor-actions-footer.component';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -32,7 +32,7 @@ import { AdminEditorActions } from '../admin-editor-actions';
     HolidaysComponent,
     TasksComponent,
     HeaderSettingsComponent,
-    HeaderBrandComponent
+    EditorActionsFooterComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
@@ -118,11 +118,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   openPlans(): void {
     this.editorActions = null;
-    const shouldExpand = !this.expandedSections.plans;
-    this.expandedSections.plans = shouldExpand;
+    const shouldLoad = !this.expandedSections.plans;
+    this.expandedSections.plans = true;
     this.activeTab = 'plans';
     this.selectedPlanId = null;
-    if (shouldExpand) this.refreshSavedPlans();
+    if (shouldLoad) this.refreshSavedPlans();
     this.plansComponent?.resetForm();
   }
 
@@ -152,21 +152,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   openHolidays(stateCode: string | null = null): void {
     this.editorActions = null;
-    const shouldExpand = stateCode !== null || !this.expandedSections.holidays;
-    this.expandedSections.holidays = shouldExpand;
+    const shouldLoad = !this.expandedSections.holidays;
+    this.expandedSections.holidays = true;
     this.activeTab = 'holidays';
     this.selectedHolidayState = stateCode;
-    if (stateCode === null && shouldExpand) this.refreshSavedHolidays();
+    if (stateCode === null && shouldLoad) this.refreshSavedHolidays();
   }
 
   openCategories(categoryId: number | null = null): void {
     this.editorActions = null;
+    const shouldLoad = !this.expandedSections.categories;
     this.activeTab = 'categories';
     this.selectedCategoryId = categoryId;
     this.selectedTaskId = null;
     this.selectedTaskCategoryId = null;
-    if (categoryId === null) this.toggleSection('categories');
-    else this.expandedSections.categories = true;
+    this.expandedSections.categories = true;
+    if (categoryId === null && shouldLoad) {
+      this.calendarService.loadCategories();
+      this.refreshSavedTasks();
+    }
   }
 
   openTask(taskId: number | null, categoryId: number | null = null): void {
@@ -225,39 +229,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   openDatabase(backupId: string | null = null): void {
     this.editorActions = null;
+    const shouldLoad = !this.expandedSections.database;
     this.activeTab = 'database';
     this.selectedDatabaseBackupId = backupId;
-    if (backupId === null) this.toggleSection('database');
-    else this.expandedSections.database = true;
-  }
-
-  openWeatherConfig(): void {
-    this.editorActions = null;
-    this.activeTab = 'system';
-    this.toggleSection('system');
-    this.selectedWeatherLocationId = null;
-  }
-
-  toggleSection(section: 'plans' | 'holidays' | 'categories' | 'system' | 'database'): void {
-    this.editorActions = null;
-    const shouldExpand = !this.expandedSections[section];
-    this.expandedSections[section] = shouldExpand;
-    if (!shouldExpand) return;
-
-    if (section === 'plans') this.refreshSavedPlans();
-    else if (section === 'holidays') this.refreshSavedHolidays();
-    else if (section === 'categories') {
-      this.calendarService.loadCategories();
-      this.refreshSavedTasks();
-    }
-    else if (section === 'system') this.refreshWeatherLocations();
-    else {
+    this.expandedSections.database = true;
+    if (backupId === null && shouldLoad) {
       this.apiService.getDatabaseTables().subscribe({
         next: (tables) => this.dbTables = tables,
         error: (error: unknown) => console.error('Datenbanktabellen konnten nicht geladen werden:', error),
       });
       this.refreshDatabaseBackups();
     }
+  }
+
+  openWeatherConfig(): void {
+    this.editorActions = null;
+    const shouldLoad = !this.expandedSections.system;
+    this.activeTab = 'system';
+    this.expandedSections.system = true;
+    this.selectedWeatherLocationId = null;
+    if (shouldLoad) this.refreshWeatherLocations();
   }
 
   openWeatherLocation(locationId: number): void {

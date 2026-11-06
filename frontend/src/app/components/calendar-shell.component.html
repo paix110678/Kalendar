@@ -7,10 +7,12 @@
       class="dashboard-frame-capsule"
       [activeUsers]="calendarGrid.activeUsersSignal()"
       [currentViewMode]="calendarGrid.currentViewMode"
+      [headerTitle]="showAdminPage ? 'Einstellungen' : null"
       (viewModeChanged)="calendarGrid.changeViewMode($event)"
       (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
       (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
-      (adminPageOpened)="showAdminPage = true">
+      (adminPageOpened)="showAdminPage = true"
+      (headerBack)="showAdminPage = false">
     </app-calendar-header>
 
     <!-- Der Hauptkalender mit der identischen Kapsel-Klasse -->
@@ -22,5 +24,5 @@
 
   <!-- Externe Modale -->
   <app-admin-dashboard *ngIf="showAdminPage" [activeUsers]="calendarGrid.activeUsersSignal()" [activeRewards]="calendarGrid.activeRewardsSignal()" [selectedUser]="calendarGrid.selectedUser" (closeAdmin)="showAdminPage = false"></app-admin-dashboard>
-  <app-reward-dashboard *ngIf="calendarGrid.showRewardPage" [user]="calendarGrid.selectedUser" [activeRewards]="calendarGrid.activeRewardsSignal()" (closeDashboard)="calendarGrid.showRewardPage = false"></app-reward-dashboard>
+  <app-reward-dashboard *ngIf="calendarGrid.showRewardPage" [user]="calendarGrid.selectedUser" [activeRewards]="calendarGrid.activeRewardsSignal()" (closeDashboard)="calendarGrid.showRewardPage = false" (adminPageOpened)="calendarGrid.showRewardPage = false; showAdminPage = true"></app-reward-dashboard>
 </div>

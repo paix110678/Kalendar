@@ -294,3 +294,28 @@
     padding-left: 10px;
   }
 }
+
+@media (max-width: 760px) {
+  .editor-header {
+    padding: 12px 16px;
+  }
+
+  .editor-fields {
+    justify-content: flex-start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .form-control {
+    min-height: 44px;
+  }
+
+  .category-option {
+    min-height: 44px;
+  }
+
+  .action-button {
+    width: 44px;
+    height: 44px;
+  }
+}

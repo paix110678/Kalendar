@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiService, HeaderPreferences, PlanConflictResolution, PlanDefinition, PlanSubject, SavedHolidayData, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
 
-export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; state_code: string | null; assigned_plan_id: number | null; }
+export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; state_code: string | null; assigned_plan_id: number | null; is_active: boolean; }
 export interface Category { id: number; value: string; label: string; color: string; default_short: string; } 
 export interface TimeBlock { id: number; user_id: number; title: string; short_title?: string; day_of_week: 'Montag' | 'Dienstag' | 'Mittwoch' | 'Donnerstag' | 'Freitag' | 'Samstag' | 'Sonntag'; start_time: string; end_time: string; type: string; is_locked: boolean; color?: string | null; plan_assignment_id?: number | null; plan_period?: number | null; person_event_type_id?: number | null; is_visible?: boolean; }
 export interface Reward { id: number; title: string; point_cost: number; type: 'snack' | 'extra_time' | 'cash'; }
@@ -198,7 +198,7 @@ export class CalendarService {
     return this.apiService.getUsers().pipe(tap((users) => this.usersSubject.next(users)));
   }
   private loadRewards(): void { this.apiService.getRewards().subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards)); }
-  public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code'>): Observable<UpdateUserProfileResult> {
+  public updateUserProfile(userId: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code' | 'is_active'>): Observable<UpdateUserProfileResult> {
     return this.apiService.updateUserProfile(userId, profile).pipe(tap(({ user, blocks_changed }) => {
       this.usersSubject.next(this.usersSubject.value.map((currentUser) => currentUser.id === userId ? user : currentUser));
       if (blocks_changed) this.loadAllBlocks();

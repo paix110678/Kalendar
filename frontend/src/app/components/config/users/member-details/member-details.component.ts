@@ -56,6 +56,7 @@ export class MemberDetailsComponent implements OnChanges {
   schoolStatus: User['status_school'] = 'GREEN';
   sportStatus: User['status_sport'] = 'BASE';
   stateCode: string | null = null;
+  isActive = true;
 
   plans: PlanDefinition[] = [];
   personEventTypes: PersonEventType[] = [];
@@ -87,6 +88,21 @@ export class MemberDetailsComponent implements OnChanges {
 
   ngOnChanges(): void {
     if (!this.user) return;
+    if (this.loadedUserId === this.user.id) {
+      if (this.profileSnapshot() === this.savedProfileSnapshot) {
+        this.name = this.user.name;
+        this.role = this.user.role;
+        this.colorCode = this.user.color_code;
+        this.currentPoints = this.user.current_points;
+        this.schoolStatus = this.user.status_school;
+        this.sportStatus = this.user.status_sport;
+        this.stateCode = this.user.state_code;
+        this.isActive = this.user.is_active;
+        this.savedProfileSnapshot = this.profileSnapshot();
+      }
+      return;
+    }
+
     this.name = this.user.name;
     this.role = this.user.role;
     this.colorCode = this.user.color_code;
@@ -94,9 +110,9 @@ export class MemberDetailsComponent implements OnChanges {
     this.schoolStatus = this.user.status_school;
     this.sportStatus = this.user.status_sport;
     this.stateCode = this.user.state_code;
+    this.isActive = this.user.is_active;
     this.savedProfileSnapshot = this.profileSnapshot();
     this.savedAssignmentSnapshot = this.assignmentSnapshot();
-    if (this.loadedUserId === this.user.id) return;
     this.loadedUserId = this.user.id;
     this.selectedPlanId = this.user.assigned_plan_id;
     this.personEventTypes = [];
@@ -304,6 +320,7 @@ export class MemberDetailsComponent implements OnChanges {
           status_school: this.schoolStatus,
           status_sport: this.sportStatus,
           state_code: this.stateCode,
+          is_active: this.isActive,
         };
         if (this.stateCode) {
           await firstValueFrom(this.calendarService.ensureHolidayState(this.stateCode).pipe(timeout({ first: 30000 })));
@@ -367,6 +384,7 @@ export class MemberDetailsComponent implements OnChanges {
         this.schoolStatus = savedUser.status_school;
         this.sportStatus = savedUser.status_sport;
         this.stateCode = savedUser.state_code;
+        this.isActive = savedUser.is_active;
         this.savedProfileSnapshot = this.profileSnapshot();
         this.eventTypeName = '';
         this.selectedEventTypeId = null;
@@ -437,7 +455,7 @@ export class MemberDetailsComponent implements OnChanges {
   private profileSnapshot(): string {
     return JSON.stringify([
       this.name, this.role, this.colorCode, this.currentPoints,
-      this.schoolStatus, this.sportStatus, this.stateCode,
+      this.schoolStatus, this.sportStatus, this.stateCode, this.isActive,
     ]);
   }
 

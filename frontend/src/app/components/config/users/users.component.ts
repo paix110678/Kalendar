@@ -68,10 +68,10 @@ export class UsersComponent implements OnChanges {
   }
 
   publishEditorActions(): void {
-    const user = this.selectedUser;
+    if (this.selectedUser) return;
     this.editorActionsChange.emit({
-      dirty: !user && (this.createUserName.trim() !== '' || this.createUserGroup !== 'child'),
-      canDelete: user !== undefined,
+      dirty: this.createUserName.trim() !== '' || this.createUserGroup !== 'child',
+      canDelete: false,
       busy: this.saving,
       save: () => this.submitNewUser(),
       cancel: () => {
@@ -79,9 +79,6 @@ export class UsersComponent implements OnChanges {
         this.createUserGroup = 'child';
         this.userActionError = '';
         this.publishEditorActions();
-      },
-      delete: () => {
-        if (user) this.deleteUser(user.id);
       },
     });
   }

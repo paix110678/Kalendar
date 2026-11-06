@@ -1,31 +1,18 @@
 <div class="fullscreen-admin-page">
-  <div class="admin-brand-header">
-    <app-header-brand [showSettingsButton]="false"></app-header-brand>
-  </div>
-
-  <div class="admin-page-header">
-    <h2>⚙️ System-Zentrale &amp; Server-Konfiguration</h2>
-    <button class="btn-back" (click)="closeAdmin.emit()">⬅️ Zurück zum Kalender</button>
-  </div>
+  <nav class="admin-top-navigation" aria-label="Einstellungsbereiche">
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'users'" (click)="selectMembers()">👥 Mitglieder</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'plans'" (click)="openPlans()">📅 Pläne</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'holidays'" (click)="openHolidays()">🏖️ Ferien</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'categories' || activeTab === 'tasks'" (click)="openCategories()">🏷️ Kategorien</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'system'" (click)="openWeatherConfig()">🌤️ Wetter</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'header'" (click)="openHeaderSettings()">🧭 Anzeige</button>
+    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'database'" (click)="openDatabase()">🗄️ DB-Viewer</button>
+  </nav>
 
   <div class="admin-split-wrapper">
     
-    <!-- LINKER REAKTIVER NAVIGATIONSTREE -->
     <div class="admin-navigation-tree">
-      <div class="tree-headline">System-Struktur</div>
-
-      <button
-        type="button"
-        class="tree-node-btn"
-        (click)="openHeaderSettings()"
-        [class.node-active]="activeTab === 'header'">
-        🧭 &nbsp; Kopfzeile &amp; Anzeige
-      </button>
-      
-      <button class="tree-node-btn" (click)="selectMembers()" [class.node-active]="activeTab === 'users' && selectedMemberId === null">
-        👥 &nbsp; Familienmitglieder
-      </button>
-      @if (activeUsers.length > 0) {
+      @if (activeTab === 'users' && activeUsers.length > 0) {
         <div class="member-tree-navigation" aria-label="Familienmitglieder">
           @for (user of activeUsers; track user.id) {
             <button
@@ -35,16 +22,25 @@
               (click)="selectMember(user.id)">
               <span class="member-tree-color" [style.background-color]="user.color_code" aria-hidden="true"></span>
               <span>{{ user.name }}</span>
+              <span class="member-active-indicator" [class.member-inactive]="!user.is_active">
+                @if (user.is_active) {
+                  <svg viewBox="0 0 24 24" role="img" [attr.aria-label]="user.name + ' aktiv'">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m8 12 2.5 2.5L16.5 9" />
+                  </svg>
+                } @else {
+                  <svg viewBox="0 0 24 24" role="img" [attr.aria-label]="user.name + ' inaktiv'">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M8 12h8" />
+                  </svg>
+                }
+              </span>
             </button>
           }
         </div>
       }
 
-      <button class="tree-node-btn" (click)="openPlans()" [class.node-active]="activeTab === 'plans'" [attr.aria-expanded]="expandedSections.plans">
-        <span aria-hidden="true">{{ expandedSections.plans ? '▾' : '▸' }}</span>
-        📅 &nbsp; Pläne
-      </button>
-      @if (expandedSections.plans) {
+      @if (activeTab === 'plans' && expandedSections.plans) {
       <div class="plan-tree-navigation" aria-label="Gespeicherte Pläne">
         @if (plansLoading && savedPlans.length === 0) {
           <span class="plan-tree-message">Pläne werden geladen …</span>
@@ -68,11 +64,7 @@
       </div>
       }
 
-      <button class="tree-node-btn" (click)="openHolidays()" [class.node-active]="activeTab === 'holidays' && selectedHolidayState === null" [attr.aria-expanded]="expandedSections.holidays">
-        <span aria-hidden="true">{{ expandedSections.holidays ? '▾' : '▸' }}</span>
-        🏖️ &nbsp; Ferien &amp; Feiertage
-      </button>
-      @if (expandedSections.holidays) {
+      @if (activeTab === 'holidays' && expandedSections.holidays) {
       <div class="plan-tree-navigation" aria-label="Gespeicherte Bundesländer">
         @if (holidaysLoading && savedHolidayStates.length === 0) {
           <span class="plan-tree-message">Bundesländer werden geladen …</span>
@@ -96,11 +88,7 @@
       </div>
       }
 
-      <button class="tree-node-btn" (click)="openCategories()" [class.node-active]="activeTab === 'categories' && selectedCategoryId === null" [attr.aria-expanded]="expandedSections.categories">
-        <span aria-hidden="true">{{ expandedSections.categories ? '▾' : '▸' }}</span>
-        🏷️ &nbsp; Kategorien
-      </button>
-      @if (expandedSections.categories) {
+      @if ((activeTab === 'categories' || activeTab === 'tasks') && expandedSections.categories) {
       <div class="plan-tree-navigation" aria-label="Kategorien">
         @if (tasksLoading) {
           <span class="plan-tree-message">Tasks werden geladen …</span>
@@ -146,11 +134,7 @@
       </div>
       }
       
-      <button class="tree-node-btn" (click)="openWeatherConfig()" [class.node-active]="activeTab === 'system' && selectedWeatherLocationId === null" [attr.aria-expanded]="expandedSections.system">
-        <span aria-hidden="true">{{ expandedSections.system ? '▾' : '▸' }}</span>
-        🌤️ &nbsp; Wetter &amp; Standort
-      </button>
-      @if (expandedSections.system) {
+      @if (activeTab === 'system' && expandedSections.system) {
       <div class="plan-tree-navigation" aria-label="Gespeicherte Wetterstandorte">
         @if (weatherLocationsLoading) {
           <span class="plan-tree-message">Standorte werden geladen …</span>
@@ -174,14 +158,7 @@
       </div>
       }
 
-      <div class="tree-separator"></div>
-      <div class="tree-headline">Datenbank-Tools</div>
-
-      <button class="tree-node-btn node-db" (click)="openDatabase()" [class.node-db-active]="activeTab === 'database'" [attr.aria-expanded]="expandedSections.database">
-        <span aria-hidden="true">{{ expandedSections.database ? '▾' : '▸' }}</span>
-        🗄️ &nbsp; SQLite Inspektor
-      </button>
-      @if (expandedSections.database) {
+      @if (activeTab === 'database' && expandedSections.database) {
       <div class="plan-tree-navigation" aria-label="Datenbank-Backups">
         @if (databaseBackupsLoading) {
           <span class="plan-tree-message">Backups werden geladen …</span>
@@ -211,43 +188,7 @@
 
     <!-- RECHTER INHALTSBEREICH: LÄDT REAKTIV DIE MODULARISIERTEN EINZEL-COMPONENTS -->
     <div class="admin-content-panel">
-      @if (editorActions?.dirty || editorActions?.canDelete || editorActions?.showSave) {
-        <div class="admin-editor-toolbar" aria-label="Änderungen">
-          <div class="admin-editor-toolbar-actions">
-            @if (editorActions?.dirty || editorActions?.showSave) {
-              <button
-                type="button"
-                class="editor-toolbar-button editor-toolbar-save"
-                [disabled]="editorActions?.busy"
-                (click)="saveEditorChanges()">
-                {{ editorActions?.saveLabel ?? 'Speichern' }}
-              </button>
-            }
-            @if (editorActions?.dirty) {
-              <button
-                type="button"
-                class="editor-toolbar-button editor-toolbar-cancel"
-                [disabled]="editorActions?.busy"
-                (click)="cancelEditorChanges()">
-                {{ editorActions?.cancelLabel ?? 'Abbrechen' }}
-              </button>
-            }
-            @if (editorActions?.canDelete) {
-              <button
-                type="button"
-                class="editor-toolbar-delete"
-                [disabled]="editorActions?.busy"
-                aria-label="Ausgewählten Eintrag löschen"
-                title="Ausgewählten Eintrag löschen"
-                (click)="deleteEditorItem()">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"></path>
-                </svg>
-              </button>
-            }
-          </div>
-        </div>
-      }
+      <div class="admin-content-scroll">
       @if (activeTab === 'users') {
         <app-users
           [activeUsers]="activeUsers"
@@ -326,6 +267,13 @@
           (editorActionsChange)="onEditorActionsChanged($event)">
         </app-header-settings>
       }
+      </div>
+      <app-editor-actions-footer
+        [actions]="editorActions"
+        (save)="saveEditorChanges()"
+        (cancel)="cancelEditorChanges()"
+        (delete)="deleteEditorItem()">
+      </app-editor-actions-footer>
     </div>
 
   </div>

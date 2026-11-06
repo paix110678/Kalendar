@@ -1,8 +1,5 @@
-.fullscreen-reward-overlay { position: fixed; inset: 0 0 auto; height: 100vh; height: 100dvh; background: #f8f9fa; z-index: 1000; padding: 40px; display: flex; flex-direction: column; gap: 25px; }
-.reward-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; }
-.reward-header h2 { margin: 0; font-size: 22px; color: #1a1b1e; font-weight: 800; }
-.btn-close-reward { background: #343a40; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
-.btn-close-reward:hover { background: #212529; }
+.fullscreen-reward-overlay { position: fixed; inset: 0; height: 100vh; height: 100dvh; background: #f8f9fa; z-index: 1000; padding: clamp(8px, 2vw, 20px); display: flex; flex-direction: column; gap: clamp(8px, 2vw, 15px); box-sizing: border-box; }
+.reward-header { display: block; height: 146px; min-width: 0; flex: 0 0 146px; box-sizing: border-box; overflow: hidden; border: 1px solid #212529; border-radius: 20px; box-shadow: 0 4px 25px rgba(0,0,0,0.04); }
 
 .reward-grid-layout { display: grid; grid-template-columns: 380px 1fr; gap: 35px; flex: 1; overflow-y: auto; }
 .reward-left-column, .reward-right-column { display: flex; flex-direction: column; gap: 20px; }

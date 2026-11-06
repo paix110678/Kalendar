@@ -4,6 +4,7 @@ import { CalendarService, User, SystemConfig } from '../../../services/calendar.
 import { HeaderPreferences } from '../../../services/api.service';
 import { HeaderControlsComponent } from '../header-controls/header-controls.component';
 import { HeaderBrandComponent } from '../header-brand/header-brand.component';
+import { TitleBackHeaderComponent } from '../../shared/title-back-header/title-back-header.component';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,7 +13,8 @@ import { Subscription } from 'rxjs';
   imports: [
     CommonModule,
     HeaderControlsComponent,
-    HeaderBrandComponent
+    HeaderBrandComponent,
+    TitleBackHeaderComponent
   ],
   templateUrl: './calendar-header.component.html',
   styleUrl: './calendar-header.component.css'
@@ -20,11 +22,13 @@ import { Subscription } from 'rxjs';
 export class CalendarHeaderComponent implements OnInit, OnDestroy {
   @Input() activeUsers: User[] = [];
   @Input() currentViewMode: 'day' | '3days' | 'week' = 'day';
+  @Input() headerTitle: string | null = null;
   
   @Output() viewModeChanged = new EventEmitter<'day' | '3days' | 'week'>();
   @Output() userVisibilityToggled = new EventEmitter<{userId: number, event: MouseEvent}>();
   @Output() rewardDashboardOpened = new EventEmitter<User>();
   @Output() adminPageOpened = new EventEmitter<void>();
+  @Output() headerBack = new EventEmitter<void>();
 
   public sysConfig: SystemConfig | null = null;
   public headerPreferences: HeaderPreferences = {

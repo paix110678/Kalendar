@@ -122,3 +122,163 @@ app-calendar-shell {
   .event-type-create label,
   .person-event-type-row label { flex-basis: auto; }
 }
+
+@media (max-width: 760px) {
+  .fullscreen-admin-page { gap: 8px; padding: 12px !important; }
+  .admin-split-wrapper { flex-direction: row; }
+  .admin-navigation-tree { padding: 5px 3px; }
+  .tree-node-btn { padding: 7px 5px; font-size: 11px; }
+  .member-tree-navigation, .plan-tree-navigation { margin: 0; padding: 0; border-left: 0; }
+  .category-task-navigation { margin: 0; padding: 0; border-left: 0; }
+  .member-tree-item { overflow: hidden; }
+  .member-tree-item > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-content-panel { min-width: 0; padding: 12px; }
+  .admin-editor-toolbar { top: -12px; margin: -12px -12px 12px; padding: 6px 10px; }
+  .editor-toolbar-button { min-height: 40px; padding: 8px 12px; }
+}
+
+@media (max-width: 400px) {
+  .fullscreen-admin-page { gap: 8px; padding: 8px !important; }
+}
+
+.admin-top-navigation {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.top-navigation-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #495057;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-navigation-button:hover { background: #e9ecef; }
+.top-navigation-button.top-navigation-active { background: #e7f5ff; color: #1971c2; }
+
+@media (max-width: 760px) {
+  .admin-top-navigation { gap: 4px; padding: 6px; }
+  .top-navigation-button { min-height: 40px; padding: 7px 9px; font-size: 12px; }
+}
+
+.admin-content-scroll .settings-grid,
+.admin-content-scroll .form-grid,
+.admin-content-scroll .form-grid-config,
+.admin-content-scroll .task-form,
+.admin-content-scroll .hours-grid,
+.admin-content-scroll .inline-edit-form,
+.admin-content-scroll .input-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.admin-content-scroll .hour-row,
+.admin-content-scroll .conflict-row {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.admin-content-scroll .settings-grid label,
+.admin-content-scroll .field,
+.admin-content-scroll .field-item,
+.admin-content-scroll .inline-edit-form label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 6px;
+}
+
+.admin-content-scroll .inline-edit-form label,
+.admin-content-scroll .input-row {
+  width: 100%;
+}
+
+.admin-content-scroll .settings-grid input,
+.admin-content-scroll .settings-grid select,
+.admin-content-scroll .field input,
+.admin-content-scroll .field select,
+.admin-content-scroll .field-item input,
+.admin-content-scroll .field-item select {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-content-scroll input:not([type="checkbox"]):not([type="radio"]),
+.admin-content-scroll select,
+.admin-content-scroll textarea {
+  max-width: 420px;
+  box-sizing: border-box;
+}
+
+.admin-content-scroll .admin-section,
+.admin-content-scroll .plan-form,
+.admin-content-scroll .task-form,
+.admin-content-scroll .holidays-form {
+  padding: 16px;
+}
+
+.admin-content-scroll .admin-section,
+.admin-content-scroll .plans-page,
+.admin-content-scroll .tasks-page,
+.admin-content-scroll .holidays-page,
+.admin-content-scroll .header-settings {
+  max-width: none;
+}
+
+.admin-content-scroll .form-actions,
+.admin-content-scroll .field-wide {
+  grid-column: auto;
+}
+
+.admin-content-scroll > app-users,
+.admin-content-scroll > app-plans,
+.admin-content-scroll > app-holidays,
+.admin-content-scroll > app-categories,
+.admin-content-scroll > app-system,
+.admin-content-scroll > app-tasks,
+.admin-content-scroll > app-database,
+.admin-content-scroll > app-header-settings {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  padding: 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.admin-content-scroll > app-users .admin-section,
+.admin-content-scroll > app-categories .admin-section,
+.admin-content-scroll > app-system .admin-section,
+.admin-content-scroll > app-database .admin-section,
+.admin-content-scroll > app-plans .plan-form,
+.admin-content-scroll > app-tasks .task-form,
+.admin-content-scroll > app-holidays .holidays-form {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-content-scroll > app-plans .plans-page,
+.admin-content-scroll > app-tasks .tasks-page,
+.admin-content-scroll > app-holidays .holidays-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}

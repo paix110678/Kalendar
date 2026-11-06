@@ -42,6 +42,7 @@
 }
 
 app-calendar-header.dashboard-frame-capsule {
+  height: 146px !important;
   padding: 0 !important;
   margin: 0 !important;
   flex-shrink: 0 !important;

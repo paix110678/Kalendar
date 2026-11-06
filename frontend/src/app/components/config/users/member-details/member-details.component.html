@@ -10,6 +10,13 @@
     <h5>Mitgliedseinstellungen</h5>
     <div class="settings-grid">
       <label>
+        <span>Aktiv</span>
+        <select name="memberActive" [(ngModel)]="isActive" (ngModelChange)="publishEditorActions()">
+          <option [ngValue]="true">Ja</option>
+          <option [ngValue]="false">Nein</option>
+        </select>
+      </label>
+      <label>
         <span>Name</span>
         <input type="text" name="memberName" [(ngModel)]="name" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>

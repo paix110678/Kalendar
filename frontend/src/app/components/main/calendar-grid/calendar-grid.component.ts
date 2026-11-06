@@ -250,7 +250,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   }
 
   public getVisibleUsers(): User[] { 
-    return this.activeUsersSignal().filter(u => this.isUserVisible(u.id)); 
+    return this.activeUsersSignal().filter(u => u.is_active && this.isUserVisible(u.id));
   }
 
   public openRewardDashboardForUser(user: User): void { 

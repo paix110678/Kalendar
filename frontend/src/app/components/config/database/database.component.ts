@@ -101,6 +101,8 @@ export class DatabaseComponent implements OnInit, OnChanges {
       dirty: false,
       canDelete: selected !== undefined,
       showSave: this.selectedBackupId === null,
+      showSaveLabel: this.selectedBackupId === null,
+      hideSave: selected !== undefined,
       saveLabel: 'Backup erstellen',
       busy: this.backupsLoading || this.backupSaving || this.backupDeleting
         || this.backupUploading || this.restoringBackupId !== null,

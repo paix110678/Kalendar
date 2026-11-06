@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CalendarService, User, Reward, TimeBlock } from '../../../services/calendar.service';
+import { CalendarHeaderComponent } from '../../header/calendar-header/calendar-header.component';
 
 @Component({
   selector: 'app-reward-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CalendarHeaderComponent],
   templateUrl: './reward-dashboard.component.html',
   styleUrl: './reward-dashboard.component.css'
 })
@@ -13,6 +14,7 @@ export class RewardDashboardComponent implements OnChanges {
   @Input() user: User | null = null;
   @Input() activeRewards: Reward[] = [];
   @Output() closeDashboard = new EventEmitter<void>();
+  @Output() adminPageOpened = new EventEmitter<void>();
   @ViewChild('fireworksCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   public todaysBlocks: TimeBlock[] = [];

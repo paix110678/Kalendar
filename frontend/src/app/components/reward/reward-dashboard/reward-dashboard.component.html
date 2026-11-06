@@ -1,9 +1,10 @@
 <div class="fullscreen-reward-overlay" *ngIf="user">
-  
-  <div class="reward-header">
-    <h2>🏆 Belohnungs-Zentrale & Sparschwein für {{ user.name }}</h2>
-    <button class="btn-close-reward" (click)="closeDashboard.emit()">✕ Schließen</button>
-  </div>
+  <app-calendar-header
+    class="reward-header"
+    [headerTitle]="'Belohnungen für ' + user.name"
+    (adminPageOpened)="adminPageOpened.emit()"
+    (headerBack)="closeDashboard.emit()">
+  </app-calendar-header>
 
   <div class="reward-grid-layout">
     

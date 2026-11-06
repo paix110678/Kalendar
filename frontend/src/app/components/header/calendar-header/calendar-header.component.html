@@ -1,13 +1,19 @@
 <div class="top-bar-grid-container">
   <app-header-brand (adminPageOpened)="adminPageOpened.emit()"></app-header-brand>
 
-  <app-header-controls
-    [activeUsers]="activeUsers"
-    [currentViewMode]="currentViewMode"
-    [config]="sysConfig"
-    [preferences]="headerPreferences"
-    (viewModeChanged)="viewModeChanged.emit($event)"
-    (userVisibilityToggled)="userVisibilityToggled.emit($event)"
-    (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">
-  </app-header-controls>
+  <div class="header-bottom-row">
+    @if (headerTitle) {
+      <app-title-back-header [title]="headerTitle" (back)="headerBack.emit()"></app-title-back-header>
+    } @else {
+      <app-header-controls
+        [activeUsers]="activeUsers"
+        [currentViewMode]="currentViewMode"
+        [config]="sysConfig"
+        [preferences]="headerPreferences"
+        (viewModeChanged)="viewModeChanged.emit($event)"
+        (userVisibilityToggled)="userVisibilityToggled.emit($event)"
+        (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">
+      </app-header-controls>
+    }
+  </div>
 </div>

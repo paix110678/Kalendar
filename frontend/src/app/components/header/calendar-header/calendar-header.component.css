@@ -2,12 +2,19 @@
 .top-bar-grid-container {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   background: linear-gradient(90deg, #3bc9db 0%, #ff922b 100%); 
-  padding: 12px 20px; 
+  height: 100%;
+  padding: 12px 20px;
   border-radius: 19px !important; /* Schmiegt sich exakt von innen an den 20px Shell-Rahmen an */
   width: 100%;
   box-sizing: border-box;
   gap: 12px;
+}
+
+.header-bottom-row {
+  flex: 0 0 52px;
+  height: 52px;
 }
 
 @media (max-width: 640px) {

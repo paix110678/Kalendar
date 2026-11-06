@@ -5,7 +5,8 @@
        draggable="true"
        (dragstart)="onDragStart(i)"
        (dragover)="onDragOver($event)"
-       (drop)="onDrop(i)">
+       (drop)="onDrop(i)"
+       [style.display]="u.is_active ? null : 'none'">
 
     <!-- WOFÜR: Das Auge liegt im Button-Verbund und reagiert auf Mausberührung -->
     <button class="eye-toggle-badge-hover-mode" (click)="userVisibilityToggled.emit({userId: u.id, event: $event})" title="Sichtbarkeit umschalten">
