@@ -29,4 +29,7 @@ jobs:
       - name: Rebuild and restart containers
         run: |
           docker-compose down
+          if docker container inspect kalendar_frontend_1 >/dev/null 2>&1; then
+            docker container rm --force kalendar_frontend_1
+          fi
           docker-compose up -d --build
