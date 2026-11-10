@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import asyncio
+import hmac
 import logging
 import os
 import sys
@@ -108,16 +109,29 @@ async def authenticate_api_requests(request, call_next):
             headers={"Cache-Control": "no-store"},
         )
     actor, csrf_hash = session
-    if request.method not in {"GET", "HEAD", "OPTIONS"} and not check_csrf(
-        request.cookies.get(CSRF_COOKIE),
-        request.headers.get("X-CSRF-Token"),
-        csrf_hash,
-    ):
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "CSRF-Prüfung fehlgeschlagen."},
-            headers={"Cache-Control": "no-store"},
-        )
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        csrf_cookie = request.cookies.get(CSRF_COOKIE)
+        csrf_header = request.headers.get("X-CSRF-Token")
+        if not check_csrf(csrf_cookie, csrf_header, csrf_hash):
+            logger.warning(
+                "CSRF validation failed: method=%s path=%s cookie_present=%s "
+                "header_present=%s values_match=%s session_match=%s",
+                request.method,
+                request.url.path,
+                csrf_cookie is not None,
+                csrf_header is not None,
+                bool(
+                    csrf_cookie
+                    and csrf_header
+                    and hmac.compare_digest(csrf_cookie, csrf_header)
+                ),
+                bool(csrf_cookie and check_csrf(csrf_cookie, csrf_cookie, csrf_hash)),
+            )
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF-Prüfung fehlgeschlagen."},
+                headers={"Cache-Control": "no-store"},
+            )
 
     request.state.account = actor
     with database.use_database_file(actor.db_file):
