@@ -28,13 +28,18 @@ if ! ip -6 route get 2606:4700:4700::1111 >/dev/null 2>&1; then
   exit 1
 fi
 
-read -r -p "INWX DynDNS username: " INWX_USERNAME
+if [[ ! -r /dev/tty ]]; then
+  echo "An interactive terminal is required to enter the INWX credentials." >&2
+  exit 1
+fi
+
+read -r -p "INWX DynDNS username: " INWX_USERNAME </dev/tty
 if [[ -z "$INWX_USERNAME" ]]; then
   echo "The username cannot be empty." >&2
   exit 1
 fi
 
-read -r -s -p "INWX DynDNS password: " INWX_PASSWORD
+read -r -s -p "INWX DynDNS password: " INWX_PASSWORD </dev/tty
 echo
 if [[ -z "$INWX_PASSWORD" ]]; then
   echo "The password cannot be empty." >&2
