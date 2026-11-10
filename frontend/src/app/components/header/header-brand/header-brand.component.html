@@ -1,7 +1,7 @@
 <div class="header-logo-row">
   <app-logo></app-logo>
   <div class="header-actions">
-    <span class="app-version" [title]="'Build ' + version">v{{ shortVersion }}</span>
+    <span class="app-version" [title]="'Version ' + version">v{{ version }}</span>
     <span class="account-name">{{ authService.currentAccount?.display_name }}</span>
     <button
       type="button"

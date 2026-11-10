@@ -136,6 +136,10 @@ async def authenticate_api_requests(request, call_next):
     request.state.account = actor
     with database.use_database_file(actor.db_file):
         response = await call_next(request)
+    if request.url.path == "/api/auth/me":
+        csrf_cookie = request.cookies.get(CSRF_COOKIE)
+        if csrf_cookie and check_csrf(csrf_cookie, csrf_cookie, csrf_hash):
+            response.headers["X-CSRF-Token"] = csrf_cookie
     response.headers["Cache-Control"] = "no-store"
     return response
 

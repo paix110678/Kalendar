@@ -17,7 +17,6 @@ type AuthMode = 'login' | 'register' | 'verify' | 'accept' | 'reset' | 'forgot';
 })
 export class AuthComponent implements OnInit {
   readonly version = KALENDAR_VERSION;
-  readonly shortVersion = KALENDAR_VERSION === 'dev' ? 'dev' : KALENDAR_VERSION.slice(0, 7);
   mode: AuthMode = 'login';
   familyName = '';
   displayName = '';

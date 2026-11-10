@@ -1,6 +1,7 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap } from 'rxjs';
+import { setSessionCsrfToken } from './auth.interceptor';
 
 export type AccountRole = 'admin' | 'adult' | 'teen' | 'child' | 'guest';
 
@@ -51,6 +52,7 @@ export class AuthService {
   constructor(private readonly http: HttpClient) {
     if (typeof window !== 'undefined') {
       window.addEventListener('kalendar:session-expired', () => {
+        setSessionCsrfToken(null);
         this.stateSubject.next({ status: 'ready', account: null, error: null });
         this.reloadToClearFamilyData();
       });
@@ -64,9 +66,21 @@ export class AuthService {
 
   refreshSession(): void {
     this.stateSubject.next({ status: 'loading', account: null, error: null });
-    this.http.get<AuthAccount>(`${this.apiBase}/auth/me`).subscribe({
-      next: (account) => this.stateSubject.next({ status: 'ready', account, error: null }),
+    this.http.get<AuthAccount>(`${this.apiBase}/auth/me`, { observe: 'response' }).subscribe({
+      next: (response) => {
+        setSessionCsrfToken(response.headers.get('X-CSRF-Token'));
+        if (!response.body) {
+          this.stateSubject.next({
+            status: 'error',
+            account: null,
+            error: 'Die Serverantwort zur Sitzung war leer.',
+          });
+          return;
+        }
+        this.stateSubject.next({ status: 'ready', account: response.body, error: null });
+      },
       error: (error: unknown) => {
+        setSessionCsrfToken(null);
         const status = error instanceof HttpErrorResponse ? error.status : null;
         this.stateSubject.next({
           status: status === 401 ? 'ready' : 'error',
@@ -78,7 +92,12 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthAccount> {
-    return this.http.post<AuthAccount>(`${this.apiBase}/auth/login`, { email, password }).pipe(
+    return this.http.post<AuthAccount>(`${this.apiBase}/auth/login`, { email, password }, { observe: 'response' }).pipe(
+      map((response: HttpResponse<AuthAccount>) => {
+        setSessionCsrfToken(response.headers.get('X-CSRF-Token'));
+        if (!response.body) throw new Error('Die Serverantwort zur Anmeldung war leer.');
+        return response.body;
+      }),
       tap((account) => this.stateSubject.next({ status: 'ready', account, error: null })),
     );
   }
@@ -86,6 +105,7 @@ export class AuthService {
   logout(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiBase}/auth/logout`, {}).pipe(
       tap(() => {
+        setSessionCsrfToken(null);
         this.stateSubject.next({ status: 'ready', account: null, error: null });
         this.reloadToClearFamilyData();
       }),

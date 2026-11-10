@@ -15,7 +15,6 @@ import { KALENDAR_VERSION } from '../../../version';
 })
 export class HeaderBrandComponent {
   readonly version = KALENDAR_VERSION;
-  readonly shortVersion = KALENDAR_VERSION === 'dev' ? 'dev' : KALENDAR_VERSION.slice(0, 7);
   @Output() adminPageOpened = new EventEmitter<void>();
 
   public showErrorReport = false;

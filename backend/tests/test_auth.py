@@ -32,6 +32,7 @@ def _register_admin(client: TestClient, email: str, family_name: str, sent_email
         json={"email": email, "password": "A-strong-password-123"},
     )
     assert response.status_code == 200
+    assert response.headers["X-CSRF-Token"] == client.cookies.get("kalendar_csrf")
     return response.json()
 
 
@@ -56,6 +57,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
         admin = _register_admin(client, "admin@example.invalid", "One Family", sent_emails)
         csrf = client.cookies.get("kalendar_csrf")
         assert csrf
+        assert client.get("/api/auth/me").headers["X-CSRF-Token"] == csrf
 
         assert client.post(
             "/api/users",

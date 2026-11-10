@@ -473,6 +473,7 @@ def login(payload: LoginPayload, request: Request, response: Response):
     csrf_token = create_token()
     session_token = create_session(account["id"], csrf_token)
     _set_session_cookies(response, session_token, csrf_token)
+    response.headers["X-CSRF-Token"] = csrf_token
     row = get_account(account["id"])
     return _account_response(row)
 
