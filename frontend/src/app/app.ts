@@ -1,21 +1,31 @@
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { AuthComponent } from './components/auth/auth.component';
 import { CalendarShellComponent } from './components/calendar-shell.component';
-
-// ✅ Dynamic Import für Bundle Optimizer
-async function loadCalendarShell() {
-  const component = await import('./components/calendar-shell.component');
-  return component.CalendarShellComponent;
-}
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CalendarShellComponent], // Bindet die Shell direkt und ohne Umwege als Root ein
-  template: `<app-calendar-shell></app-calendar-shell>` // Zwingt Angular, mit der Shell zu starten
+  imports: [CommonModule, CalendarShellComponent, AuthComponent],
+  template: `
+    @if (authState$ | async; as state) {
+      @if (state.status === 'loading') {
+        <main class="auth-loading" role="status">Anmeldestatus wird geprüft …</main>
+      } @else if (state.status === 'error') {
+        <main class="auth-loading" role="alert">
+          <p>{{ state.error }}</p>
+          <button type="button" (click)="authService.refreshSession()">Erneut versuchen</button>
+        </main>
+      } @else if (state.account) {
+        <app-calendar-shell></app-calendar-shell>
+      } @else {
+        <app-auth></app-auth>
+      }
+    }
+  `,
 })
-export class AppComponent {}
-
-// Wir bereinigen die App-Konfiguration von ungenutzten Providern
-export const appConfig = {
-  providers: []
-};
+export class AppComponent {
+  public readonly authService = inject(AuthService);
+  readonly authState$ = this.authService.state$;
+}

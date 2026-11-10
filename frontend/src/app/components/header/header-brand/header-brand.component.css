@@ -15,6 +15,46 @@
   gap: 8px;
 }
 
+.app-version {
+  padding: 3px 6px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 5px;
+  color: rgb(255 255 255 / 85%);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.account-name {
+  max-width: 180px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-logout {
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.logout-error {
+  margin: 4px 0;
+  color: #ffe3e3;
+  font-size: 12px;
+}
+
 .btn-admin-gear {
   display: flex;
   flex: 0 0 48px;
@@ -98,6 +138,22 @@
 
   .header-actions {
     gap: 3px;
+  }
+
+  .account-name {
+    max-width: 84px;
+    font-size: 10px;
+  }
+
+  .app-version {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .btn-logout {
+    min-height: 30px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
 
   .btn-error-report {

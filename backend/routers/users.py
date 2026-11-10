@@ -1,10 +1,18 @@
 import json
 import sqlite3
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Literal, Optional
 import database
+from auth_database import get_auth_connection
+from security import (
+    AccountContext,
+    ensure_profile_access,
+    require_authenticated,
+    require_profile_access,
+    require_roles,
+)
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -74,8 +82,54 @@ def serialize_person_event_type(row):
     return {"id": row["id"], "user_id": row["user_id"], "name": row["name"], "color": row["color"]}
 
 
+def ensure_linked_account_role(user_id: int, role: str, family_id: str):
+    profile_roles = {
+        "adult": {"admin", "adult"},
+        "child_10": {"child"},
+        "child_14": {"teen"},
+        "patchwork_guest": {"guest"},
+    }
+    conn = get_auth_connection()
+    try:
+        accounts = conn.execute(
+            "SELECT role FROM accounts WHERE family_id = ? AND profile_id = ?",
+            (family_id, user_id),
+        ).fetchall()
+    finally:
+        conn.close()
+    if any(account["role"] not in profile_roles[role] for account in accounts):
+        raise HTTPException(
+            status_code=409,
+            detail="Die Profilrolle passt nicht mehr zu einem verknüpften Login-Konto.",
+        )
+
+
+def deactivate_linked_accounts(user_id: int, family_id: str):
+    conn = get_auth_connection()
+    try:
+        account_ids = conn.execute(
+            "SELECT id FROM accounts WHERE family_id = ? AND profile_id = ? AND is_active = 1",
+            (family_id, user_id),
+        ).fetchall()
+        if account_ids:
+            conn.execute(
+                "UPDATE accounts SET is_active = 0 WHERE family_id = ? AND profile_id = ?",
+                (family_id, user_id),
+            )
+            conn.executemany(
+                "DELETE FROM sessions WHERE account_id = ?",
+                [(account["id"],) for account in account_ids],
+            )
+            conn.commit()
+    finally:
+        conn.close()
+
+
 @router.get("/{user_id}/event-types")
-def get_person_event_types(user_id: int):
+def get_person_event_types(
+    user_id: int,
+    actor: AccountContext = Depends(require_profile_access),
+):
     conn = database.get_db_connection()
     try:
         if conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone() is None:
@@ -90,7 +144,12 @@ def get_person_event_types(user_id: int):
 
 
 @router.post("/{user_id}/event-types", status_code=status.HTTP_201_CREATED)
-def create_person_event_type(user_id: int, payload: PersonEventTypePayload):
+def create_person_event_type(
+    user_id: int,
+    payload: PersonEventTypePayload,
+    actor: AccountContext = Depends(require_profile_access),
+):
+    ensure_profile_access(actor, user_id, write=True)
     conn = database.get_db_connection()
     try:
         if conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone() is None:
@@ -116,7 +175,13 @@ def create_person_event_type(user_id: int, payload: PersonEventTypePayload):
 
 
 @router.put("/{user_id}/event-types/{event_type_id}")
-def update_person_event_type(user_id: int, event_type_id: int, payload: PersonEventTypePayload):
+def update_person_event_type(
+    user_id: int,
+    event_type_id: int,
+    payload: PersonEventTypePayload,
+    actor: AccountContext = Depends(require_profile_access),
+):
+    ensure_profile_access(actor, user_id, write=True)
     conn = database.get_db_connection()
     try:
         name = payload.name.strip()
@@ -153,7 +218,12 @@ def update_person_event_type(user_id: int, event_type_id: int, payload: PersonEv
 
 
 @router.delete("/{user_id}/event-types/{event_type_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_person_event_type(user_id: int, event_type_id: int):
+def delete_person_event_type(
+    user_id: int,
+    event_type_id: int,
+    actor: AccountContext = Depends(require_profile_access),
+):
+    ensure_profile_access(actor, user_id, write=True)
     conn = database.get_db_connection()
     try:
         event_type = conn.execute(
@@ -184,7 +254,10 @@ def delete_person_event_type(user_id: int, event_type_id: int):
 
 
 @router.get("/{user_id}/plan-assignment")
-def get_user_plan_assignment(user_id: int):
+def get_user_plan_assignment(
+    user_id: int,
+    actor: AccountContext = Depends(require_profile_access),
+):
     conn = database.get_db_connection()
     try:
         assignment = conn.execute(
@@ -222,7 +295,7 @@ def get_user_plan_assignment(user_id: int):
 
 
 @router.get("")
-def get_users():
+def get_users(actor: AccountContext = Depends(require_authenticated)):
     conn = database.get_db_connection()
     cursor = conn.cursor()
     
@@ -235,6 +308,8 @@ def get_users():
 
     # KORREKTUR: Sortiert die Benutzerliste beim Auslesen knallhart nach der permanenten Reihenfolge!
     users = conn.execute("SELECT * FROM users ORDER BY sort_order ASC").fetchall()
+    if actor.role not in {"admin", "adult"}:
+        users = [user for user in users if user["id"] == actor.profile_id]
     result = []
     for user in users:
         serialized_user = dict(user)
@@ -243,8 +318,15 @@ def get_users():
     conn.close()
     return result
 
-@router.put("/{user_id}/profile")
-def update_user_profile(user_id: int, payload: UserProfileUpdate):
+@router.put(
+    "/{user_id}/profile",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
+def update_user_profile(
+    user_id: int,
+    payload: UserProfileUpdate,
+    actor: AccountContext = Depends(require_authenticated),
+):
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Der Name darf nicht leer sein.")
@@ -257,6 +339,7 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
 
         previous_school_status = user["status_school"]
         previous_sport_status = user["status_sport"]
+        ensure_linked_account_role(user_id, payload.role, actor.family_id)
         state_code = (
             payload.state_code
             if "state_code" in payload.model_fields_set
@@ -316,11 +399,16 @@ def update_user_profile(user_id: int, payload: UserProfileUpdate):
         updated_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         serialized_user = dict(updated_user)
         serialized_user["is_active"] = bool(serialized_user["is_active"])
+        if not serialized_user["is_active"]:
+            deactivate_linked_accounts(user_id, actor.family_id)
         return {"user": serialized_user, "blocks_changed": blocks_changed}
     finally:
         conn.close()
 
-@router.post("/{user_id}/apply-plan")
+@router.post(
+    "/{user_id}/apply-plan",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def apply_plan(user_id: int, payload: ApplyPlanPayload):
     conn = database.get_db_connection()
     try:
@@ -587,7 +675,7 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
         conn.close()
 
 # NEU: Der unzerstörbare Endpunkt für das datenbankbasierte Drag-and-Drop
-@router.put("/reorder")
+@router.put("/reorder", dependencies=[Depends(require_roles("admin", "adult"))])
 def reorder_users(payload: UserOrderPayload):
     conn = database.get_db_connection()
     cursor = conn.cursor()
@@ -603,7 +691,7 @@ def reorder_users(payload: UserOrderPayload):
     finally:
         conn.close()
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_roles("admin", "adult"))])
 def create_user(payload: UserCreate):
     conn = database.get_db_connection()
     cursor = conn.cursor()
@@ -613,17 +701,43 @@ def create_user(payload: UserCreate):
     conn.close()
     return {"status": "success", "user_id": new_id}
 
-@router.put("/{user_id}")
-def update_user(user_id: int, payload: UserUpdate):
+@router.put("/{user_id}", dependencies=[Depends(require_roles("admin", "adult"))])
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    actor: AccountContext = Depends(require_authenticated),
+):
     conn = database.get_db_connection()
+    exists = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if exists is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
+    ensure_linked_account_role(user_id, payload.role, actor.family_id)
     conn.execute("UPDATE users SET name = ?, role = ?, color_code = ? WHERE id = ?", (payload.name, payload.role, payload.color_code, user_id))
     conn.commit()
     conn.close()
     return {"status": "success"}
 
-@router.delete("/{user_id}")
-def delete_user(user_id: int):
+@router.delete("/{user_id}", dependencies=[Depends(require_roles("admin", "adult"))])
+def delete_user(
+    user_id: int,
+    actor: AccountContext = Depends(require_authenticated),
+):
     conn = database.get_db_connection()
+    auth_conn = get_auth_connection()
+    try:
+        linked_account = auth_conn.execute(
+            "SELECT 1 FROM accounts WHERE family_id = ? AND profile_id = ? LIMIT 1",
+            (actor.family_id, user_id),
+        ).fetchone()
+    finally:
+        auth_conn.close()
+    if linked_account:
+        conn.close()
+        raise HTTPException(
+            status_code=409,
+            detail="Dieses Familienprofil ist mit einem Login-Konto verknüpft. Entferne oder verknüpfe das Konto zuerst.",
+        )
     assignment = conn.execute(
         "SELECT id FROM user_plan_assignments WHERE user_id = ?",
         (user_id,),
@@ -639,7 +753,10 @@ def delete_user(user_id: int):
     conn.close()
     return {"status": "success"}
 
-@router.put("/{user_id}/status-school")
+@router.put(
+    "/{user_id}/status-school",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def update_school_status(user_id: int, payload: StatusSchoolUpdate):
     conn = database.get_db_connection()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -658,7 +775,10 @@ def update_school_status(user_id: int, payload: StatusSchoolUpdate):
     conn.close()
     return {"status": "success"}
 
-@router.put("/{user_id}/status-sport")
+@router.put(
+    "/{user_id}/status-sport",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def update_sport_status(user_id: int, payload: StatusSportUpdate):
     conn = database.get_db_connection()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -677,7 +797,10 @@ def update_sport_status(user_id: int, payload: StatusSportUpdate):
     conn.close()
     return {"status": "success"}
 
-@router.post("/{user_id}/tuev-passed")
+@router.post(
+    "/{user_id}/tuev-passed",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def final_tuev_passed(user_id: int):
     conn = database.get_db_connection()
     conn.execute("UPDATE users SET current_points = current_points + 10 WHERE id = ?", (user_id,))

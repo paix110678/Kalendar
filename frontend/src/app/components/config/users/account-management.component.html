@@ -1,0 +1,114 @@
+<section class="account-management" aria-labelledby="accounts-title">
+  <h3 id="accounts-title">Login-Konten und Einladungen</h3>
+  <p>Konten melden Personen im gemeinsamen Familienkalender an. Familienprofile bleiben davon getrennt.</p>
+
+  @if (error) {
+    <p class="account-message account-error" role="alert">{{ error }}</p>
+  }
+  @if (message) {
+    <p class="account-message account-success" role="status">{{ message }}</p>
+  }
+
+  <form class="invite-form" (ngSubmit)="invite()">
+    <h4>Mitglied einladen</h4>
+    <label>
+      E-Mail-Adresse
+      <input type="email" name="inviteEmail" [(ngModel)]="inviteEmail" required maxlength="254" autocomplete="email">
+    </label>
+    <label>
+      Rolle
+      <select name="inviteRole" [(ngModel)]="inviteRole" (ngModelChange)="onInviteRoleChange()">
+        <option value="adult">Erwachsener – sieht die ganze Familie</option>
+        <option value="teen">Jugendlicher – nur eigenes Profil</option>
+        <option value="child">Kind – nur eigenes Profil</option>
+        <option value="guest">Gast – eigenes Profil, nur lesen</option>
+      </select>
+    </label>
+    <label>
+      Familienprofil
+      <select name="inviteProfile" [(ngModel)]="inviteProfileId" required>
+        @for (profile of inviteProfiles; track profile.id) {
+          <option [ngValue]="profile.id">{{ profile.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" [disabled]="saving || !inviteEmail.trim() || inviteProfileId === null">
+      {{ saving ? 'Wird gesendet …' : 'Einladung per E-Mail senden' }}
+    </button>
+    @if (inviteProfiles.length === 0) {
+      <p class="account-hint">Für diese Rolle ist kein passendes aktives Familienprofil vorhanden.</p>
+    }
+  </form>
+
+  <div class="account-list">
+    <h4>Vorhandene Konten</h4>
+    @if (loading) {
+      <p role="status">Konten werden geladen …</p>
+    } @else if (accounts.length === 0) {
+      <p>Noch keine Konten vorhanden.</p>
+    } @else {
+      @for (account of accounts; track account.id) {
+        <article class="account-card">
+          <div class="account-heading">
+            <strong>{{ account.display_name }}</strong>
+            <span>{{ account.email }}</span>
+            <span class="account-state" [class.account-disabled]="!account.is_active">
+              {{ account.is_active ? 'Aktiv' : 'Deaktiviert' }}
+            </span>
+          </div>
+          <div class="account-fields">
+            <label>
+              Rolle
+              <select
+                [name]="'role-' + account.id"
+                [(ngModel)]="account.role"
+                (ngModelChange)="account.profile_id = profileOptions(account)[0]?.id ?? null"
+                [disabled]="isCurrentAccount(account)">
+                <option value="admin">Admin</option>
+                <option value="adult">Erwachsener</option>
+                <option value="teen">Jugendlicher</option>
+                <option value="child">Kind</option>
+                <option value="guest">Gast</option>
+              </select>
+            </label>
+            <label>
+              Familienprofil
+              <select
+                [name]="'profile-' + account.id"
+                [(ngModel)]="account.profile_id"
+                [disabled]="isCurrentAccount(account)">
+                @for (profile of profileOptions(account); track profile.id) {
+                  <option [ngValue]="profile.id">{{ profile.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="account-active">
+              <input
+                type="checkbox"
+                [name]="'active-' + account.id"
+                [(ngModel)]="account.is_active"
+                [disabled]="isCurrentAccount(account)">
+              Konto aktiv
+            </label>
+          </div>
+          <p class="account-hint">
+            {{ roleLabel(account.role) }} · {{ account.profile_name || 'Kein Profil' }}
+            @if (!account.email_verified) { · E-Mail noch nicht bestätigt }
+          </p>
+          <div class="account-actions">
+            <button type="button" (click)="save(account)" [disabled]="saving || isCurrentAccount(account)">
+              Änderungen speichern
+            </button>
+            <button
+              type="button"
+              class="danger-button"
+              (click)="delete(account)"
+              [disabled]="saving || isCurrentAccount(account)">
+              Login entfernen
+            </button>
+          </div>
+        </article>
+      }
+    }
+  </div>
+</section>

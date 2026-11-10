@@ -54,6 +54,25 @@ ng e2e
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
+## Anmeldung und öffentlicher Betrieb
+
+Die API verlangt eine Anmeldung. Für die erste Familie wird die erste Registrierung zum Admin; weitere Registrierungen legen eigene, getrennte Familienkalender an. Familienadmins laden zusätzliche Profile über **Einstellungen → Konten** ein.
+
+Vor der Freigabe müssen im Backend mindestens `KALENDAR_PUBLIC_URL` mit der extern erreichbaren HTTPS-Adresse sowie `KALENDAR_SMTP_HOST` und `KALENDAR_SMTP_FROM` konfiguriert werden. Optional sind `KALENDAR_SMTP_PORT` (Standard `587`), `KALENDAR_SMTP_USER` und `KALENDAR_SMTP_PASSWORD`. Port `465` verwendet implizites TLS; andere Ports starten TLS vor dem Versand. Geheimnisse gehören in die Deployment-Umgebung, nicht in den Quellcode.
+
+Die Sitzungscookies sind standardmäßig nur über HTTPS zulässig (`KALENDAR_COOKIE_SECURE=true`). TLS muss am öffentlichen Reverse-Proxy terminiert werden. Die Backend-Ports sind in der Compose-Konfiguration nur an Loopback gebunden und sollen nicht direkt ins Internet veröffentlicht werden. `KALENDAR_CORS_ORIGINS` enthält kommasepariert die erlaubten Frontend-Ursprünge.
+
+Vor der allerersten Registrierung auf einer Datenbank mit vorhandenen Kalenderdaten muss `KALENDAR_BOOTSTRAP_TOKEN` als zufälliger, mindestens 32 Zeichen langer geheimer Wert gesetzt werden. Bei der Registrierung des ersten Admins ist dieser Wert als Übernahme-Token anzugeben. Damit wird verhindert, dass ein beliebiger Internetnutzer den vorhandenen Familienkalender übernimmt. Der Token wird nach der ersten erfolgreichen Übernahme nicht mehr benötigt und sollte anschließend entfernt werden.
+
+Konten, Familienzuordnungen und Sitzungen liegen in `KALENDAR_AUTH_DB_PATH`; zusätzliche Familienkalender liegen unter `KALENDAR_TENANT_DB_DIR`. Beide Verzeichnisse müssen wie die bestehende Kalenderdatenbank dauerhaft und mit restriktiven Dateiberechtigungen gespeichert werden. Die vorhandene Backup-Funktion exportiert jeweils nur die Kalenderdatenbank, nicht die Konten-/Sitzungsdatenbank; für eine vollständige Wiederherstellung muss deshalb zusätzlich das gesamte persistente `/data`-Volume gesichert werden. Diese Sicherungen enthalten Passwort-Hashes und Sitzungstoken-Digests und müssen verschlüsselt sowie zugriffsbeschränkt aufbewahrt werden. Entwicklungsserver unter HTTP benötigen explizit `KALENDAR_COOKIE_SECURE=false`; diese Einstellung darf nicht für den öffentlichen Betrieb verwendet werden.
+
+Backend-Tests ausführen:
+
+```bash
+cd backend
+python -m pytest
+```
+
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

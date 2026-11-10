@@ -1,7 +1,10 @@
-import { ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectorRef, Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LogoComponent } from '../logo/logo.component';
 import { ErrorReportDialogComponent } from '../error-report-dialog/error-report-dialog.component';
+import { AuthService } from '../../../services/auth.service';
+import { KALENDAR_VERSION } from '../../../version';
 
 @Component({
   selector: 'app-header-brand',
@@ -11,15 +14,35 @@ import { ErrorReportDialogComponent } from '../error-report-dialog/error-report-
   styleUrl: './header-brand.component.css',
 })
 export class HeaderBrandComponent {
-  @Input() showSettingsButton = true;
+  readonly version = KALENDAR_VERSION;
+  readonly shortVersion = KALENDAR_VERSION === 'dev' ? 'dev' : KALENDAR_VERSION.slice(0, 7);
   @Output() adminPageOpened = new EventEmitter<void>();
 
   public showErrorReport = false;
   public isCapturingScreenshot = false;
   public screenshotDataUrl: string | null = null;
   public screenshotError = '';
+  public logoutError = '';
 
-  constructor(private readonly changeDetector: ChangeDetectorRef) {}
+  constructor(
+    private readonly changeDetector: ChangeDetectorRef,
+    readonly authService: AuthService,
+  ) {}
+
+  get canOpenAdmin(): boolean {
+    return ['admin', 'adult'].includes(this.authService.currentAccount?.role ?? '');
+  }
+
+  logout(): void {
+    this.logoutError = '';
+    this.authService.logout().subscribe({
+      error: (error: unknown) => {
+        this.logoutError = error instanceof HttpErrorResponse
+          ? error.error?.detail ?? 'Abmeldung fehlgeschlagen.'
+          : 'Abmeldung fehlgeschlagen.';
+      },
+    });
+  }
 
   public async openErrorReport(): Promise<void> {
     if (this.isCapturingScreenshot || this.showErrorReport) return;

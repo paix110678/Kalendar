@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     && mkdir -p /data
 
-COPY main.py database.py backup_service.py ./
+COPY main.py database.py auth_database.py security.py backup_service.py ./
 COPY routers ./routers
 
 EXPOSE 8000

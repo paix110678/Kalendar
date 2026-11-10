@@ -4,9 +4,12 @@
     <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'plans'" (click)="openPlans()">📅 Pläne</button>
     <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'holidays'" (click)="openHolidays()">🏖️ Ferien</button>
     <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'categories' || activeTab === 'tasks'" (click)="openCategories()">🏷️ Kategorien</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'system'" (click)="openWeatherConfig()">🌤️ Wetter</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'header'" (click)="openHeaderSettings()">🧭 Anzeige</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'database'" (click)="openDatabase()">🗄️ DB-Viewer</button>
+    @if (isAdmin) {
+      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'accounts'" (click)="selectAccounts()">🔐 Konten</button>
+      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'system'" (click)="openWeatherConfig()">🌤️ Wetter</button>
+      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'header'" (click)="openHeaderSettings()">🧭 Anzeige</button>
+      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'database'" (click)="openDatabase()">🗄️ DB-Viewer</button>
+    }
   </nav>
 
   <div class="admin-split-wrapper">
@@ -196,6 +199,9 @@
           (editorActionsChange)="onEditorActionsChanged($event)"
           (memberClosed)="selectedMemberId = null">
         </app-users>
+      }
+      @if (activeTab === 'accounts' && isAdmin) {
+        <app-account-management [familyProfiles]="activeUsers"></app-account-management>
       }
       @defer (on immediate) {
         @if (activeTab === 'plans') {

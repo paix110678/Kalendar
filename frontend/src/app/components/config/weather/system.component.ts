@@ -37,12 +37,8 @@ export class SystemComponent implements OnChanges {
   public editingLocationId: number | null = null;
   public creatingLocation = false;
   public loading = false;
-  public showPasswordPrompt = false;
-  public passwordInput = '';
-  public passwordError = '';
   public configMessage = '';
   public configError = false;
-  private pendingAction: WeatherLocationAction | null = null;
   private savedFormSnapshot = '';
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -74,33 +70,10 @@ export class SystemComponent implements OnChanges {
   }
 
   triggerAction(action: WeatherLocationAction): void {
-    this.pendingAction = action;
-    this.showPasswordPrompt = true;
-    this.passwordInput = '';
-    this.passwordError = '';
-  }
-
-  cancelPasswordPrompt(): void {
-    this.showPasswordPrompt = false;
-    this.pendingAction = null;
-    this.passwordInput = '';
-    this.passwordError = '';
-  }
-
-  verifyAdminAction(): void {
-    if (!this.pendingAction) return;
-    this.calendarService.verifyAdminPassword(this.passwordInput).subscribe({
-      next: () => {
-        this.showPasswordPrompt = false;
-        const action = this.pendingAction;
-        this.pendingAction = null;
-        if (action === 'create') this.createLocation();
-        else if (action === 'save') this.saveLocation();
-        else if (action === 'activate') this.activateLocation();
-        else if (action === 'delete') this.deleteLocation();
-      },
-      error: () => this.passwordError = 'Kennwort inkorrekt.'
-    });
+    if (action === 'create') this.createLocation();
+    else if (action === 'save') this.saveLocation();
+    else if (action === 'activate') this.activateLocation();
+    else if (action === 'delete') this.deleteLocation();
   }
 
   private loadLocations(): void {
@@ -286,7 +259,6 @@ export class SystemComponent implements OnChanges {
   }
 
   cancelChanges(): void {
-    this.cancelPasswordPrompt();
     this.loading = true;
     this.publishEditorActions();
     this.apiService.getWeatherLocations().subscribe({

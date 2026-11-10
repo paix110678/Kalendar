@@ -23,7 +23,7 @@ app-root {
   height: 100% !important;
   height: 100vh !important;
   height: 100dvh !important;
-  overflow: hidden !important;
+  overflow: auto !important;
 }
 
 /* Erzwingt, dass der neue Angular-Einstiegspunkt den Bildschirm voll ausfüllt */
@@ -34,6 +34,27 @@ app-calendar-shell {
   height: 100vh !important;
   height: 100dvh !important;
   overflow: hidden !important;
+}
+
+.auth-loading {
+  display: grid;
+  min-height: 100%;
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: #343a40;
+  text-align: center;
+}
+
+.auth-loading button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #1971c2;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 @media (max-width: 760px) {

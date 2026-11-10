@@ -1,6 +1,16 @@
 <div class="header-logo-row">
   <app-logo></app-logo>
   <div class="header-actions">
+    <span class="app-version" [title]="'Build ' + version">v{{ shortVersion }}</span>
+    <span class="account-name">{{ authService.currentAccount?.display_name }}</span>
+    <button
+      type="button"
+      class="btn-logout"
+      (click)="logout()"
+      title="Abmelden"
+      aria-label="Abmelden">
+      Abmelden
+    </button>
     <button
       type="button"
       class="btn-error-report"
@@ -11,7 +21,7 @@
       <span aria-hidden="true">🐞</span>
     </button>
     <button
-      *ngIf="showSettingsButton"
+      *ngIf="canOpenAdmin"
       type="button"
       class="btn-admin-gear"
       (click)="adminPageOpened.emit()"
@@ -21,6 +31,7 @@
     </button>
   </div>
 </div>
+<p *ngIf="logoutError" class="logout-error" role="alert">{{ logoutError }}</p>
 
 <div *ngIf="isCapturingScreenshot" class="screenshot-capture-overlay" role="status" aria-live="polite">
   <span class="screenshot-spinner" aria-hidden="true"></span>

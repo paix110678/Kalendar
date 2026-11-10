@@ -1,16 +1,25 @@
 from contextlib import asynccontextmanager
 import asyncio
 import logging
+import os
 import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import database
+import auth_database
 import backup_service
 import uvicorn
+from security import (
+    CSRF_COOKIE,
+    SESSION_COOKIE,
+    check_csrf,
+    load_session,
+)
 
 # Router-Imports
-from routers import users, blocks, rewards, config, plans, holidays, backups, tasks, error_reports
+from routers import auth, users, blocks, rewards, config, plans, holidays, backups, tasks, error_reports
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -23,18 +32,21 @@ for stream in (sys.stdout, sys.stderr):
 async def hourly_weather_cron_task():
     # Wir warten nach dem Serverstart 3 Sekunden, damit die DB bereit ist
     await asyncio.sleep(3)
-    try:
-        await asyncio.to_thread(config.ensure_weather_location)
-    except config.LocationLookupError as error:
-        logger.warning("Standort konnte beim Start nicht ermittelt werden; neuer Versuch beim nächsten Start: %s", error)
-
     while True:
-        print("⏰ Stündliche Wetter-API-Aktualisierung wird ausgeführt...")
-        try:
-            await asyncio.to_thread(config.fetch_live_weather_pure_ram)
-        except Exception as e:
-            print(f"⚠️ Wetter-Cron-Job verzögert: {e}")
-        # Wartet exakt 1 Stunde (3600 Sekunden) im Hintergrund
+        for db_file in auth_database.list_family_db_paths():
+            with database.use_database_file(db_file):
+                try:
+                    await asyncio.to_thread(config.ensure_weather_location)
+                except config.LocationLookupError as error:
+                    logger.warning(
+                        "Wetterstandort für %s konnte nicht ermittelt werden: %s",
+                        db_file.name,
+                        error,
+                    )
+                try:
+                    await asyncio.to_thread(config.fetch_live_weather_pure_ram)
+                except Exception:
+                    logger.exception("Wetteraktualisierung für %s fehlgeschlagen", db_file.name)
         await asyncio.sleep(3600)
 
 
@@ -42,6 +54,7 @@ async def hourly_weather_cron_task():
 async def lifespan(_: FastAPI):
     logger.info("Familien-Kalender API wird gestartet.")
     database.init_db()
+    auth_database.init_auth_db()
     backup_migration_failures = backup_service.migrate_backup_files()
     if backup_migration_failures:
         logger.error(
@@ -67,14 +80,70 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+PUBLIC_AUTH_ENDPOINTS = {
+    ("POST", "/api/auth/register"),
+    ("POST", "/api/auth/login"),
+    ("POST", "/api/auth/verify-email"),
+    ("POST", "/api/auth/resend-verification"),
+    ("POST", "/api/auth/request-password-reset"),
+    ("POST", "/api/auth/reset-password"),
+    ("POST", "/api/auth/accept-invitation"),
+}
+
+
+@app.middleware("http")
+async def authenticate_api_requests(request, call_next):
+    if not request.url.path.startswith("/api/") or request.method == "OPTIONS":
+        return await call_next(request)
+    if (request.method, request.url.path) in PUBLIC_AUTH_ENDPOINTS:
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    session = load_session(request.cookies.get(SESSION_COOKIE))
+    if session is None:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Anmeldung erforderlich."},
+            headers={"Cache-Control": "no-store"},
+        )
+    actor, csrf_hash = session
+    if request.method not in {"GET", "HEAD", "OPTIONS"} and not check_csrf(
+        request.cookies.get(CSRF_COOKIE),
+        request.headers.get("X-CSRF-Token"),
+        csrf_hash,
+    ):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "CSRF-Prüfung fehlgeschlagen."},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    request.state.account = actor
+    with database.use_database_file(actor.db_file):
+        response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.environ.get(
+        "KALENDAR_CORS_ORIGINS",
+        "http://localhost:4200,http://127.0.0.1:4200",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "X-CSRF-Token"],
 )
 
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(blocks.router)
 app.include_router(rewards.router)

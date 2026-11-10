@@ -1,9 +1,14 @@
 import json
 import database
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
+from security import require_roles
 
-router = APIRouter(prefix="/api/plans", tags=["Pläne"])
+router = APIRouter(
+    prefix="/api/plans",
+    tags=["Pläne"],
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 
 DAYS_OF_WEEK = (
     "Montag",

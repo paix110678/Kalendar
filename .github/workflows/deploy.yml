@@ -11,6 +11,17 @@ permissions:
 jobs:
   deploy:
     runs-on: self-hosted
+    env:
+      KALENDAR_PUBLIC_URL: https://famsolver.de
+      KALENDAR_CORS_ORIGINS: https://famsolver.de
+      KALENDAR_COOKIE_SECURE: "true"
+      KALENDAR_VERSION: ${{ github.sha }}
+      KALENDAR_SMTP_HOST: ${{ secrets.KALENDAR_SMTP_HOST }}
+      KALENDAR_SMTP_PORT: ${{ secrets.KALENDAR_SMTP_PORT }}
+      KALENDAR_SMTP_USER: ${{ secrets.KALENDAR_SMTP_USER }}
+      KALENDAR_SMTP_PASSWORD: ${{ secrets.KALENDAR_SMTP_PASSWORD }}
+      KALENDAR_SMTP_FROM: ${{ secrets.KALENDAR_SMTP_FROM }}
+      KALENDAR_BOOTSTRAP_TOKEN: ${{ secrets.KALENDAR_BOOTSTRAP_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

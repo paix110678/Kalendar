@@ -3,9 +3,20 @@ services:
     build:
       context: ./backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       KALENDAR_DB_PATH: /data/kalender.db
+      KALENDAR_AUTH_DB_PATH: /data/auth.sqlite3
+      KALENDAR_TENANT_DB_DIR: /data/families
+      KALENDAR_PUBLIC_URL: ${KALENDAR_PUBLIC_URL:-https://famsolver.de}
+      KALENDAR_COOKIE_SECURE: ${KALENDAR_COOKIE_SECURE:-true}
+      KALENDAR_CORS_ORIGINS: ${KALENDAR_CORS_ORIGINS:-https://famsolver.de}
+      KALENDAR_BOOTSTRAP_TOKEN: ${KALENDAR_BOOTSTRAP_TOKEN:-}
+      KALENDAR_SMTP_HOST: ${KALENDAR_SMTP_HOST:-}
+      KALENDAR_SMTP_PORT: ${KALENDAR_SMTP_PORT:-587}
+      KALENDAR_SMTP_USER: ${KALENDAR_SMTP_USER:-}
+      KALENDAR_SMTP_PASSWORD: ${KALENDAR_SMTP_PASSWORD:-}
+      KALENDAR_SMTP_FROM: ${KALENDAR_SMTP_FROM:-}
     volumes:
       - backend-data:/data
     restart: always
@@ -13,8 +24,10 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        KALENDAR_VERSION: ${KALENDAR_VERSION:-dev}
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
     restart: always

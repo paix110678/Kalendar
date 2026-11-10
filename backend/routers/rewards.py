@@ -1,12 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 import database
+from security import AccountContext, require_authenticated, require_roles
 
 router = APIRouter(prefix="/api", tags=["Rewards & Admin"])
-
-# Passwort-Konfiguration (wird temporär im RAM gehalten, optional in DB erweiterbar)
-class PasswordContainer:
-    current_password = "Chef"
 
 class RewardCreate(BaseModel):
     title: str
@@ -22,13 +19,6 @@ class RewardClaim(BaseModel):
     user_id: int
     reward_id: int
 
-class PasswordVerify(BaseModel):
-    password: str
-
-class PasswordChange(BaseModel):
-    old_password: str
-    new_password: str
-
 @router.get("/rewards")
 def get_rewards():
     conn = database.get_db_connection()
@@ -36,7 +26,10 @@ def get_rewards():
     conn.close()
     return [dict(r) for r in rewards]
 
-@router.post("/rewards")
+@router.post(
+    "/rewards",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def create_reward(payload: RewardCreate):
     conn = database.get_db_connection()
     cursor = conn.cursor()
@@ -46,7 +39,10 @@ def create_reward(payload: RewardCreate):
     conn.close()
     return {"status": "success", "reward_id": new_id}
 
-@router.put("/rewards/{reward_id}")
+@router.put(
+    "/rewards/{reward_id}",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def update_reward(reward_id: int, payload: RewardUpdate):
     conn = database.get_db_connection()
     conn.execute("UPDATE rewards SET title = ?, point_cost = ?, type = ? WHERE id = ?", (payload.title, payload.point_cost, payload.type, reward_id))
@@ -54,7 +50,10 @@ def update_reward(reward_id: int, payload: RewardUpdate):
     conn.close()
     return {"status": "success"}
 
-@router.delete("/rewards/{reward_id}")
+@router.delete(
+    "/rewards/{reward_id}",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def delete_reward(reward_id: int):
     conn = database.get_db_connection()
     conn.execute("DELETE FROM rewards WHERE id = ?", (reward_id,))
@@ -63,33 +62,40 @@ def delete_reward(reward_id: int):
     return {"status": "success"}
 
 @router.post("/rewards/claim")
-def claim_reward(payload: RewardClaim):
+def claim_reward(
+    payload: RewardClaim,
+    actor: AccountContext = Depends(require_authenticated),
+):
+    if actor.role == "guest" or (
+        actor.role in {"teen", "child"} and actor.profile_id != payload.user_id
+    ):
+        raise HTTPException(status_code=403, detail="Du kannst nur eigene Belohnungen einlösen.")
     conn = database.get_db_connection()
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (payload.user_id,)).fetchone()
-    reward = conn.execute("SELECT * FROM rewards WHERE id = ?", (payload.reward_id,)).fetchone()
-    
-    if not user or not reward:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Objekt fehlt.")
-    if user["current_points"] < reward["point_cost"]:
-        conn.close()
-        raise HTTPException(status_code=400, detail="Mangelnde Sterne!")
-        
-    new_points = user["current_points"] - reward["point_cost"]
-    conn.execute("UPDATE users SET current_points = ? WHERE id = ?", (new_points, payload.user_id))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "remaining_points": new_points}
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        user = conn.execute(
+            "SELECT current_points FROM users WHERE id = ? AND is_active = 1",
+            (payload.user_id,),
+        ).fetchone()
+        reward = conn.execute(
+            "SELECT point_cost FROM rewards WHERE id = ?",
+            (payload.reward_id,),
+        ).fetchone()
 
-@router.post("/admin/verify")
-def verify_password(payload: PasswordVerify):
-    if payload.password != PasswordContainer.current_password:
-        raise HTTPException(status_code=401, detail="Falsches Passwort!")
-    return {"status": "authorized"}
+        if not user or not reward:
+            raise HTTPException(status_code=404, detail="Objekt fehlt.")
+        if user["current_points"] < reward["point_cost"]:
+            raise HTTPException(status_code=400, detail="Mangelnde Sterne!")
 
-@router.post("/admin/change-password")
-def change_password(payload: PasswordChange):
-    if payload.old_password != PasswordContainer.current_password:
-        raise HTTPException(status_code=401, detail="Altes Passwort stimmt nicht!")
-    PasswordContainer.current_password = payload.new_password
-    return {"status": "success"}
+        new_points = user["current_points"] - reward["point_cost"]
+        conn.execute(
+            "UPDATE users SET current_points = ? WHERE id = ?",
+            (new_points, payload.user_id),
+        )
+        conn.commit()
+        return {"status": "success", "remaining_points": new_points}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

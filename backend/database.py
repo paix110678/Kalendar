@@ -1,13 +1,32 @@
 import json
 import sqlite3
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
+from pathlib import Path
 
 # 1. Standardmäßig liegt die Datenbank im backend-Ordner; Container können den Pfad überschreiben.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.environ.get("KALENDAR_DB_PATH", os.path.join(BASE_DIR, "kalender.db"))
+_active_db_file: ContextVar[str | None] = ContextVar("active_db_file", default=None)
+
+
+def get_active_db_file():
+    return Path(_active_db_file.get() or DB_FILE)
+
+
+@contextmanager
+def use_database_file(db_file):
+    token = _active_db_file.set(str(db_file))
+    try:
+        yield
+    finally:
+        _active_db_file.reset(token)
 
 def get_db_connection(db_file=None):
-    conn = sqlite3.connect(db_file or DB_FILE)
+    path = Path(db_file) if db_file is not None else get_active_db_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     return conn
 

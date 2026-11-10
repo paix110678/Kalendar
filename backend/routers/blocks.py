@@ -1,8 +1,14 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
 import sqlite3
 import database
+from security import (
+    AccountContext,
+    ensure_profile_access,
+    require_authenticated,
+    require_roles,
+)
 
 router = APIRouter(prefix="/api/blocks", tags=["Blocks"])
 
@@ -48,6 +54,20 @@ def reject_plan_event_mutation(block):
         )
 
 
+def ensure_block_editable(conn, actor: AccountContext, block):
+    ensure_profile_access(actor, block["user_id"], write=True)
+    if actor.role in {"admin", "adult"}:
+        return
+    user = conn.execute(
+        "SELECT status_school FROM users WHERE id = ?",
+        (block["user_id"],),
+    ).fetchone()
+    if block["is_locked"]:
+        raise HTTPException(status_code=403, detail="Dieser Block ist fixiert.")
+    if user is not None and user["status_school"] == "RED":
+        raise HTTPException(status_code=403, detail="Kontrollmodus aktiv (RED): Keine Autonomie.")
+
+
 def serialize_time_block(row):
     block = dict(row)
     if block["person_event_type_name"] is not None:
@@ -65,7 +85,10 @@ def get_all_categories():
     conn.close()
     return [dict(c) for c in categories]
 
-@router.put("/categories/{cat_id}")
+@router.put(
+    "/categories/{cat_id}",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def update_category(cat_id: int, payload: CategoryUpdate):
     conn = database.get_db_connection()
     cursor = conn.cursor()
@@ -79,7 +102,11 @@ def update_category(cat_id: int, payload: CategoryUpdate):
     return {"status": "success"}
 
 
-@router.post("/categories", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/categories",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def create_category(payload: CategoryCreate):
     conn = database.get_db_connection()
     try:
@@ -97,7 +124,11 @@ def create_category(payload: CategoryCreate):
         conn.close()
 
 
-@router.delete("/categories/{cat_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/categories/{cat_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def delete_category(cat_id: int):
     conn = database.get_db_connection()
     try:
@@ -128,7 +159,7 @@ def delete_category(cat_id: int):
     return None
 
 @router.get("/all")
-def get_all_blocks():
+def get_all_blocks(actor: AccountContext = Depends(require_authenticated)):
     conn = database.get_db_connection()
     try:
         blocks = conn.execute(
@@ -141,12 +172,18 @@ def get_all_blocks():
                AND person_event_types.user_id = time_blocks.user_id
             """
         ).fetchall()
+        if actor.role not in {"admin", "adult"}:
+            blocks = [block for block in blocks if block["user_id"] == actor.profile_id]
         return [serialize_time_block(block) for block in blocks]
     finally:
         conn.close()
 
 @router.get("/{user_id}")
-def get_blocks_for_user(user_id: int):
+def get_blocks_for_user(
+    user_id: int,
+    actor: AccountContext = Depends(require_authenticated),
+):
+    ensure_profile_access(actor, user_id)
     conn = database.get_db_connection()
     try:
         blocks = conn.execute(
@@ -166,9 +203,24 @@ def get_blocks_for_user(user_id: int):
         conn.close()
 
 @router.post("")
-def create_time_block(payload: TimeBlockCreate):
+def create_time_block(
+    payload: TimeBlockCreate,
+    actor: AccountContext = Depends(require_authenticated),
+):
+    ensure_profile_access(actor, payload.user_id, write=True)
     conn = database.get_db_connection()
     cursor = conn.cursor()
+
+    user = conn.execute(
+        "SELECT id, status_school FROM users WHERE id = ? AND is_active = 1",
+        (payload.user_id,),
+    ).fetchone()
+    if user is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
+    if actor.role not in {"admin", "adult"} and user["status_school"] == "RED":
+        conn.close()
+        raise HTTPException(status_code=403, detail="Kontrollmodus aktiv (RED): Keine Autonomie.")
     
     final_short = payload.short_title
     if not final_short:
@@ -185,15 +237,20 @@ def create_time_block(payload: TimeBlockCreate):
     return {"status": "success", "block_id": new_id}
 
 @router.put("/{block_id}/visibility")
-def update_plan_block_visibility(block_id: int, payload: PlanBlockVisibilityUpdate):
+def update_plan_block_visibility(
+    block_id: int,
+    payload: PlanBlockVisibilityUpdate,
+    actor: AccountContext = Depends(require_authenticated),
+):
     conn = database.get_db_connection()
     try:
         block = conn.execute(
-            "SELECT plan_assignment_id FROM time_blocks WHERE id = ?",
+            "SELECT plan_assignment_id, user_id, is_locked FROM time_blocks WHERE id = ?",
             (block_id,),
         ).fetchone()
         if not block:
             raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
+        ensure_block_editable(conn, actor, block)
         if block["plan_assignment_id"] is None:
             raise HTTPException(status_code=422, detail="Nur gespeicherte Plan-Events können einzeln ausgeblendet werden.")
 
@@ -206,7 +263,10 @@ def update_plan_block_visibility(block_id: int, payload: PlanBlockVisibilityUpda
     finally:
         conn.close()
 
-@router.put("/{block_id}/owner")
+@router.put(
+    "/{block_id}/owner",
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def update_block_owner(block_id: int, payload: TimeBlockOwnerUpdate):
     conn = database.get_db_connection()
     try:
@@ -216,8 +276,14 @@ def update_block_owner(block_id: int, payload: TimeBlockOwnerUpdate):
         reject_plan_event_mutation(block)
 
         user = conn.execute("SELECT * FROM users WHERE id = ?", (block["user_id"],)).fetchone()
+        new_user = conn.execute(
+            "SELECT id FROM users WHERE id = ? AND is_active = 1",
+            (payload.user_id,),
+        ).fetchone()
+        if new_user is None:
+            raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
 
-        if user["role"] != "adult":
+        if user and user["role"] != "adult":
             if block["is_locked"] == 1:
                 raise HTTPException(status_code=403, detail="Dieser Block ist fixiert.")
             if user["status_school"] == "RED":
@@ -230,12 +296,17 @@ def update_block_owner(block_id: int, payload: TimeBlockOwnerUpdate):
         conn.close()
 
 @router.put("/{block_id}/move")
-def move_time_block(block_id: int, payload: TimeBlockUpdate):
+def move_time_block(
+    block_id: int,
+    payload: TimeBlockUpdate,
+    actor: AccountContext = Depends(require_authenticated),
+):
     conn = database.get_db_connection()
     try:
         block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
         if not block:
             raise HTTPException(status_code=404, detail="Zeitblock nicht gefunden")
+        ensure_block_editable(conn, actor, block)
         reject_plan_event_mutation(block)
 
         final_day = payload.day_of_week if payload.day_of_week is not None else block["day_of_week"]
@@ -245,6 +316,13 @@ def move_time_block(block_id: int, payload: TimeBlockUpdate):
         final_short = payload.short_title if payload.short_title is not None else block["short_title"]
         final_type = payload.type if payload.type is not None else block["type"]
         final_user_id = payload.user_id if payload.user_id is not None else block["user_id"]
+        if actor.role not in {"admin", "adult"} and final_user_id != actor.profile_id:
+            raise HTTPException(status_code=403, detail="Du kannst Zeitblöcke nicht anderen Personen zuordnen.")
+        if conn.execute(
+            "SELECT 1 FROM users WHERE id = ? AND is_active = 1",
+            (final_user_id,),
+        ).fetchone() is None:
+            raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
 
         conn.execute("""
             UPDATE time_blocks
@@ -258,12 +336,16 @@ def move_time_block(block_id: int, payload: TimeBlockUpdate):
         conn.close()
 
 @router.delete("/{block_id}")
-def delete_time_block(block_id: int):
+def delete_time_block(
+    block_id: int,
+    actor: AccountContext = Depends(require_authenticated),
+):
     conn = database.get_db_connection()
     try:
         block = conn.execute("SELECT * FROM time_blocks WHERE id = ?", (block_id,)).fetchone()
         if not block:
             raise HTTPException(status_code=404, detail="Zeitblock existiert nicht")
+        ensure_block_editable(conn, actor, block)
         reject_plan_event_mutation(block)
 
         conn.execute("DELETE FROM time_blocks WHERE id = ?", (block_id,))
@@ -273,7 +355,7 @@ def delete_time_block(block_id: int):
         conn.close()
 
 # NEU: Listet alle anwenderdefinierten Tabellen aus SQLite dynamisch auf
-@router.get("/db/tables")
+@router.get("/db/tables", dependencies=[Depends(require_roles("admin"))])
 def get_db_tables():
     conn = database.get_db_connection()
     tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
@@ -281,7 +363,7 @@ def get_db_tables():
     return [t["name"] for t in tables]
 
 # NEU: Holt Spaltennamen und Zeilen für JEDE beliebige Tabelle vollkommen generisch ab
-@router.get("/db/tables/{table_name}")
+@router.get("/db/tables/{table_name}", dependencies=[Depends(require_roles("admin"))])
 def get_db_table_data(table_name: str):
     conn = database.get_db_connection()
     valid_tables = [t["name"] for t in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]

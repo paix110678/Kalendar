@@ -2,14 +2,19 @@ import json
 import logging
 import sqlite3
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 import backup_service
+from security import require_roles
 
 
-router = APIRouter(prefix="/api/backups", tags=["Datenbank-Backups"])
+router = APIRouter(
+    prefix="/api/backups",
+    tags=["Datenbank-Backups"],
+    dependencies=[Depends(require_roles("admin"))],
+)
 logger = logging.getLogger(__name__)
 MAX_BACKUP_UPLOAD_BYTES = 50 * 1024 * 1024
 

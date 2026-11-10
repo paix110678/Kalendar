@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 
 // Importpfade matchen exakt zu euren neuen, sauberen Geschwister-Ordnern
 import { UsersComponent } from '../users/users.component';
+import { AccountManagementComponent } from '../users/account-management.component';
 import { CategoriesComponent } from '../categories/categories.component';
 import { SystemComponent } from '../weather/system.component';
 import { DatabaseComponent } from '../database/database.component';
@@ -17,6 +18,7 @@ import { HeaderSettingsComponent } from '../header-settings/header-settings.comp
 import { User } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 import { EditorActionsFooterComponent } from '../editor-actions-footer/editor-actions-footer.component';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -25,6 +27,7 @@ import { EditorActionsFooterComponent } from '../editor-actions-footer/editor-ac
     CommonModule, 
     FormsModule, 
     UsersComponent, 
+    AccountManagementComponent,
     CategoriesComponent, 
     SystemComponent, 
     DatabaseComponent,
@@ -48,7 +51,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
 
-  public activeTab: 'users' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' = 'users';
+  public activeTab: 'users' | 'accounts' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' = 'users';
   public selectedMemberId: number | null = null;
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
@@ -87,7 +90,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public editorError = false;
   private readonly subscriptions = new Subscription();
 
-  constructor(private apiService: ApiService, private calendarService: CalendarService) {}
+  constructor(
+    private apiService: ApiService,
+    private calendarService: CalendarService,
+    private readonly authService: AuthService,
+  ) {}
+
+  get isAdmin(): boolean {
+    return this.authService.currentAccount?.role === 'admin';
+  }
 
   ngOnInit(): void {
     this.subscriptions.add(this.calendarService.categories$.subscribe((categories) => {
@@ -228,6 +239,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openDatabase(backupId: string | null = null): void {
+    if (!this.isAdmin) return;
     this.editorActions = null;
     const shouldLoad = !this.expandedSections.database;
     this.activeTab = 'database';
@@ -243,6 +255,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openWeatherConfig(): void {
+    if (!this.isAdmin) return;
     this.editorActions = null;
     const shouldLoad = !this.expandedSections.system;
     this.activeTab = 'system';
@@ -252,6 +265,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openWeatherLocation(locationId: number): void {
+    if (!this.isAdmin) return;
     this.editorActions = null;
     this.expandedSections.system = true;
     this.activeTab = 'system';
@@ -370,6 +384,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.editorActions = null;
     this.activeTab = 'users';
     this.selectedMemberId = null;
+  }
+
+  selectAccounts(): void {
+    if (!this.isAdmin) return;
+    this.editorActions = null;
+    this.activeTab = 'accounts';
   }
 
   selectMember(userId: number): void {

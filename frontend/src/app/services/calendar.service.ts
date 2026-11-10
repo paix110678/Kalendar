@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiService, HeaderPreferences, PlanConflictResolution, PlanDefinition, PlanSubject, SavedHolidayData, SystemConfigLocationResult, SystemConfigUpdateResult, UpdateUserProfileResult } from './api.service';
+import { AuthService } from './auth.service';
 
 export interface User { id: number; name: string; role: 'adult' | 'child_10' | 'child_14' | 'patchwork_guest'; current_points: number; status_school: 'GREEN' | 'RED'; status_sport: 'BASE' | 'SILBER'; color_code: string; state_code: string | null; assigned_plan_id: number | null; is_active: boolean; }
 export interface Category { id: number; value: string; label: string; color: string; default_short: string; } 
@@ -39,7 +40,10 @@ export class CalendarService {
   public savedHolidayDataState$ = this.savedHolidayDataState.asObservable();
 
   public readonly START_HOUR = 6; public readonly END_HOUR = 24; public readonly ROW_HEIGHT_PIXELS = 4.5;
-  constructor(private apiService: ApiService) { this.loadInitialData(); }
+  constructor(
+    private apiService: ApiService,
+    private authService: AuthService,
+  ) { this.loadInitialData(); }
 
   public getDrawnDay(): string { return localStorage.getItem('DRAWN_DAY') || ''; }
   public getDrawnStartTime(): string { return localStorage.getItem('DRAWN_START_TIME') || '09:00'; }
@@ -54,7 +58,11 @@ export class CalendarService {
     this.loadRewards();
     this.loadInitialSystemConfig();
     this.loadHeaderPreferences();
-    this.loadSavedPlans();
+    if (['admin', 'adult'].includes(this.authService.currentAccount?.role ?? '')) {
+      this.loadSavedPlans();
+    } else {
+      this.savedPlansState.next({ data: [], loading: false, error: null });
+    }
     this.loadSavedHolidayData();
   }
   public loadSavedPlans(): void {
@@ -289,8 +297,6 @@ export class CalendarService {
   public updateSystemConfig(cfg: SystemConfig): Observable<SystemConfigUpdateResult> {
     return this.apiService.updateSystemConfig(cfg).pipe(tap(() => this.loadSystemConfig()));
   }
-  public verifyAdminPassword(p: string): Observable<any> { return this.apiService.verifyAdminPassword(p); }
-  public changeAdminPassword(o: string, n: string): Observable<any> { return this.apiService.changeAdminPassword(o, n); }
 
   // KORREKTUR: Steuert den Entwurfs-Typ nun voll-reaktiv über den RAM-Safe
   public getDrawnCategory(): string { return this.drawnCategorySubject.value; }

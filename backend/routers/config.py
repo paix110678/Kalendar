@@ -1,9 +1,10 @@
 import threading
 import time
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 import database
+from security import require_roles
 import requests
 from datetime import datetime
 
@@ -25,6 +26,10 @@ def _invalidate_weather_cache():
         _weather_cache = None
         _weather_cache_key = None
         _weather_cache_time = 0.0
+
+
+def _active_db_key() -> str:
+    return str(database.get_active_db_file().resolve())
 
 
 class ConfigUpdate(BaseModel):
@@ -145,7 +150,7 @@ def ensure_weather_location() -> bool:
         if cfg["weather_latitude"] is not None and cfg["weather_longitude"] is not None:
             return True
 
-        lookup_key = (database.DB_FILE, str(cfg["weather_plz"]).strip())
+        lookup_key = (_active_db_key(), str(cfg["weather_plz"]).strip())
         if lookup_key in _attempted_location_lookups:
             return False
         _attempted_location_lookups.add(lookup_key)
@@ -323,10 +328,10 @@ def fetch_live_weather_pure_ram():
                 "FROM system_config ORDER BY id ASC LIMIT 1"
             ).fetchone()
             if cfg is None:
-                cache_key = (database.DB_FILE, None)
+                cache_key = (_active_db_key(), None)
             else:
                 cache_key = (
-                    database.DB_FILE,
+                    _active_db_key(),
                     cfg["weather_plz"],
                     cfg["weather_service"],
                     cfg["api_key"],
@@ -353,10 +358,11 @@ def fetch_live_weather_pure_ram():
 
 @router.get("")
 def get_config():
-    return fetch_live_weather_pure_ram()
+    result = fetch_live_weather_pure_ram()
+    return {key: value for key, value in result.items() if key != "api_key"}
 
 
-@router.get("/locations")
+@router.get("/locations", dependencies=[Depends(require_roles("admin"))])
 def get_weather_locations():
     conn = database.get_db_connection()
     try:
@@ -368,7 +374,7 @@ def get_weather_locations():
         conn.close()
 
 
-@router.get("/locations/{location_id}")
+@router.get("/locations/{location_id}", dependencies=[Depends(require_roles("admin"))])
 def get_weather_location(location_id: int):
     conn = database.get_db_connection()
     try:
@@ -382,7 +388,7 @@ def get_weather_location(location_id: int):
         conn.close()
 
 
-@router.post("/locations")
+@router.post("/locations", dependencies=[Depends(require_roles("admin"))])
 def create_weather_location(payload: WeatherLocationCreate):
     name = payload.name.strip()
     postal_code = payload.weather_plz.strip()
@@ -442,7 +448,7 @@ def create_weather_location(payload: WeatherLocationCreate):
         conn.close()
 
 
-@router.put("/locations/{location_id}")
+@router.put("/locations/{location_id}", dependencies=[Depends(require_roles("admin"))])
 def update_weather_location(location_id: int, payload: WeatherLocationUpdate):
     name = payload.name.strip()
     postal_code = payload.weather_plz.strip()
@@ -544,7 +550,7 @@ def _activate_weather_location(conn, location_id: int):
         )
 
 
-@router.put("/locations/{location_id}/active")
+@router.put("/locations/{location_id}/active", dependencies=[Depends(require_roles("admin"))])
 def activate_weather_location(location_id: int):
     conn = database.get_db_connection()
     try:
@@ -564,7 +570,7 @@ def activate_weather_location(location_id: int):
     return result
 
 
-@router.delete("/locations/{location_id}")
+@router.delete("/locations/{location_id}", dependencies=[Depends(require_roles("admin"))])
 def delete_weather_location(location_id: int):
     conn = database.get_db_connection()
     try:
@@ -595,7 +601,7 @@ def delete_weather_location(location_id: int):
     return {"status": "success"}
 
 
-@router.get("/settings")
+@router.get("/settings", dependencies=[Depends(require_roles("admin"))])
 def get_config_settings():
     conn = database.get_db_connection()
     try:
@@ -628,7 +634,7 @@ def get_config_settings():
     if _weather_cache_lock.acquire(blocking=False):
         try:
             cache_key = (
-                database.DB_FILE,
+                _active_db_key(),
                 cfg["weather_plz"],
                 cfg["weather_service"],
                 cfg["api_key"],
@@ -667,7 +673,7 @@ def get_header_preferences():
     }
 
 
-@router.put("/header-preferences")
+@router.put("/header-preferences", dependencies=[Depends(require_roles("admin"))])
 def update_header_preferences(preferences: HeaderPreferencesUpdate):
     conn = database.get_db_connection()
     try:
@@ -694,7 +700,7 @@ def update_header_preferences(preferences: HeaderPreferencesUpdate):
     return preferences.model_dump()
 
 
-@router.post("/location")
+@router.post("/location", dependencies=[Depends(require_roles("admin"))])
 def resolve_weather_location():
     try:
         resolved = ensure_weather_location()
@@ -710,7 +716,7 @@ def resolve_weather_location():
         }
 
 
-@router.put("")
+@router.put("", dependencies=[Depends(require_roles("admin"))])
 def update_config(payload: ConfigUpdate):
     conn = database.get_db_connection()
     try:
@@ -722,7 +728,7 @@ def update_config(payload: ConfigUpdate):
         new_plz = payload.weather_plz.strip()
         location_changed = current is None or new_plz != str(current["weather_plz"] or "").strip()
         if location_changed and new_plz:
-            _attempted_location_lookups.discard((database.DB_FILE, new_plz))
+            _attempted_location_lookups.discard((_active_db_key(), new_plz))
         if location_changed:
             city = ""
             latitude = None

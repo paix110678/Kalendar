@@ -338,6 +338,4 @@ export class ApiService {
   updateSystemConfig(cfg: SystemConfig): Observable<SystemConfigUpdateResult> {
     return this.http.put<SystemConfigUpdateResult>(this.apiBase + '/config', cfg);
   }
-  verifyAdminPassword(p: string): Observable<any> { return this.http.post(this.apiBase + '/admin/verify', { password: p }); }
-  changeAdminPassword(o: string, n: string): Observable<any> { return this.http.post(this.apiBase + '/admin/change-password', { old_password: o, new_password: n }); }
 }

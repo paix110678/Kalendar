@@ -49,16 +49,3 @@
     </div>
   </div>
 </div>
-
-<div class="modal-backdrop" *ngIf="showPasswordPrompt">
-  <div class="security-modal-box">
-    <h3>🔑 Sicherheitsabfrage</h3>
-    <p>Diese Aktion erfordert Rechte für Erwachsene. Bitte gib das Admin-Passwort ein:</p>
-    <input type="password" [(ngModel)]="passwordInput" (keyup.enter)="verifyAdminAction()" placeholder="Passwort eingeben...">
-    <p class="error-text-msg" *ngIf="passwordError">{{ passwordError }}</p>
-    <div class="modal-buttons">
-      <button class="btn-modal-cancel" (click)="cancelPasswordPrompt()">Dialog schließen</button>
-      <button class="btn-modal-confirm" (click)="verifyAdminAction()">Bestätigen</button>
-    </div>
-  </div>
-</div>

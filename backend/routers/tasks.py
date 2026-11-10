@@ -1,10 +1,11 @@
 import sqlite3
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 
 import database
+from security import AccountContext, require_authenticated, require_roles
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
@@ -154,16 +155,31 @@ def sync_task_event_types(
 
 
 @router.get("")
-def get_tasks():
+def get_tasks(actor: AccountContext = Depends(require_authenticated)):
     conn = database.get_db_connection()
     try:
         rows = conn.execute("SELECT id FROM tasks ORDER BY title COLLATE NOCASE, id").fetchall()
-        return [serialize_task(conn, row["id"]) for row in rows]
+        tasks = [serialize_task(conn, row["id"]) for row in rows]
+        if actor.role in {"admin", "adult"}:
+            return tasks
+        if actor.profile_id is None:
+            return []
+        visible_tasks = [
+            task for task in tasks
+            if actor.profile_id in task["member_ids"]
+        ]
+        for task in visible_tasks:
+            task["member_ids"] = [actor.profile_id]
+        return visible_tasks
     finally:
         conn.close()
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def create_task(payload: TaskPayload):
     conn = database.get_db_connection()
     try:
@@ -183,7 +199,7 @@ def create_task(payload: TaskPayload):
         conn.close()
 
 
-@router.put("/{task_id}")
+@router.put("/{task_id}", dependencies=[Depends(require_roles("admin", "adult"))])
 def update_task(task_id: int, payload: TaskPayload):
     conn = database.get_db_connection()
     try:
@@ -212,7 +228,11 @@ def update_task(task_id: int, payload: TaskPayload):
         conn.close()
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def delete_task(task_id: int):
     conn = database.get_db_connection()
     try:

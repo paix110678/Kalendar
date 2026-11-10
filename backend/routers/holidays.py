@@ -2,10 +2,11 @@ import logging
 from datetime import date, datetime, timezone
 
 import requests
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, field_validator
 
 import database
+from security import require_roles
 
 
 router = APIRouter(prefix="/api/holidays", tags=["Ferien und Feiertage"])
@@ -210,7 +211,11 @@ def list_saved_holiday_data():
         conn.close()
 
 
-@router.post("/states", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/states",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def add_holiday_state(payload: HolidayStateCreate):
     conn = database.get_db_connection()
     try:
@@ -236,7 +241,11 @@ def add_holiday_state(payload: HolidayStateCreate):
     }
 
 
-@router.delete("/states/{state_code}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/states/{state_code}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("admin", "adult"))],
+)
 def delete_holiday_state(state_code: str):
     state = state_code.strip().upper()
     if state not in STATE_SUBDIVISIONS:

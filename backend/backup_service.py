@@ -25,7 +25,11 @@ class InvalidBackupError(ValueError):
 
 
 def get_backup_directory() -> Path:
-    return Path(database.DB_FILE).resolve().parent / "backups"
+    active_db_file = database.get_active_db_file().resolve()
+    default_db_file = Path(database.DB_FILE).resolve()
+    if active_db_file == default_db_file:
+        return active_db_file.parent / "backups"
+    return active_db_file.parent / "backups" / active_db_file.stem
 
 
 def _quote_identifier(identifier: str) -> str:
@@ -509,7 +513,7 @@ def restore_uploaded_backup(payload: object) -> dict:
 
 
 def _restore_validated_payload(payload: dict, backup_id: str) -> dict:
-    live_db_path = Path(database.DB_FILE).resolve()
+    live_db_path = database.get_active_db_file().resolve()
     staged_db_path = _new_temporary_database(live_db_path.parent)
     try:
         _restore_payload(payload, staged_db_path)
@@ -551,7 +555,7 @@ def migrate_backup_files() -> list[dict]:
             payload = _load_backup(path)
             _restore_payload(payload, staged_db_path)
             database.init_db(str(staged_db_path))
-            _sync_schema_from_database(Path(database.DB_FILE).resolve(), staged_db_path)
+            _sync_schema_from_database(database.get_active_db_file().resolve(), staged_db_path)
             conn = sqlite3.connect(staged_db_path)
             conn.row_factory = sqlite3.Row
             try:
