@@ -1,24 +1,19 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
-let sessionCsrfToken: string | null = null;
-
-export function setSessionCsrfToken(token: string | null): void {
-  sessionCsrfToken = token;
-}
-
 function csrfTokenFromCookie(): string | null {
   if (typeof document === 'undefined') return null;
-  const cookie = document.cookie
+  const cookies = document.cookie
     .split(';')
     .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith('kalendar_csrf='));
-  return cookie ? decodeURIComponent(cookie.slice('kalendar_csrf='.length)) : null;
+    .filter((entry) => entry.startsWith('kalendar_csrf='));
+  const cookie = cookies[cookies.length - 1];
+  return cookie ? cookie.slice('kalendar_csrf='.length) : null;
 }
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
-  const csrfToken = unsafeMethod ? sessionCsrfToken ?? csrfTokenFromCookie() : null;
+  const csrfToken = unsafeMethod ? csrfTokenFromCookie() : null;
   const headers = csrfToken
     ? request.headers.set('X-CSRF-Token', csrfToken)
     : request.headers;

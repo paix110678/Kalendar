@@ -159,6 +159,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["Content-Type", "X-CSRF-Token"],
+    expose_headers=["X-CSRF-Token"],
 )
 
 app.include_router(auth.router)
