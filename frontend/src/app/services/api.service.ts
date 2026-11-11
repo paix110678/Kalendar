@@ -155,6 +155,7 @@ export interface PlatformStatistics {
   calendar_count: number;
   calendars_created_last_30_days: number;
   account_count: number;
+  accounts: Array<{ name: string; email: string }>;
   active_account_count: number;
   verified_account_count: number;
   accounts_created_last_30_days: number;

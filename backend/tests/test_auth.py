@@ -444,6 +444,10 @@ def test_platform_statistics_are_restricted_and_aggregate_families(tmp_path, mon
             "calendar_count": 2,
             "calendars_created_last_30_days": 2,
             "account_count": 2,
+            "accounts": [
+                {"name": "Family Admin", "email": "family@example.invalid"},
+                {"name": "Family Admin", "email": "platform@example.invalid"},
+            ],
             "active_account_count": 2,
             "verified_account_count": 2,
             "accounts_created_last_30_days": 2,

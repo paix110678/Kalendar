@@ -32,6 +32,13 @@ def get_platform_statistics(
             """,
             (cutoff,),
         ).fetchone()
+        account_list = auth_conn.execute(
+            """
+            SELECT display_name, email
+            FROM accounts
+            ORDER BY display_name COLLATE NOCASE, email COLLATE NOCASE
+            """
+        ).fetchall()
     finally:
         auth_conn.close()
 
@@ -66,6 +73,10 @@ def get_platform_statistics(
             family["created_at"] >= cutoff for family in families
         ),
         "account_count": accounts["total"],
+        "accounts": [
+            {"name": account["display_name"], "email": account["email"]}
+            for account in account_list
+        ],
         "active_account_count": accounts["active"],
         "verified_account_count": accounts["verified"],
         "accounts_created_last_30_days": accounts["created_last_30_days"],

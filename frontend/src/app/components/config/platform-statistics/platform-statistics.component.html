@@ -49,6 +49,21 @@
         <span class="statistics-detail">Gespeicherte Aufgaben</span>
       </article>
     </div>
+    <section class="statistics-accounts" aria-labelledby="statistics-accounts-title">
+      <h3 id="statistics-accounts-title">Login-Konten</h3>
+      @if (statistics.accounts.length === 0) {
+        <p class="statistics-loading">Noch keine Login-Konten vorhanden.</p>
+      } @else {
+        <div class="statistics-account-list">
+          @for (account of statistics.accounts; track account.email) {
+            <article class="statistics-account">
+              <strong>{{ account.name }}</strong>
+              <a [href]="'mailto:' + account.email">{{ account.email }}</a>
+            </article>
+          }
+        </div>
+      }
+    </section>
     @if (updatedAt) {
       <p class="statistics-updated">Zuletzt aktualisiert: {{ updatedAt | date:'dd.MM.yyyy, HH:mm:ss' }}</p>
     }
