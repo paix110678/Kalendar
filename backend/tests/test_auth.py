@@ -68,10 +68,14 @@ def test_existing_invitations_get_history_fields(tmp_path, monkeypatch):
         invitation = conn.execute(
             "SELECT invitation_id, created_at FROM invitations"
         ).fetchone()
+        platform_admin = conn.execute(
+            "SELECT is_platform_admin FROM accounts WHERE id = 1"
+        ).fetchone()
     finally:
         conn.close()
     assert invitation["invitation_id"]
     assert datetime.fromisoformat(invitation["created_at"]) == created_at
+    assert platform_admin["is_platform_admin"] == 0
 
 
 def _token_from_email(email_body: str) -> str:
@@ -372,3 +376,78 @@ def test_family_backup_directories_are_isolated(tmp_path, monkeypatch):
 
     assert default_backup_dir == tmp_path / "backups"
     assert first_backup_dir != second_backup_dir
+
+
+def test_platform_statistics_are_restricted_and_aggregate_families(tmp_path, monkeypatch):
+    database_path = tmp_path / "calendar.sqlite3"
+    monkeypatch.setattr(database, "DB_FILE", str(database_path))
+    monkeypatch.setattr(auth_database, "AUTH_DB_FILE", tmp_path / "auth.sqlite3")
+    monkeypatch.setattr(auth_database, "TENANT_DB_DIR", tmp_path / "families")
+    monkeypatch.setenv("KALENDAR_COOKIE_SECURE", "false")
+    monkeypatch.setenv("KALENDAR_SMTP_HOST", "mail.invalid")
+    monkeypatch.setenv("KALENDAR_SMTP_FROM", "calendar@example.invalid")
+    monkeypatch.setenv("KALENDAR_PUBLIC_URL", "http://testserver")
+
+    sent_emails: list[str] = []
+    monkeypatch.setattr(
+        "routers.auth._send_email",
+        lambda recipient, subject, body: sent_emails.append(body),
+    )
+
+    with TestClient(main.app) as platform_client:
+        platform_account = _register_admin(
+            platform_client,
+            "platform@example.invalid",
+            "Platform Family",
+            sent_emails,
+        )
+        assert platform_account["is_platform_admin"] is False
+        assert platform_client.get("/api/platform/statistics").status_code == 403
+
+        with TestClient(main.app) as family_client:
+            family_account = _register_admin(
+                family_client,
+                "family@example.invalid",
+                "Second Family",
+                sent_emails,
+            )
+            family = auth_database.get_family(family_account["family_id"])
+            family_database = auth_database.get_family_db_path(family["db_key"])
+            with database.use_database_file(family_database):
+                conn = database.get_db_connection()
+                try:
+                    conn.execute(
+                        "INSERT INTO users (name, role) VALUES (?, ?)",
+                        ("Additional profile", "child_10"),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+            assert family_client.get("/api/platform/statistics").status_code == 403
+
+        conn = auth_database.get_auth_connection()
+        try:
+            cursor = conn.execute(
+                "UPDATE accounts SET is_platform_admin = 1 WHERE email = ?",
+                ("platform@example.invalid",),
+            )
+            conn.commit()
+            assert cursor.rowcount == 1
+        finally:
+            conn.close()
+
+        assert platform_client.get("/api/auth/me").json()["is_platform_admin"] is True
+        statistics = platform_client.get("/api/platform/statistics")
+        assert statistics.status_code == 200
+        assert statistics.json() == {
+            "calendar_count": 2,
+            "calendars_created_last_30_days": 2,
+            "account_count": 2,
+            "active_account_count": 2,
+            "verified_account_count": 2,
+            "accounts_created_last_30_days": 2,
+            "profile_count": 3,
+            "time_block_count": 0,
+            "task_count": 0,
+        }

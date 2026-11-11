@@ -14,6 +14,7 @@ export interface AuthAccount {
   profile_name?: string | null;
   email_verified: boolean;
   is_active: boolean;
+  is_platform_admin?: boolean;
   created_at?: string;
 }
 

@@ -10,6 +10,9 @@
       <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'header'" (click)="openHeaderSettings()">🧭 Anzeige</button>
       <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'database'" (click)="openDatabase()">🗄️ DB-Viewer</button>
     }
+    @if (isPlatformAdmin) {
+      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'statistics'" (click)="openStatistics()">📊 Statistik</button>
+    }
   </nav>
 
   <div class="admin-split-wrapper">
@@ -272,6 +275,9 @@
         <app-header-settings
           (editorActionsChange)="onEditorActionsChanged($event)">
         </app-header-settings>
+      }
+      @if (activeTab === 'statistics' && isPlatformAdmin) {
+        <app-platform-statistics></app-platform-statistics>
       }
       </div>
       <app-editor-actions-footer

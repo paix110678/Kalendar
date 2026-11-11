@@ -20,7 +20,19 @@ from security import (
 )
 
 # Router-Imports
-from routers import auth, users, blocks, rewards, config, plans, holidays, backups, tasks, error_reports
+from routers import (
+    auth,
+    users,
+    blocks,
+    rewards,
+    config,
+    plans,
+    holidays,
+    backups,
+    tasks,
+    error_reports,
+    platform,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -172,6 +184,7 @@ app.include_router(holidays.router)
 app.include_router(backups.router)
 app.include_router(tasks.router)
 app.include_router(error_reports.router)
+app.include_router(platform.router)
 
 @app.get("/")
 def read_root():

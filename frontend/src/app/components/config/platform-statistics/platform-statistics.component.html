@@ -1,0 +1,56 @@
+<section class="platform-statistics" aria-labelledby="platform-statistics-title">
+  <header class="statistics-heading">
+    <div>
+      <h2 id="platform-statistics-title">Plattform-Statistik</h2>
+      <p>Zusammengefasste Kennzahlen aller Familienkalender und Konten.</p>
+    </div>
+    <button type="button" class="statistics-refresh" (click)="loadStatistics()" [disabled]="loading">
+      {{ loading ? 'Wird aktualisiert …' : 'Aktualisieren' }}
+    </button>
+  </header>
+
+  @if (error) {
+    <div class="statistics-error" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="loadStatistics()" [disabled]="loading">Erneut versuchen</button>
+    </div>
+  } @else if (loading && !statistics) {
+    <p class="statistics-loading" role="status">Statistik wird geladen …</p>
+  } @else if (statistics) {
+    <div class="statistics-grid">
+      <article class="statistics-card">
+        <span class="statistics-label">Kalender</span>
+        <strong>{{ statistics.calendar_count | number }}</strong>
+        <span class="statistics-detail">+{{ statistics.calendars_created_last_30_days | number }} in den letzten 30 Tagen</span>
+      </article>
+      <article class="statistics-card">
+        <span class="statistics-label">Login-Konten</span>
+        <strong>{{ statistics.account_count | number }}</strong>
+        <span class="statistics-detail">+{{ statistics.accounts_created_last_30_days | number }} in den letzten 30 Tagen</span>
+      </article>
+      <article class="statistics-card">
+        <span class="statistics-label">Aktive Konten</span>
+        <strong>{{ statistics.active_account_count | number }}</strong>
+        <span class="statistics-detail">{{ statistics.verified_account_count | number }} E-Mail-Adressen bestätigt</span>
+      </article>
+      <article class="statistics-card">
+        <span class="statistics-label">Familienprofile</span>
+        <strong>{{ statistics.profile_count | number }}</strong>
+        <span class="statistics-detail">Profile in allen Kalendern</span>
+      </article>
+      <article class="statistics-card">
+        <span class="statistics-label">Kalendereinträge</span>
+        <strong>{{ statistics.time_block_count | number }}</strong>
+        <span class="statistics-detail">Gespeicherte Zeitblöcke</span>
+      </article>
+      <article class="statistics-card">
+        <span class="statistics-label">Aufgaben</span>
+        <strong>{{ statistics.task_count | number }}</strong>
+        <span class="statistics-detail">Gespeicherte Aufgaben</span>
+      </article>
+    </div>
+    @if (updatedAt) {
+      <p class="statistics-updated">Zuletzt aktualisiert: {{ updatedAt | date:'dd.MM.yyyy, HH:mm:ss' }}</p>
+    }
+  }
+</section>

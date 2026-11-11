@@ -29,7 +29,8 @@ export class HeaderBrandComponent {
   ) {}
 
   get canOpenAdmin(): boolean {
-    return ['admin', 'adult'].includes(this.authService.currentAccount?.role ?? '');
+    const account = this.authService.currentAccount;
+    return ['admin', 'adult'].includes(account?.role ?? '') || account?.is_platform_admin === true;
   }
 
   logout(): void {

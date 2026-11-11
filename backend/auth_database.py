@@ -52,6 +52,7 @@ def init_auth_db():
                 profile_id INTEGER,
                 email_verified INTEGER NOT NULL DEFAULT 0,
                 is_active INTEGER NOT NULL DEFAULT 1,
+                is_platform_admin INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(family_id) REFERENCES families(id)
             );
@@ -100,6 +101,7 @@ def init_auth_db():
             """
         )
         _migrate_invitation_history(conn)
+        _migrate_platform_admin(conn)
         conn.commit()
         _migrate_existing_calendar(conn)
     finally:
@@ -141,6 +143,16 @@ def _migrate_invitation_history(conn):
                 (expires_at - timedelta(days=7)).isoformat(),
                 row["rowid"],
             ),
+        )
+
+
+def _migrate_platform_admin(conn):
+    columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(accounts)").fetchall()
+    }
+    if "is_platform_admin" not in columns:
+        conn.execute(
+            "ALTER TABLE accounts ADD COLUMN is_platform_admin INTEGER NOT NULL DEFAULT 0"
         )
 
 

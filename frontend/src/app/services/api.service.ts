@@ -151,6 +151,18 @@ export interface HeaderPreferences {
   show_weather: boolean;
 }
 
+export interface PlatformStatistics {
+  calendar_count: number;
+  calendars_created_last_30_days: number;
+  account_count: number;
+  active_account_count: number;
+  verified_account_count: number;
+  accounts_created_last_30_days: number;
+  profile_count: number;
+  time_block_count: number;
+  task_count: number;
+}
+
 export interface ErrorReportPayload {
   description: string;
   diagnostics: Record<string, string | number>;
@@ -184,6 +196,9 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
+  getPlatformStatistics(): Observable<PlatformStatistics> {
+    return this.http.get<PlatformStatistics>(`${this.apiBase}/platform/statistics`);
+  }
   addUser(name: string, role: string, color: string): Observable<any> { return this.http.post(this.apiBase + '/users', { name, role, color_code: color }); }
   updateUser(id: number, name: string, role: string, color: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id, { name, role, color_code: color }); }
   updateUserProfile(id: number, profile: Pick<User, 'name' | 'role' | 'color_code' | 'current_points' | 'status_school' | 'status_sport' | 'state_code' | 'is_active'>): Observable<UpdateUserProfileResult> {

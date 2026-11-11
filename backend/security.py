@@ -24,6 +24,7 @@ class AccountContext:
     display_name: str
     role: str
     profile_id: int | None
+    is_platform_admin: bool
     db_file: Path
 
 
@@ -82,7 +83,8 @@ def load_session(token: str | None):
             """
             SELECT accounts.id, accounts.family_id, accounts.email,
                    accounts.display_name, accounts.role, accounts.profile_id,
-                   accounts.is_active, accounts.email_verified, sessions.csrf_hash,
+                   accounts.is_active, accounts.email_verified,
+                   accounts.is_platform_admin, sessions.csrf_hash,
                    families.db_key
             FROM sessions
             JOIN accounts ON accounts.id = sessions.account_id
@@ -100,6 +102,7 @@ def load_session(token: str | None):
             display_name=row["display_name"],
             role=row["role"],
             profile_id=row["profile_id"],
+            is_platform_admin=bool(row["is_platform_admin"]),
             db_file=auth_database.get_family_db_path(row["db_key"]),
         )
         return actor, row["csrf_hash"]
@@ -160,6 +163,13 @@ def require_roles(*roles: str):
         return actor
 
     return dependency
+
+
+async def require_platform_admin(request: Request) -> AccountContext:
+    actor = await require_authenticated(request)
+    if not actor.is_platform_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung.")
+    return actor
 
 
 def ensure_profile_access(actor: AccountContext, user_id: int, write: bool = False):
@@ -234,7 +244,8 @@ def get_account(account_id: int):
             """
             SELECT accounts.id, accounts.family_id, accounts.email,
                    accounts.display_name, accounts.role, accounts.profile_id,
-                   accounts.email_verified, accounts.is_active, families.db_key
+                   accounts.email_verified, accounts.is_active,
+                   accounts.is_platform_admin, families.db_key
             FROM accounts
             JOIN families ON families.id = accounts.family_id
             WHERE accounts.id = ?

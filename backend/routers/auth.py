@@ -475,13 +475,17 @@ def login(payload: LoginPayload, request: Request, response: Response):
     _set_session_cookies(response, session_token, csrf_token)
     response.headers["X-CSRF-Token"] = csrf_token
     row = get_account(account["id"])
-    return _account_response(row)
+    result = _account_response(row)
+    result["is_platform_admin"] = bool(row["is_platform_admin"])
+    return result
 
 
 @router.get("/me")
 def get_current_account(actor: AccountContext = Depends(require_authenticated)):
     row = get_account(actor.id)
-    return _account_response(row)
+    result = _account_response(row)
+    result["is_platform_admin"] = actor.is_platform_admin
+    return result
 
 
 @router.post("/logout")

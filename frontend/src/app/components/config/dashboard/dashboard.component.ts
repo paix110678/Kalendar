@@ -19,6 +19,7 @@ import { User } from '../../../services/calendar.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 import { EditorActionsFooterComponent } from '../editor-actions-footer/editor-actions-footer.component';
 import { AuthService } from '../../../services/auth.service';
+import { PlatformStatisticsComponent } from '../platform-statistics/platform-statistics.component';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -35,7 +36,8 @@ import { AuthService } from '../../../services/auth.service';
     HolidaysComponent,
     TasksComponent,
     HeaderSettingsComponent,
-    EditorActionsFooterComponent
+    EditorActionsFooterComponent,
+    PlatformStatisticsComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
@@ -51,7 +53,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
 
-  public activeTab: 'users' | 'accounts' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' = 'users';
+  public activeTab: 'users' | 'accounts' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' | 'statistics' = 'users';
   public selectedMemberId: number | null = null;
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
@@ -98,6 +100,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get isAdmin(): boolean {
     return this.authService.currentAccount?.role === 'admin';
+  }
+
+  get isPlatformAdmin(): boolean {
+    return this.authService.currentAccount?.is_platform_admin === true;
   }
 
   ngOnInit(): void {
@@ -390,6 +396,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.isAdmin) return;
     this.editorActions = null;
     this.activeTab = 'accounts';
+  }
+
+  openStatistics(): void {
+    if (!this.isPlatformAdmin) return;
+    this.editorActions = null;
+    this.activeTab = 'statistics';
   }
 
   selectMember(userId: number): void {
