@@ -173,7 +173,10 @@ def _send_email(recipient: str, subject: str, body: str):
 
 def _frontend_link(path: str, token: str) -> str:
     base_url = os.environ.get("KALENDAR_PUBLIC_URL", "http://localhost:4200").rstrip("/")
-    return f"{base_url}/{path}?token={token}"
+    query = f"token={token}"
+    if path == "accept-invitation":
+        query += "&flow=accept-invitation"
+    return f"{base_url}/{path}?{query}"
 
 
 def _issue_email_token(account_id: int, purpose: str, expires: timedelta) -> str:

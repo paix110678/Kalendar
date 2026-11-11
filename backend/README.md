@@ -23,3 +23,10 @@ the role, reload the application so the account's permissions are refreshed.
 The statistics contain aggregate counts for calendars, login accounts, family
 profiles, time blocks, and tasks; they do not return account or calendar
 contents.
+
+Platform admins can remove another login account from the statistics page.
+This also removes its linked family profile and personal time blocks, plan
+assignment, event types, and task participation. Tasks assigned only to the
+deleted profile are removed; shared tasks, plans, categories, and other
+profiles remain. The signed-in platform-admin account and the last platform
+admin cannot be removed this way.

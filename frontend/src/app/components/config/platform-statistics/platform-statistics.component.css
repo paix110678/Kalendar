@@ -88,6 +88,16 @@
   font-size: 18px;
 }
 
+.statistics-account-note {
+  margin: 0 0 14px;
+  color: #868e96;
+  font-size: 13px;
+}
+
+.statistics-error-message {
+  color: #c92a2a;
+}
+
 .statistics-account-list {
   display: grid;
   gap: 8px;
@@ -104,10 +114,43 @@
   background: #fff;
 }
 
+.statistics-account-identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
 .statistics-account a {
   overflow-wrap: anywhere;
   color: #1971c2;
   text-decoration: none;
+}
+
+.statistics-platform-admin {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e7f5ff;
+  color: #1971c2;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.statistics-account-delete {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #ffc9c9;
+  border-radius: 7px;
+  background: #fff5f5;
+  color: #c92a2a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.statistics-account-delete:disabled {
+  cursor: not-allowed;
+  opacity: .6;
 }
 
 .statistics-account a:hover {
@@ -142,5 +185,9 @@
   .statistics-account {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .statistics-account-delete {
+    width: 100%;
   }
 }

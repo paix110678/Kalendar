@@ -32,6 +32,13 @@ h1 {
   color: #687078;
 }
 
+.invitation-instructions {
+  margin: 0 0 16px;
+  color: #495057;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 form {
   display: grid;
   gap: 10px;

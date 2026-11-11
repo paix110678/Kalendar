@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 import auth_database
 import database
@@ -34,7 +34,7 @@ def get_platform_statistics(
         ).fetchone()
         account_list = auth_conn.execute(
             """
-            SELECT display_name, email
+            SELECT id, display_name, email, is_platform_admin
             FROM accounts
             ORDER BY display_name COLLATE NOCASE, email COLLATE NOCASE
             """
@@ -74,7 +74,12 @@ def get_platform_statistics(
         ),
         "account_count": accounts["total"],
         "accounts": [
-            {"name": account["display_name"], "email": account["email"]}
+            {
+                "id": account["id"],
+                "name": account["display_name"],
+                "email": account["email"],
+                "is_platform_admin": bool(account["is_platform_admin"]),
+            }
             for account in account_list
         ],
         "active_account_count": accounts["active"],
@@ -84,3 +89,98 @@ def get_platform_statistics(
         "time_block_count": time_block_count,
         "task_count": task_count,
     }
+
+
+@router.delete(
+    "/accounts/{account_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def delete_platform_account(
+    account_id: int,
+    actor: AccountContext = Depends(require_platform_admin),
+):
+    if account_id == actor.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Das eigene Plattform-Admin-Konto kann hier nicht gelöscht werden.",
+        )
+
+    conn = auth_database.get_auth_connection()
+    try:
+        family_account = conn.execute(
+            "SELECT family_id FROM accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+        if family_account is None:
+            raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
+
+        family = conn.execute(
+            "SELECT db_key FROM families WHERE id = ?",
+            (family_account["family_id"],),
+        ).fetchone()
+        if family is None:
+            logger.error("Konto %s verweist auf einen nicht vorhandenen Familienkalender.", account_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Der Kalender des Kontos konnte nicht gefunden werden.",
+            )
+
+        calendar_path = auth_database.get_family_db_path(family["db_key"])
+        if not calendar_path.is_file():
+            logger.error("Kalenderdatenbank fehlt: %s", calendar_path.name)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Die Kalenderdaten des Kontos konnten nicht gefunden werden.",
+            )
+
+        conn.execute("ATTACH DATABASE ? AS calendar", (str(calendar_path),))
+        conn.execute("BEGIN IMMEDIATE")
+        family_account = conn.execute(
+            """
+            SELECT id, family_id, email, profile_id, is_platform_admin
+            FROM accounts WHERE id = ?
+            """,
+            (account_id,),
+        ).fetchone()
+        if family_account is None:
+            raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
+        if family_account["is_platform_admin"]:
+            platform_admin_count = conn.execute(
+                "SELECT COUNT(*) FROM accounts WHERE is_platform_admin = 1"
+            ).fetchone()[0]
+            if platform_admin_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Der letzte Plattform-Admin kann nicht gelöscht werden.",
+                )
+        current_family = conn.execute(
+            "SELECT db_key FROM families WHERE id = ?",
+            (family_account["family_id"],),
+        ).fetchone()
+        if current_family is None or current_family["db_key"] != family["db_key"]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Der Familienkalender des Kontos hat sich geändert. Bitte erneut versuchen.",
+            )
+
+        if family_account["profile_id"] is not None:
+            database.delete_user_profile_data(
+                conn,
+                family_account["profile_id"],
+                schema="calendar",
+            )
+
+        conn.execute(
+            "DELETE FROM invitations WHERE created_by = ? OR (family_id = ? AND email = ? COLLATE NOCASE)",
+            (account_id, family_account["family_id"], family_account["email"]),
+        )
+        conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+        conn.commit()
+        conn.execute("DETACH DATABASE calendar")
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -31,12 +31,13 @@ export class AuthComponent implements OnInit {
   constructor(private readonly authService: AuthService) {}
 
   ngOnInit(): void {
-    this.token = new URLSearchParams(window.location.search).get('token') ?? '';
-    const path = window.location.pathname;
+    const query = new URLSearchParams(window.location.search);
+    this.token = query.get('token') ?? '';
+    const path = window.location.pathname.replace(/\/+$/, '');
     if (path.endsWith('/verify-email')) {
       this.mode = 'verify';
       this.verifyEmail();
-    } else if (path.endsWith('/accept-invitation')) {
+    } else if (path.endsWith('/accept-invitation') || query.get('flow') === 'accept-invitation') {
       this.mode = 'accept';
     } else if (path.endsWith('/reset-password')) {
       this.mode = 'reset';

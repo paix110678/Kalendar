@@ -155,7 +155,7 @@ export interface PlatformStatistics {
   calendar_count: number;
   calendars_created_last_30_days: number;
   account_count: number;
-  accounts: Array<{ name: string; email: string }>;
+  accounts: Array<{ id: number; name: string; email: string; is_platform_admin: boolean }>;
   active_account_count: number;
   verified_account_count: number;
   accounts_created_last_30_days: number;
@@ -199,6 +199,9 @@ export class ApiService {
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
   getPlatformStatistics(): Observable<PlatformStatistics> {
     return this.http.get<PlatformStatistics>(`${this.apiBase}/platform/statistics`);
+  }
+  deletePlatformAccount(accountId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/platform/accounts/${accountId}`);
   }
   addUser(name: string, role: string, color: string): Observable<any> { return this.http.post(this.apiBase + '/users', { name, role, color_code: color }); }
   updateUser(id: number, name: string, role: string, color: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id, { name, role, color_code: color }); }

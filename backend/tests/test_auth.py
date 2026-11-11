@@ -189,6 +189,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             headers={"X-CSRF-Token": csrf},
         )
         assert invite.status_code == 201
+        assert "flow=accept-invitation" in sent_emails[-1]
         invitation = client.get("/api/auth/invitations")
         assert invitation.status_code == 200
         invitation_record = invitation.json()[0]
@@ -202,6 +203,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             headers={"X-CSRF-Token": csrf},
         )
         assert resent.status_code == 200
+        assert "flow=accept-invitation" in sent_emails[-1]
         original_invitation_token = _token_from_email(sent_emails[-2])
         invitation_token = _token_from_email(sent_emails[-1])
 
@@ -416,9 +418,78 @@ def test_platform_statistics_are_restricted_and_aggregate_families(tmp_path, mon
             with database.use_database_file(family_database):
                 conn = database.get_db_connection()
                 try:
-                    conn.execute(
+                    additional_profile_cursor = conn.execute(
                         "INSERT INTO users (name, role) VALUES (?, ?)",
                         ("Additional profile", "child_10"),
+                    )
+                    additional_profile_id = additional_profile_cursor.lastrowid
+                    conn.execute(
+                        """
+                        INSERT INTO time_blocks (
+                            user_id, title, day_of_week, start_time, end_time, type
+                        ) VALUES (?, 'Personal block', 'Montag', '09:00', '10:00', 'school')
+                        """,
+                        (family_account["profile_id"],),
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO categories (value, label, color, default_short)
+                        VALUES ('delete-test', 'Delete test', '#228be6', 'DT')
+                        """
+                    )
+                    category_id = conn.execute(
+                        "SELECT id FROM categories WHERE value = 'delete-test'"
+                    ).fetchone()["id"]
+                    task_cursor = conn.execute(
+                        "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                        ("Shared task", "#228be6", category_id),
+                    )
+                    task_id = task_cursor.lastrowid
+                    conn.executemany(
+                        "INSERT INTO task_participants (task_id, user_id) VALUES (?, ?)",
+                        [
+                            (task_id, family_account["profile_id"]),
+                            (task_id, additional_profile_id),
+                        ],
+                    )
+                    private_task_cursor = conn.execute(
+                        "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                        ("Personal task", "#228be6", category_id),
+                    )
+                    private_task_id = private_task_cursor.lastrowid
+                    conn.execute(
+                        "INSERT INTO task_participants (task_id, user_id) VALUES (?, ?)",
+                        (private_task_id, family_account["profile_id"]),
+                    )
+                    conn.execute(
+                        "INSERT INTO person_event_types (user_id, name, color) VALUES (?, ?, ?)",
+                        (family_account["profile_id"], "Personal event", "#228be6"),
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO plans (
+                            name, start_day, end_day, hours_count, hours_json
+                        ) VALUES ('Test plan', 'Montag', 'Freitag', 1, '[]')
+                        """
+                    )
+                    plan_id = conn.execute(
+                        "SELECT id FROM plans WHERE name = 'Test plan'"
+                    ).fetchone()["id"]
+                    assignment_cursor = conn.execute(
+                        """
+                        INSERT INTO user_plan_assignments (user_id, plan_id, title)
+                        VALUES (?, ?, 'Assigned test plan')
+                        """,
+                        (family_account["profile_id"], plan_id),
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO time_blocks (
+                            user_id, title, day_of_week, start_time, end_time, type,
+                            plan_assignment_id
+                        ) VALUES (?, 'Plan block', 'Dienstag', '11:00', '12:00', 'plan', ?)
+                        """,
+                        (family_account["profile_id"], assignment_cursor.lastrowid),
                     )
                     conn.commit()
                 finally:
@@ -438,6 +509,12 @@ def test_platform_statistics_are_restricted_and_aggregate_families(tmp_path, mon
             conn.close()
 
         assert platform_client.get("/api/auth/me").json()["is_platform_admin"] is True
+        csrf = platform_client.cookies.get("kalendar_csrf")
+        assert csrf
+        assert platform_client.delete(
+            f"/api/platform/accounts/{platform_account['id']}",
+            headers={"X-CSRF-Token": csrf},
+        ).status_code == 400
         statistics = platform_client.get("/api/platform/statistics")
         assert statistics.status_code == 200
         assert statistics.json() == {
@@ -445,13 +522,76 @@ def test_platform_statistics_are_restricted_and_aggregate_families(tmp_path, mon
             "calendars_created_last_30_days": 2,
             "account_count": 2,
             "accounts": [
-                {"name": "Family Admin", "email": "family@example.invalid"},
-                {"name": "Family Admin", "email": "platform@example.invalid"},
+                {
+                    "id": family_account["id"],
+                    "name": "Family Admin",
+                    "email": "family@example.invalid",
+                    "is_platform_admin": False,
+                },
+                {
+                    "id": platform_account["id"],
+                    "name": "Family Admin",
+                    "email": "platform@example.invalid",
+                    "is_platform_admin": True,
+                },
             ],
             "active_account_count": 2,
             "verified_account_count": 2,
             "accounts_created_last_30_days": 2,
             "profile_count": 3,
-            "time_block_count": 0,
-            "task_count": 0,
+            "time_block_count": 2,
+            "task_count": 2,
         }
+
+        deleted = platform_client.delete(
+            f"/api/platform/accounts/{family_account['id']}",
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert deleted.status_code == 204
+
+        conn = auth_database.get_auth_connection()
+        try:
+            assert conn.execute(
+                "SELECT 1 FROM accounts WHERE id = ?",
+                (family_account["id"],),
+            ).fetchone() is None
+        finally:
+            conn.close()
+
+        with database.use_database_file(family_database):
+            conn = database.get_db_connection()
+            try:
+                assert conn.execute(
+                    "SELECT 1 FROM users WHERE id = ?",
+                    (family_account["profile_id"],),
+                ).fetchone() is None
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM time_blocks WHERE user_id = ?",
+                    (family_account["profile_id"],),
+                ).fetchone()[0] == 0
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM person_event_types WHERE user_id = ?",
+                    (family_account["profile_id"],),
+                ).fetchone()[0] == 0
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM user_plan_assignments WHERE user_id = ?",
+                    (family_account["profile_id"],),
+                ).fetchone()[0] == 0
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM task_participants WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()[0] == 1
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM tasks WHERE id = ?",
+                    (task_id,),
+                ).fetchone()[0] == 1
+                assert conn.execute(
+                    "SELECT COUNT(*) FROM tasks WHERE id = ?",
+                    (private_task_id,),
+                ).fetchone()[0] == 0
+                assert conn.execute(
+                    "SELECT 1 FROM users WHERE id = ?",
+                    (additional_profile_id,),
+                ).fetchone() is not None
+            finally:
+                conn.close()

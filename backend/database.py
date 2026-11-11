@@ -30,6 +30,62 @@ def get_db_connection(db_file=None):
     conn.row_factory = sqlite3.Row
     return conn
 
+
+def delete_user_profile_data(conn, user_id, schema="main"):
+    if schema not in {"main", "calendar"}:
+        raise ValueError("Invalid calendar database schema")
+
+    exclusive_task_ids = [
+        row["task_id"]
+        for row in conn.execute(
+            f"""
+            SELECT task_id
+            FROM {schema}.task_participants
+            GROUP BY task_id
+            HAVING COUNT(*) = 1 AND MIN(user_id) = ?
+            """,
+            (user_id,),
+        ).fetchall()
+    ]
+    conn.execute(
+        f"""
+        DELETE FROM {schema}.time_blocks
+        WHERE user_id = ?
+           OR plan_assignment_id IN (
+               SELECT id FROM {schema}.user_plan_assignments WHERE user_id = ?
+           )
+        """,
+        (user_id, user_id),
+    )
+    conn.execute(
+        f"DELETE FROM {schema}.task_participants WHERE user_id = ?",
+        (user_id,),
+    )
+    for task_id in exclusive_task_ids:
+        conn.execute(
+            f"DELETE FROM {schema}.task_event_type_migrations WHERE task_id = ?",
+            (task_id,),
+        )
+        conn.execute(f"DELETE FROM {schema}.tasks WHERE id = ?", (task_id,))
+    conn.execute(
+        f"""
+        DELETE FROM {schema}.task_event_type_migrations
+        WHERE event_type_id IN (
+            SELECT id FROM {schema}.person_event_types WHERE user_id = ?
+        )
+        """,
+        (user_id,),
+    )
+    conn.execute(
+        f"DELETE FROM {schema}.person_event_types WHERE user_id = ?",
+        (user_id,),
+    )
+    conn.execute(
+        f"DELETE FROM {schema}.user_plan_assignments WHERE user_id = ?",
+        (user_id,),
+    )
+    conn.execute(f"DELETE FROM {schema}.users WHERE id = ?", (user_id,))
+
 def init_db(db_file=None):
     conn = get_db_connection(db_file)
     try:

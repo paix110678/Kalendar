@@ -1,7 +1,13 @@
 <main class="auth-page">
   <section class="auth-card" aria-labelledby="auth-title">
     <h1 id="auth-title">Familienkalender</h1>
-    <p class="auth-intro">Melde dich an oder richte einen Familienkalender ein.</p>
+    <p class="auth-intro">
+      @if (mode === 'accept') {
+        Du wurdest eingeladen. Lege hier dein Login für den Familienkalender an.
+      } @else {
+        Melde dich an oder richte einen Familienkalender ein.
+      }
+    </p>
 
     @if (error) {
       <p class="auth-message auth-error" role="alert">{{ error }}</p>
@@ -49,6 +55,9 @@
       <p>Die E-Mail-Adresse wird bestätigt …</p>
       <button type="button" class="secondary-button" (click)="setMode('login')">Zur Anmeldung</button>
     } @else if (mode === 'accept') {
+      <p class="invitation-instructions">
+        Gib deinen Namen ein und lege ein neues Passwort fest. Ein eigenes Familienkonto musst du nicht erstellen.
+      </p>
       <form (ngSubmit)="acceptInvitation()">
         <label for="invite-name">Dein Name</label>
         <input id="invite-name" type="text" name="inviteName" [(ngModel)]="displayName" autocomplete="name" required maxlength="100">

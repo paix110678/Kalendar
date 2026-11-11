@@ -738,17 +738,7 @@ def delete_user(
             status_code=409,
             detail="Dieses Familienprofil ist mit einem Login-Konto verknüpft. Entferne oder verknüpfe das Konto zuerst.",
         )
-    assignment = conn.execute(
-        "SELECT id FROM user_plan_assignments WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()
-    if assignment:
-        conn.execute("DELETE FROM time_blocks WHERE plan_assignment_id = ?", (assignment["id"],))
-        conn.execute("DELETE FROM user_plan_assignments WHERE id = ?", (assignment["id"],))
-    conn.execute("DELETE FROM task_participants WHERE user_id = ?", (user_id,))
-    conn.execute("DELETE FROM person_event_types WHERE user_id = ?", (user_id,))
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.execute("DELETE FROM time_blocks WHERE user_id = ?", (user_id,))
+    database.delete_user_profile_data(conn, user_id)
     conn.commit()
     conn.close()
     return {"status": "success"}
