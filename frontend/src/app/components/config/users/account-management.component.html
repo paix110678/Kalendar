@@ -40,6 +40,40 @@
     }
   </form>
 
+  <div class="invitation-list">
+    <h4>Gesendete Einladungen</h4>
+    @if (invitationsLoading) {
+      <p role="status">Einladungen werden geladen …</p>
+    } @else if (invitations.length === 0) {
+      <p>Noch keine Einladungen versendet.</p>
+    } @else {
+      @for (invitation of invitations; track invitation.id) {
+        <article class="invitation-card">
+          <div class="account-heading">
+            <strong>{{ invitation.email }}</strong>
+            <span class="account-state" [class.account-disabled]="invitation.status !== 'pending'">
+              {{ invitationStatusLabel(invitation.status) }}
+            </span>
+          </div>
+          <p>
+            {{ roleLabel(invitation.role) }} · Profil: {{ invitation.profile_name || 'Nicht mehr vorhanden' }}
+          </p>
+          <p class="account-hint">
+            Gesendet: <time [attr.datetime]="invitation.created_at">{{ invitation.created_at | date:'dd.MM.yyyy, HH:mm' }}</time>
+            · gültig bis {{ invitation.expires_at | date:'dd.MM.yyyy, HH:mm' }}
+          </p>
+          @if (invitation.status === 'pending' || invitation.status === 'expired') {
+            <div class="account-actions">
+              <button type="button" (click)="resendInvitation(invitation)" [disabled]="saving">
+                {{ saving ? 'Wird gesendet …' : 'Einladung erneut senden' }}
+              </button>
+            </div>
+          }
+        </article>
+      }
+    }
+  </div>
+
   <div class="account-list">
     <h4>Vorhandene Konten</h4>
     @if (loading) {

@@ -1,4 +1,6 @@
 import re
+import sqlite3
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -6,6 +8,70 @@ import auth_database
 import backup_service
 import database
 import main
+
+
+def test_existing_invitations_get_history_fields(tmp_path, monkeypatch):
+    database_path = tmp_path / "calendar.sqlite3"
+    auth_path = tmp_path / "auth.sqlite3"
+    monkeypatch.setattr(database, "DB_FILE", str(database_path))
+    monkeypatch.setattr(auth_database, "AUTH_DB_FILE", auth_path)
+    monkeypatch.setattr(auth_database, "TENANT_DB_DIR", tmp_path / "families")
+    database.init_db()
+
+    created_at = datetime.now(timezone.utc)
+    conn = sqlite3.connect(auth_path)
+    conn.executescript(
+        """
+        CREATE TABLE families (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, db_key TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY, family_id TEXT NOT NULL, email TEXT NOT NULL,
+            display_name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL,
+            profile_id INTEGER, email_verified INTEGER NOT NULL, is_active INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE invitations (
+            token_hash TEXT PRIMARY KEY, family_id TEXT NOT NULL, email TEXT NOT NULL,
+            role TEXT NOT NULL, profile_id INTEGER, created_by INTEGER NOT NULL,
+            expires_at TEXT NOT NULL, consumed_at TEXT
+        );
+        """
+    )
+    conn.execute(
+        "INSERT INTO families VALUES ('family', 'Family', 'family-key', ?)",
+        (created_at.isoformat(),),
+    )
+    conn.execute(
+        """
+        INSERT INTO accounts VALUES
+            (1, 'family', 'admin@example.invalid', 'Admin', 'hash', 'admin',
+             1, 1, 1, ?)
+        """,
+        (created_at.isoformat(),),
+    )
+    conn.execute(
+        """
+        INSERT INTO invitations VALUES
+            ('token-hash', 'family', 'invite@example.invalid', 'child', 2, 1, ?, NULL)
+        """,
+        ((created_at + timedelta(days=7)).isoformat(),),
+    )
+    conn.commit()
+    conn.close()
+
+    auth_database.init_auth_db()
+
+    conn = auth_database.get_auth_connection()
+    try:
+        invitation = conn.execute(
+            "SELECT invitation_id, created_at FROM invitations"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert invitation["invitation_id"]
+    assert datetime.fromisoformat(invitation["created_at"]) == created_at
 
 
 def _token_from_email(email_body: str) -> str:
@@ -119,9 +185,31 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             headers={"X-CSRF-Token": csrf},
         )
         assert invite.status_code == 201
+        invitation = client.get("/api/auth/invitations")
+        assert invitation.status_code == 200
+        invitation_record = invitation.json()[0]
+        assert invitation_record["email"] == "child@example.invalid"
+        assert invitation_record["role"] == "child"
+        assert invitation_record["profile_name"] == "Child"
+        assert invitation_record["status"] == "pending"
+
+        resent = client.post(
+            f"/api/auth/invitations/{invitation_record['id']}/resend",
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert resent.status_code == 200
+        original_invitation_token = _token_from_email(sent_emails[-2])
         invitation_token = _token_from_email(sent_emails[-1])
 
         child_client = TestClient(main.app)
+        assert child_client.post(
+            "/api/auth/accept-invitation",
+            json={
+                "token": original_invitation_token,
+                "display_name": "Child Login",
+                "password": "Another-strong-password-456",
+            },
+        ).status_code == 400
         accepted = child_client.post(
             "/api/auth/accept-invitation",
             json={
@@ -131,6 +219,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             },
         )
         assert accepted.status_code == 201
+        assert client.get("/api/auth/invitations").json()[0]["status"] == "accepted"
         login = child_client.post(
             "/api/auth/login",
             json={
@@ -180,6 +269,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
         assert [user["name"] for user in second_users] == ["Family Admin"]
         assert second_client.get("/api/blocks/all").json() == []
         assert second_client.get("/api/auth/accounts").json()[0]["email"] == "second@example.invalid"
+        assert second_client.get("/api/auth/invitations").json() == []
 
 
 def test_legacy_calendar_requires_bootstrap_token(tmp_path, monkeypatch):

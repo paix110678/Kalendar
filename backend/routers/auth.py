@@ -630,7 +630,8 @@ def accept_invitation(payload: AcceptInvitationPayload):
             SELECT invitations.*, families.db_key
             FROM invitations
             JOIN families ON families.id = invitations.family_id
-            WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?
+            WHERE token_hash = ? AND consumed_at IS NULL
+              AND revoked_at IS NULL AND expires_at > ?
             """,
             (hash_token(payload.token), _utc_now().isoformat()),
         ).fetchone()
@@ -710,6 +711,58 @@ def list_accounts(actor: AccountContext = Depends(require_roles("admin"))):
     return result
 
 
+@router.get("/invitations")
+def list_invitations(actor: AccountContext = Depends(require_roles("admin"))):
+    conn = auth_database.get_auth_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT invitation_id, email, role, profile_id, created_at, expires_at,
+                   consumed_at, revoked_at
+            FROM invitations
+            WHERE family_id = ?
+            ORDER BY created_at DESC, invitation_id
+            """,
+            (actor.family_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    calendar_conn = database.get_db_connection()
+    try:
+        profiles = {
+            row["id"]: row["name"]
+            for row in calendar_conn.execute("SELECT id, name FROM users").fetchall()
+        }
+    finally:
+        calendar_conn.close()
+
+    now = _utc_now().isoformat()
+    result = []
+    for row in rows:
+        if row["consumed_at"]:
+            invitation_status = "accepted"
+        elif row["revoked_at"]:
+            invitation_status = "revoked"
+        elif row["expires_at"] <= now:
+            invitation_status = "expired"
+        else:
+            invitation_status = "pending"
+        result.append(
+            {
+                "id": row["invitation_id"],
+                "email": row["email"],
+                "role": row["role"],
+                "profile_id": row["profile_id"],
+                "profile_name": profiles.get(row["profile_id"]),
+                "created_at": row["created_at"],
+                "expires_at": row["expires_at"],
+                "status": invitation_status,
+            }
+        )
+    return result
+
+
 @router.post("/invitations", status_code=status.HTTP_201_CREATED)
 def invite_account(
     payload: InvitePayload,
@@ -727,10 +780,6 @@ def invite_account(
     conn = auth_database.get_auth_connection()
     token = create_token()
     try:
-        conn.execute(
-            "DELETE FROM invitations WHERE consumed_at IS NOT NULL OR expires_at <= ?",
-            (_utc_now().isoformat(),),
-        )
         if conn.execute(
             "SELECT 1 FROM accounts WHERE email = ? COLLATE NOCASE",
             (payload.email,),
@@ -747,28 +796,36 @@ def invite_account(
         if conn.execute(
             """
             SELECT 1 FROM invitations
-            WHERE family_id = ? AND profile_id = ? AND consumed_at IS NULL AND expires_at > ?
+            WHERE family_id = ? AND profile_id = ? AND consumed_at IS NULL
+              AND revoked_at IS NULL AND expires_at > ?
             """,
             (actor.family_id, payload.profile_id, _utc_now().isoformat()),
         ).fetchone():
             raise HTTPException(status_code=409, detail="Für dieses Familienprofil besteht bereits eine Einladung.")
         conn.execute(
-            "DELETE FROM invitations WHERE email = ? COLLATE NOCASE AND family_id = ?",
-            (payload.email, actor.family_id),
+            """
+            UPDATE invitations SET revoked_at = ?
+            WHERE family_id = ? AND (email = ? COLLATE NOCASE OR profile_id = ?)
+              AND consumed_at IS NULL AND revoked_at IS NULL
+            """,
+            (_utc_now().isoformat(), actor.family_id, payload.email, payload.profile_id),
         )
         conn.execute(
             """
             INSERT INTO invitations (
-                token_hash, family_id, email, role, profile_id, created_by, expires_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                invitation_id, token_hash, family_id, email, role, profile_id,
+                created_by, created_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                uuid.uuid4().hex,
                 hash_token(token),
                 actor.family_id,
                 payload.email,
                 payload.role,
                 payload.profile_id,
                 actor.id,
+                _utc_now().isoformat(),
                 (_utc_now() + timedelta(days=7)).isoformat(),
             ),
         )
@@ -786,6 +843,102 @@ def invite_account(
         "Der Link ist 7 Tage gültig.",
     )
     return {"message": "Einladung wurde versendet."}
+
+
+@router.post("/invitations/{invitation_id}/resend")
+def resend_invitation(
+    invitation_id: str,
+    request: Request,
+    actor: AccountContext = Depends(require_roles("admin")),
+):
+    client_host = request.client.host if request.client else "unknown"
+    consume_rate_limit(f"invite:{actor.id}:{client_host}", 30, 3600)
+    if not _smtp_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="E-Mail-Versand muss vor dem Einladen konfiguriert werden.",
+        )
+
+    token = create_token()
+    now = _utc_now()
+    conn = auth_database.get_auth_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        invitation = conn.execute(
+            """
+            SELECT * FROM invitations
+            WHERE invitation_id = ? AND family_id = ?
+            """,
+            (invitation_id, actor.family_id),
+        ).fetchone()
+        if invitation is None:
+            raise HTTPException(status_code=404, detail="Einladung nicht gefunden.")
+        if invitation["consumed_at"] or invitation["revoked_at"]:
+            raise HTTPException(
+                status_code=409,
+                detail="Diese Einladung kann nicht erneut versendet werden.",
+            )
+        if conn.execute(
+            "SELECT 1 FROM accounts WHERE email = ? COLLATE NOCASE",
+            (invitation["email"],),
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Für diese E-Mail-Adresse besteht bereits ein Konto.",
+            )
+        if conn.execute(
+            """
+            SELECT 1 FROM accounts
+            WHERE family_id = ? AND profile_id = ?
+            """,
+            (actor.family_id, invitation["profile_id"]),
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Für dieses Familienprofil besteht bereits ein Login-Konto.",
+            )
+        if conn.execute(
+            """
+            SELECT 1 FROM invitations
+            WHERE family_id = ? AND profile_id = ? AND invitation_id != ?
+              AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > ?
+            """,
+            (actor.family_id, invitation["profile_id"], invitation_id, now.isoformat()),
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Für dieses Familienprofil besteht bereits eine andere Einladung.",
+            )
+        _validate_profile_for_role(invitation["profile_id"], invitation["role"])
+        conn.execute(
+            """
+            UPDATE invitations
+            SET token_hash = ?, created_at = ?, expires_at = ?
+            WHERE invitation_id = ? AND family_id = ?
+            """,
+            (
+                hash_token(token),
+                now.isoformat(),
+                (now + timedelta(days=7)).isoformat(),
+                invitation_id,
+                actor.family_id,
+            ),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    _send_email(
+        invitation["email"],
+        "Einladung zum Familienkalender",
+        f"Du wurdest zum Familienkalender eingeladen.\n"
+        f"Einladung annehmen: {_frontend_link('accept-invitation', token)}\n"
+        "Der Link ist 7 Tage gültig.",
+    )
+    return {"message": "Einladung wurde erneut versendet."}
 
 
 @router.put("/accounts/{account_id}")

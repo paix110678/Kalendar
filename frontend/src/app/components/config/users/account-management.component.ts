@@ -2,7 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AccountRole, AuthAccount, AuthService } from '../../../services/auth.service';
+import {
+  AccountInvitationRecord,
+  AccountRole,
+  AuthAccount,
+  AuthService,
+} from '../../../services/auth.service';
 import { User } from '../../../services/calendar.service';
 
 type InviteRole = Exclude<AccountRole, 'admin'>;
@@ -18,10 +23,12 @@ export class AccountManagementComponent implements OnInit, OnChanges {
   @Input() familyProfiles: User[] = [];
 
   accounts: AuthAccount[] = [];
+  invitations: AccountInvitationRecord[] = [];
   inviteEmail = '';
   inviteRole: InviteRole = 'adult';
   inviteProfileId: number | null = null;
   loading = false;
+  invitationsLoading = false;
   saving = false;
   error = '';
   message = '';
@@ -55,6 +62,7 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       next: (accounts) => {
         this.accounts = accounts;
         this.loading = false;
+        this.loadInvitations();
       },
       error: (error: unknown) => {
         this.loading = false;
@@ -82,6 +90,37 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       error: (error: unknown) => {
         this.saving = false;
         this.error = this.errorMessage(error, 'Einladung konnte nicht versendet werden.');
+      },
+    });
+  }
+
+  loadInvitations(): void {
+    this.invitationsLoading = true;
+    this.authService.getInvitations().subscribe({
+      next: (invitations) => {
+        this.invitations = invitations;
+        this.invitationsLoading = false;
+      },
+      error: (error: unknown) => {
+        this.invitationsLoading = false;
+        this.error = this.errorMessage(error, 'Einladungen konnten nicht geladen werden.');
+      },
+    });
+  }
+
+  resendInvitation(invitation: AccountInvitationRecord): void {
+    this.saving = true;
+    this.error = '';
+    this.message = '';
+    this.authService.resendInvitation(invitation.id).subscribe({
+      next: (result) => {
+        this.saving = false;
+        this.message = result.message;
+        this.loadInvitations();
+      },
+      error: (error: unknown) => {
+        this.saving = false;
+        this.error = this.errorMessage(error, 'Einladung konnte nicht erneut versendet werden.');
       },
     });
   }
@@ -134,6 +173,15 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       child: 'Kind',
       guest: 'Gast',
     }[role];
+  }
+
+  invitationStatusLabel(status: AccountInvitationRecord['status']): string {
+    return {
+      pending: 'Ausstehend',
+      expired: 'Abgelaufen',
+      accepted: 'Angenommen',
+      revoked: 'Ersetzt',
+    }[status];
   }
 
   isCurrentAccount(account: AuthAccount): boolean {

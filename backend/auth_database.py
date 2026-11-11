@@ -2,7 +2,7 @@ import os
 import re
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import database
@@ -78,14 +78,17 @@ def init_auth_db():
             CREATE INDEX IF NOT EXISTS idx_email_tokens_account
                 ON email_tokens(account_id, purpose);
             CREATE TABLE IF NOT EXISTS invitations (
+                    invitation_id TEXT NOT NULL,
                 token_hash TEXT PRIMARY KEY,
                 family_id TEXT NOT NULL,
                 email TEXT NOT NULL COLLATE NOCASE,
                 role TEXT NOT NULL CHECK(role IN ('admin', 'adult', 'teen', 'child', 'guest')),
                 profile_id INTEGER,
                 created_by INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
                 consumed_at TEXT,
+                revoked_at TEXT,
                 FOREIGN KEY(family_id) REFERENCES families(id),
                 FOREIGN KEY(created_by) REFERENCES accounts(id)
             );
@@ -96,10 +99,49 @@ def init_auth_db():
             );
             """
         )
+        _migrate_invitation_history(conn)
         conn.commit()
         _migrate_existing_calendar(conn)
     finally:
         conn.close()
+
+
+def _migrate_invitation_history(conn):
+    columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(invitations)").fetchall()
+    }
+    if "invitation_id" not in columns:
+        conn.execute("ALTER TABLE invitations ADD COLUMN invitation_id TEXT")
+    if "created_at" not in columns:
+        conn.execute("ALTER TABLE invitations ADD COLUMN created_at TEXT")
+    if "revoked_at" not in columns:
+        conn.execute("ALTER TABLE invitations ADD COLUMN revoked_at TEXT")
+
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_id ON invitations(invitation_id)"
+    )
+    rows = conn.execute(
+        """
+        SELECT rowid, invitation_id, created_at, expires_at
+        FROM invitations
+        WHERE invitation_id IS NULL OR created_at IS NULL
+        """
+    ).fetchall()
+    for row in rows:
+        expires_at = datetime.fromisoformat(row["expires_at"])
+        conn.execute(
+            """
+            UPDATE invitations
+            SET invitation_id = COALESCE(invitation_id, ?),
+                created_at = COALESCE(created_at, ?)
+            WHERE rowid = ?
+            """,
+            (
+                uuid.uuid4().hex,
+                (expires_at - timedelta(days=7)).isoformat(),
+                row["rowid"],
+            ),
+        )
 
 
 def _migrate_existing_calendar(auth_conn):

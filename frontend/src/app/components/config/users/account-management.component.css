@@ -15,7 +15,8 @@
 }
 
 .invite-form,
-.account-card {
+.account-card,
+.invitation-card {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -74,6 +75,11 @@ button:disabled {
 }
 
 .account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.invitation-list {
   display: grid;
   gap: 10px;
 }

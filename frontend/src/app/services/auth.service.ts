@@ -29,6 +29,17 @@ export interface AccountInvitation {
   profile_id: number;
 }
 
+export interface AccountInvitationRecord {
+  id: string;
+  email: string;
+  role: AccountRole;
+  profile_id: number | null;
+  profile_name: string | null;
+  created_at: string;
+  expires_at: string;
+  status: 'pending' | 'expired' | 'accepted' | 'revoked';
+}
+
 export interface AccountUpdate {
   role: AccountRole;
   profile_id: number;
@@ -152,6 +163,17 @@ export class AuthService {
 
   inviteAccount(invitation: AccountInvitation): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiBase}/auth/invitations`, invitation);
+  }
+
+  getInvitations(): Observable<AccountInvitationRecord[]> {
+    return this.http.get<AccountInvitationRecord[]>(`${this.apiBase}/auth/invitations`);
+  }
+
+  resendInvitation(invitationId: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiBase}/auth/invitations/${encodeURIComponent(invitationId)}/resend`,
+      {},
+    );
   }
 
   updateAccount(accountId: number, update: AccountUpdate): Observable<{ message: string }> {
