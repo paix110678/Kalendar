@@ -1,11 +1,13 @@
-:host {
-  container-type: inline-size;
-}
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  :host {
+    position: relative;
+    z-index: 20;
+  }
 
-@media (max-width: 480px) {
   .view-mode-buttons {
-    width: 100%;
+    width: max-content;
     min-width: 0;
+    overflow: visible !important;
     padding: 3px !important;
   }
 
@@ -13,9 +15,18 @@
     display: none;
   }
 
-  .view-mode-select {
+  .view-mode-dropdown {
+    position: relative;
     display: block;
-    width: 100%;
+    width: max-content;
+    height: 100%;
+  }
+
+  .view-mode-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
     min-width: 0;
     height: 100%;
     padding: 0 8px;
@@ -25,39 +36,58 @@
     background: rgba(0, 0, 0, 0.12);
     color: #fff;
     font: 800 13px system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
   }
 
-  .view-mode-select option {
-    background: #fff;
-    color: #212529;
-  }
-}
-
-@container (max-width: 190px) {
-  .view-mode-buttons {
-    padding: 3px !important;
+  .view-mode-select:focus-visible {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
   }
 
-  .view-mode-options {
-    display: none;
+  .view-mode-chevron {
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
   }
 
-  .view-mode-select {
+  .view-mode-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    width: max-content;
+    min-width: 100%;
+    padding: 3px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: #64bdc8;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  }
+
+  .view-mode-menu-option {
     display: block;
     width: 100%;
-    min-width: 0;
-    height: 100%;
-    padding: 0 8px;
+    padding: 8px 8px;
     border: 0;
     border-radius: 10px;
-    outline: none;
     background: rgba(0, 0, 0, 0.12);
     color: #fff;
-    font: 800 13px system-ui, sans-serif;
+    font: 900 13px system-ui, sans-serif;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
   }
 
-  .view-mode-select option {
-    background: #fff;
-    color: #212529;
+  .view-mode-menu-option:hover,
+  .view-mode-menu-option:focus-visible {
+    background: rgba(0, 0, 0, 0.2);
+    outline: none;
   }
 }

@@ -1,6 +1,7 @@
 @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
   app-view-mode-buttons {
-    flex-basis: 84px;
+    flex: 0 0 auto;
+    width: max-content;
   }
 
   app-user-selector {
@@ -15,10 +16,6 @@
 @media (max-width: 360px) {
   .controls-row {
     gap: 3px;
-  }
-
-  app-view-mode-buttons {
-    flex-basis: 72px;
   }
 
   app-weather-widget {

@@ -4,13 +4,32 @@
     <button [class.active]="currentViewMode === '3days'" (click)="changeViewMode('3days')">3 Tage</button>
     <button [class.active]="currentViewMode === 'week'" (click)="changeViewMode('week')">Woche</button>
   </div>
-  <select
-    class="view-mode-select"
-    aria-label="Kalenderansicht"
-    [value]="currentViewMode"
-    (change)="onSelectChange($event)">
-    <option value="day">1 Tag</option>
-    <option value="3days">3 Tage</option>
-    <option value="week">7 Tage</option>
-  </select>
+  <div class="view-mode-dropdown">
+    <button
+      #viewModeTrigger
+      type="button"
+      class="view-mode-select"
+      aria-label="Kalenderansicht"
+      aria-haspopup="listbox"
+      [attr.aria-expanded]="isViewModeMenuOpen"
+      (click)="toggleViewModeMenu()">
+      <span>{{ currentViewModeLabel }}</span>
+      <span class="view-mode-chevron" aria-hidden="true"></span>
+    </button>
+    @if (isViewModeMenuOpen) {
+      <div class="view-mode-menu" role="listbox" aria-label="Kalenderansicht">
+        @for (option of viewModes; track option.value) {
+          @if (currentViewMode !== option.value) {
+            <button
+              type="button"
+              role="option"
+              class="view-mode-menu-option"
+              (click)="selectViewMode(option.value)">
+              {{ option.label }}
+            </button>
+          }
+        }
+      </div>
+    }
+  </div>
 </div>
