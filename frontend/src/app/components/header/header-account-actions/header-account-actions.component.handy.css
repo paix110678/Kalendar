@@ -13,12 +13,6 @@
   .icon-action {
     font-size: 23px;
   }
-
-  .btn-logout {
-    min-height: 30px;
-    padding: 4px 6px;
-    font-size: 10px;
-  }
 }
 
 @media (max-width: 360px) {

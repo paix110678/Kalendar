@@ -35,19 +35,13 @@
             @if (account.created_at) {
               <p><span>Konto seit</span><strong>{{ account.created_at | date: 'dd.MM.yyyy' }}</strong></p>
             }
+            <button type="button" class="account-logout" (click)="logout()">
+              Abmelden
+            </button>
           </section>
         }
       </div>
     }
-
-    <button
-      type="button"
-      class="btn-logout"
-      (click)="logout()"
-      title="Abmelden"
-      aria-label="Abmelden">
-      Abmelden
-    </button>
 
     <button
       type="button"
