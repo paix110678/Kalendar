@@ -9,6 +9,7 @@ import sqlite3
 import tempfile
 import uuid
 
+import auth_database
 import database
 
 
@@ -16,6 +17,14 @@ logger = logging.getLogger(__name__)
 BACKUP_FORMAT = "kalendar-sqlite-backup"
 BACKUP_VERSION = 1
 BACKUP_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+AUTH_TABLES = {
+    "accounts",
+    "email_tokens",
+    "families",
+    "invitations",
+    "sessions",
+    "auth_rate_limits",
+}
 SQLITE_OBJECT_ORDER = {"table": 0, "view": 1, "index": 2, "trigger": 3}
 _migration_errors: dict[str, str] = {}
 
@@ -152,6 +161,10 @@ def _validate_backup(payload: object) -> dict:
     schema_tables = {
         item["name"] for item in schema if item["type"] == "table"
     }
+    if schema_tables & AUTH_TABLES:
+        raise InvalidBackupError(
+            "Familienbackups dürfen keine Login- oder Authentifizierungsdaten enthalten."
+        )
     seen_tables = set()
     for table in tables:
         if (
@@ -388,6 +401,179 @@ def _new_temporary_database(directory: Path) -> Path:
     return Path(file_path)
 
 
+def _family_profile_links(db_file: Path) -> tuple[str, list[dict]] | None:
+    if not auth_database.AUTH_DB_FILE.is_file():
+        return None
+
+    auth_conn = auth_database.get_auth_connection()
+    try:
+        family = next(
+            (
+                row
+                for row in auth_conn.execute(
+                    "SELECT id, db_key FROM families"
+                ).fetchall()
+                if auth_database.get_family_db_path(row["db_key"]).resolve() == db_file.resolve()
+            ),
+            None,
+        )
+        if family is None:
+            return None
+
+        accounts = auth_conn.execute(
+            """
+            SELECT id, profile_id
+            FROM accounts
+            WHERE family_id = ? AND profile_id IS NOT NULL
+            ORDER BY id
+            """,
+            (family["id"],),
+        ).fetchall()
+    finally:
+        auth_conn.close()
+
+    calendar_conn = sqlite3.connect(db_file)
+    calendar_conn.row_factory = sqlite3.Row
+    try:
+        profiles = {
+            row["id"]: {"name": row["name"], "role": row["role"]}
+            for row in calendar_conn.execute("SELECT id, name, role FROM users")
+        }
+    finally:
+        calendar_conn.close()
+
+    return family["id"], [
+        {
+            "account_id": account["id"],
+            "profile_id": account["profile_id"],
+            "name": profiles.get(account["profile_id"], {}).get("name"),
+            "role": profiles.get(account["profile_id"], {}).get("role"),
+        }
+        for account in accounts
+    ]
+
+
+def _profile_link_updates(
+    links: list[dict],
+    restored_db_file: Path,
+) -> list[tuple[int | None, int, int]]:
+    conn = sqlite3.connect(restored_db_file)
+    conn.row_factory = sqlite3.Row
+    try:
+        profiles = {
+            row["id"]: row
+            for row in conn.execute("SELECT id, name, role FROM users")
+        }
+    finally:
+        conn.close()
+
+    profiles_by_name_role: dict[tuple[str, str], list[int]] = {}
+    for profile in profiles.values():
+        key = (profile["name"].strip().casefold(), profile["role"])
+        profiles_by_name_role.setdefault(key, []).append(profile["id"])
+
+    updates = []
+    claimed_profile_ids: set[int] = set()
+    for link in links:
+        restored_profile_id = link["profile_id"] if link["profile_id"] in profiles else None
+        if restored_profile_id is None and link["name"] and link["role"]:
+            matches = profiles_by_name_role.get(
+                (link["name"].strip().casefold(), link["role"]),
+                [],
+            )
+            if len(matches) == 1:
+                restored_profile_id = matches[0]
+        if restored_profile_id in claimed_profile_ids:
+            restored_profile_id = None
+        if restored_profile_id is not None:
+            claimed_profile_ids.add(restored_profile_id)
+        updates.append((restored_profile_id, link["account_id"], link["profile_id"]))
+    return updates
+
+
+def _snapshot_database(source_path: Path, snapshot_path: Path) -> None:
+    source = sqlite3.connect(source_path)
+    snapshot = sqlite3.connect(snapshot_path)
+    try:
+        source.backup(snapshot)
+    finally:
+        snapshot.close()
+        source.close()
+
+
+def _replace_database_and_profile_links(
+    live_db_path: Path,
+    staged_db_path: Path,
+    profile_links: tuple[str, list[dict]] | None,
+) -> tuple[int, int]:
+    if profile_links is None:
+        os.replace(staged_db_path, live_db_path)
+        return 0, 0
+
+    family_id, links = profile_links
+    updates = _profile_link_updates(links, staged_db_path)
+    old_db_path = _new_temporary_database(live_db_path.parent)
+    _snapshot_database(live_db_path, old_db_path)
+
+    auth_conn = auth_database.get_auth_connection()
+    database_replaced = False
+    try:
+        auth_conn.execute("BEGIN IMMEDIATE")
+        current_family = auth_conn.execute(
+            "SELECT 1 FROM families WHERE id = ?",
+            (family_id,),
+        ).fetchone()
+        if current_family is None:
+            raise InvalidBackupError(
+                "Die zugehörige Familie wurde während der Wiederherstellung entfernt."
+            )
+
+        for _, account_id, previous_profile_id in updates:
+            current_link = auth_conn.execute(
+                """
+                SELECT 1 FROM accounts
+                WHERE id = ? AND family_id = ? AND profile_id = ?
+                """,
+                (account_id, family_id, previous_profile_id),
+            ).fetchone()
+            if current_link is None:
+                raise InvalidBackupError(
+                    "Eine Profilverknüpfung wurde während der Wiederherstellung geändert. "
+                    "Bitte starte die Wiederherstellung erneut."
+                )
+
+        for _, account_id, _ in updates:
+            auth_conn.execute(
+                "UPDATE accounts SET profile_id = NULL WHERE id = ? AND family_id = ?",
+                (account_id, family_id),
+            )
+
+        for profile_id, account_id, _ in updates:
+            if profile_id is not None:
+                auth_conn.execute(
+                    "UPDATE accounts SET profile_id = ? WHERE id = ? AND family_id = ?",
+                    (profile_id, account_id, family_id),
+                )
+
+        os.replace(staged_db_path, live_db_path)
+        database_replaced = True
+        auth_conn.commit()
+    except Exception:
+        auth_conn.rollback()
+        if database_replaced:
+            os.replace(old_db_path, live_db_path)
+            old_db_path = None
+        raise
+    finally:
+        auth_conn.close()
+        if old_db_path is not None:
+            old_db_path.unlink(missing_ok=True)
+
+    restored_links = sum(profile_id is not None for profile_id, _, _ in updates)
+    unlinked_accounts = len(updates) - restored_links
+    return restored_links, unlinked_accounts
+
+
 def _write_backup(payload: dict, backup_path: Path) -> None:
     handle, temporary_path = tempfile.mkstemp(
         prefix=".backup-",
@@ -514,6 +700,7 @@ def restore_uploaded_backup(payload: object) -> dict:
 
 def _restore_validated_payload(payload: dict, backup_id: str) -> dict:
     live_db_path = database.get_active_db_file().resolve()
+    profile_links = _family_profile_links(live_db_path)
     staged_db_path = _new_temporary_database(live_db_path.parent)
     try:
         _restore_payload(payload, staged_db_path)
@@ -529,10 +716,16 @@ def _restore_validated_payload(payload: dict, backup_id: str) -> dict:
             conn.close()
 
         recovery_backup = create_backup()
-        os.replace(staged_db_path, live_db_path)
+        restored_links, unlinked_accounts = _replace_database_and_profile_links(
+            live_db_path,
+            staged_db_path,
+            profile_links,
+        )
         return {
             "restored_backup_id": backup_id,
             "recovery_backup_id": recovery_backup["id"],
+            "profile_links_restored": restored_links,
+            "accounts_unlinked": unlinked_accounts,
         }
     finally:
         staged_db_path.unlink(missing_ok=True)

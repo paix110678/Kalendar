@@ -155,8 +155,9 @@ export class DatabaseComponent implements OnInit, OnChanges {
 
   public restoreBackup(backup: DatabaseBackup): void {
     if (!confirm(
-      `Datenbank wirklich mit dem Backup vom ${this.formatBackupDate(backup.created_at)} ersetzen? `
-      + 'Vor dem Ersetzen wird ein Wiederherstellungsbackup des aktuellen Stands erstellt.',
+      `Familien-Kalenderdatenbank wirklich mit dem Backup vom ${this.formatBackupDate(backup.created_at)} ersetzen? `
+      + 'Login-Konten bleiben erhalten; passende Personenverknüpfungen werden übernommen. '
+      + 'Vorher wird ein Wiederherstellungsbackup des aktuellen Stands erstellt.',
     )) {
       return;
     }
@@ -165,8 +166,8 @@ export class DatabaseComponent implements OnInit, OnChanges {
     this.backupError = '';
     this.backupMessage = '';
     this.apiService.restoreDatabaseBackup(backup.id).subscribe({
-      next: () => {
-        this.backupMessage = 'Backup wiederhergestellt. Die Anwendung wird neu geladen.';
+      next: (result) => {
+        this.backupMessage = this.restoreResultMessage(result.accounts_unlinked);
         this.cdr.markForCheck();
         window.setTimeout(() => window.location.reload(), 800);
       },
@@ -200,8 +201,9 @@ export class DatabaseComponent implements OnInit, OnChanges {
       return;
     }
     if (!confirm(
-      `Die Datenbank auf diesem Server wird vollständig durch „${file.name}“ ersetzt. `
-      + 'Vorher wird automatisch ein Wiederherstellungsbackup des aktuellen Stands erstellt. Fortfahren?',
+      `Die Familien-Kalenderdatenbank auf diesem Server wird durch „${file.name}“ ersetzt. `
+      + 'Login-Konten bleiben erhalten; passende Personenverknüpfungen werden übernommen. '
+      + 'Vorher wird automatisch ein Wiederherstellungsbackup erstellt. Fortfahren?',
     )) {
       return;
     }
@@ -211,9 +213,10 @@ export class DatabaseComponent implements OnInit, OnChanges {
     try {
       const payload: unknown = JSON.parse(await file.text());
       this.apiService.restoreDatabaseBackupFile(payload).subscribe({
-        next: () => {
+        next: (result) => {
           this.backupUploading = false;
-          this.backupMessage = 'Datei eingespielt. Das vorherige Server-Backup bleibt zur Wiederherstellung erhalten.';
+          this.backupMessage = this.restoreResultMessage(result.accounts_unlinked)
+            + ' Das vorherige Server-Backup bleibt zur Wiederherstellung erhalten.';
           this.refreshBackups();
           this.publishEditorActions();
           this.cdr.markForCheck();
@@ -247,6 +250,13 @@ export class DatabaseComponent implements OnInit, OnChanges {
     return bytes < 1024
       ? `${bytes} B`
       : `${(bytes / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB`;
+  }
+
+  private restoreResultMessage(unlinkedAccounts: number): string {
+    const unlinkMessage = unlinkedAccounts === 0
+      ? 'Alle passenden Kontoverknüpfungen wurden übernommen.'
+      : `${unlinkedAccounts} Kontoverknüpfung(en) ohne passende Person wurden getrennt; die Personen bleiben erhalten.`;
+    return `Familienbackup wiederhergestellt. ${unlinkMessage} Die Anwendung wird neu geladen.`;
   }
 
   private focusBackup(backupId: string): void {

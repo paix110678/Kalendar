@@ -145,6 +145,13 @@ export interface DatabaseBackupList {
   errors: Array<{ file: string; error: string }>;
 }
 
+export interface DatabaseRestoreResult {
+  restored_backup_id: string;
+  recovery_backup_id: string;
+  profile_links_restored: number;
+  accounts_unlinked: number;
+}
+
 export interface HeaderPreferences {
   show_users: boolean;
   show_view_mode: boolean;
@@ -268,14 +275,14 @@ export class ApiService {
   submitErrorReport(report: ErrorReportPayload): Observable<{ id: number; status: string }> {
     return this.http.post<{ id: number; status: string }>(`${this.apiBase}/error-reports`, report);
   }
-  restoreDatabaseBackup(backupId: string): Observable<{ restored_backup_id: string; recovery_backup_id: string }> {
-    return this.http.post<{ restored_backup_id: string; recovery_backup_id: string }>(
+  restoreDatabaseBackup(backupId: string): Observable<DatabaseRestoreResult> {
+    return this.http.post<DatabaseRestoreResult>(
       `${this.apiBase}/backups/${encodeURIComponent(backupId)}/restore`,
       {},
     );
   }
-  restoreDatabaseBackupFile(payload: unknown): Observable<{ restored_backup_id: string; recovery_backup_id: string }> {
-    return this.http.post<{ restored_backup_id: string; recovery_backup_id: string }>(
+  restoreDatabaseBackupFile(payload: unknown): Observable<DatabaseRestoreResult> {
+    return this.http.post<DatabaseRestoreResult>(
       `${this.apiBase}/backups/restore-file`,
       payload,
     );

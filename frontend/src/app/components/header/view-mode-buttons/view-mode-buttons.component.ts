@@ -18,4 +18,11 @@ export class ViewModeButtonsComponent {
   public changeViewMode(mode: 'day' | '3days' | 'week'): void {
     this.viewModeChanged.emit(mode);
   }
+
+  public onSelectChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'day' || value === '3days' || value === 'week') {
+      this.changeViewMode(value);
+    }
+  }
 }

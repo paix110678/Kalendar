@@ -1,5 +1,16 @@
 <div class="view-mode-buttons">
-  <button [class.active]="currentViewMode === 'day'" (click)="changeViewMode('day')"><span class="view-label-full">Tag</span><span class="view-label-short">T</span></button>
-  <button [class.active]="currentViewMode === '3days'" (click)="changeViewMode('3days')"><span class="view-label-full">3 Tage</span><span class="view-label-short">3T</span></button>
-  <button [class.active]="currentViewMode === 'week'" (click)="changeViewMode('week')"><span class="view-label-full">Woche</span><span class="view-label-short">W</span></button>
+  <div class="view-mode-options">
+    <button [class.active]="currentViewMode === 'day'" (click)="changeViewMode('day')">Tag</button>
+    <button [class.active]="currentViewMode === '3days'" (click)="changeViewMode('3days')">3 Tage</button>
+    <button [class.active]="currentViewMode === 'week'" (click)="changeViewMode('week')">Woche</button>
+  </div>
+  <select
+    class="view-mode-select"
+    aria-label="Kalenderansicht"
+    [value]="currentViewMode"
+    (change)="onSelectChange($event)">
+    <option value="day">1 Tag</option>
+    <option value="3days">3 Tage</option>
+    <option value="week">7 Tage</option>
+  </select>
 </div>

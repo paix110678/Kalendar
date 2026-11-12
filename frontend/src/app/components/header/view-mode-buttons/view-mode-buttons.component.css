@@ -13,8 +13,18 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+.view-mode-options {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.view-mode-select {
+  display: none;
+}
+
 /* Basis-Styling der Knöpfe */
-.view-mode-buttons button { 
+.view-mode-options button {
   background: transparent; 
   border: none; 
   outline: none !important;
@@ -36,18 +46,18 @@
 }
 
 /* Sicherer Seitenabstand für die äußeren Knöpfe */
-.view-mode-buttons button:first-child { padding-left: 20px !important; }
-.view-mode-buttons button:last-child { padding-right: 20px !important; }
+.view-mode-options button:first-child { padding-left: 20px !important; }
+.view-mode-options button:last-child { padding-right: 20px !important; }
 
 /* Hover-Effekt für die inaktiven Knöpfe */
-.view-mode-buttons button:not(.active):hover {
+.view-mode-options button:not(.active):hover {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 
 /* KORREKTUR: Rundung zurückgeholt und vertikales Padding erzwungen, damit das Feld richtig groß wird */
-.view-mode-buttons button.active { 
+.view-mode-options button.active {
   background: rgba(0, 0, 0, 0.12) !important; 
   color: #ffffff !important; 
   
@@ -61,8 +71,4 @@
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.1); 
   transform: scale(1.0); 
   font-weight: 900;
-}
-
-.view-label-short {
-  display: none;
 }

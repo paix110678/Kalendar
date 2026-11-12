@@ -5,7 +5,7 @@
   <details class="backup-inspector" open>
     <summary>Datenbank-Backups ({{ backups.length }})</summary>
     <div class="backup-content">
-      <p class="backup-description">JSON-Vollbackups aller Datenbanktabellen und ihres Schemas. Speicherort: backend\backups</p>
+      <p class="backup-description">JSON-Vollbackups aller Kalenderdaten dieser Familie inklusive Personen und Tabellenstruktur. Login-Konten, E-Mail-Adressen und Passwort-Hashes werden nicht gesichert. Speicherort: backend\backups</p>
       <div class="backup-actions">
         <button type="button" class="backup-button" [disabled]="backupsLoading" (click)="refreshBackups()">
           Aktualisieren
@@ -25,7 +25,7 @@
           aria-label="JSON-Backupdatei auswählen"
           (change)="onBackupFileSelected($event)">
       </div>
-      <p class="backup-description">Wähle ein zuvor heruntergeladenes JSON-Backup. Die aktuelle Serverdatenbank wird ersetzt; davor wird automatisch ein Wiederherstellungsbackup angelegt.</p>
+      <p class="backup-description">Wähle ein zuvor heruntergeladenes Familienbackup. Login-Konten bleiben erhalten; passende Konten werden wieder mit ihren Personen verknüpft. Personen aus dem Backup bleiben auch ohne Login-Konto erhalten. Vorher wird ein Wiederherstellungsbackup erstellt.</p>
       <p class="backup-message backup-error" role="alert" [hidden]="!backupError">{{ backupError }}</p>
       <p class="backup-message backup-success" role="status" [hidden]="!backupMessage">{{ backupMessage }}</p>
       @if (backupsLoading) {

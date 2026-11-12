@@ -1,25 +1,63 @@
+:host {
+  container-type: inline-size;
+}
+
 @media (max-width: 480px) {
   .view-mode-buttons {
     width: 100%;
     min-width: 0;
+    padding: 3px !important;
   }
 
-  .view-mode-buttons button {
-    min-width: 0;
-    padding-right: 2px;
-    padding-left: 2px;
-    font-size: 12px;
-  }
-
-  .view-mode-buttons button:first-child { padding-left: 3px !important; }
-  .view-mode-buttons button:last-child { padding-right: 3px !important; }
-  .view-mode-buttons button.active { padding: 8px 2px !important; }
-
-  .view-label-full {
+  .view-mode-options {
     display: none;
   }
 
-  .view-label-short {
-    display: inline;
+  .view-mode-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 10px;
+    outline: none;
+    background: rgba(0, 0, 0, 0.12);
+    color: #fff;
+    font: 800 13px system-ui, sans-serif;
+  }
+
+  .view-mode-select option {
+    background: #fff;
+    color: #212529;
+  }
+}
+
+@container (max-width: 190px) {
+  .view-mode-buttons {
+    padding: 3px !important;
+  }
+
+  .view-mode-options {
+    display: none;
+  }
+
+  .view-mode-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 10px;
+    outline: none;
+    background: rgba(0, 0, 0, 0.12);
+    color: #fff;
+    font: 800 13px system-ui, sans-serif;
+  }
+
+  .view-mode-select option {
+    background: #fff;
+    color: #212529;
   }
 }
