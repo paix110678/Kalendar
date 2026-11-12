@@ -1,11 +1,4 @@
-<div class="fullscreen-reward-overlay" *ngIf="user">
-  <app-calendar-header
-    class="reward-header"
-    [headerTitle]="'Belohnungen für ' + user.name"
-    (adminPageOpened)="adminPageOpened.emit()"
-    (headerBack)="closeDashboard.emit()">
-  </app-calendar-header>
-
+<div class="reward-page-body" *ngIf="user">
   <div class="reward-grid-layout">
     
     <!-- LINKER BEREICH: STATS & TÜV -->

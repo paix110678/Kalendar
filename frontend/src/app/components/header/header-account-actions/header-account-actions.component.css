@@ -1,0 +1,151 @@
+:host {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-profile {
+  position: relative;
+}
+
+.account-avatar,
+.icon-action {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+}
+
+.account-avatar {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.icon-action {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.icon-action:hover {
+  transform: scale(1.12);
+}
+
+.btn-admin-gear:hover {
+  transform: rotate(45deg) scale(1.1);
+}
+
+.icon-action:disabled {
+  cursor: wait;
+}
+
+.btn-logout {
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.app-version {
+  padding: 2px 6px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 5px;
+  color: rgb(255 255 255 / 85%);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.account-details {
+  position: absolute;
+  z-index: 3100;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(300px, calc(100vw - 24px));
+  padding: 18px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #212529;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 20%);
+}
+
+.account-details h2 {
+  margin: 0 28px 4px 0;
+  font-size: 16px;
+}
+
+.account-details .account-email {
+  margin: 0 0 14px;
+  color: #495057;
+  overflow-wrap: anywhere;
+}
+
+.account-details p:not(.account-email) {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.account-details p span {
+  color: #868e96;
+}
+
+.account-details p strong {
+  text-align: right;
+}
+
+.account-details-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #495057;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.logout-error {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: 4px 0;
+  color: #ffe3e3;
+  font-size: 12px;
+}

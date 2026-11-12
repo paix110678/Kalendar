@@ -1,0 +1,94 @@
+<div class="account-actions">
+  <div class="action-row">
+    @if (authService.currentAccount; as account) {
+      <div class="account-profile">
+        <button
+          type="button"
+          class="account-avatar"
+          [style.background-color]="accountColor"
+          [attr.aria-expanded]="showAccountDetails"
+          aria-haspopup="dialog"
+          aria-label="Kontodetails für {{ account.display_name }}"
+          (click)="showAccountDetails = !showAccountDetails">
+          {{ accountInitials }}
+        </button>
+
+        @if (showAccountDetails) {
+          <section class="account-details" role="dialog" aria-label="Kontodetails">
+            <button
+              type="button"
+              class="account-details-close"
+              aria-label="Kontodetails schließen"
+              (click)="showAccountDetails = false">
+              ×
+            </button>
+            <h2>{{ account.display_name }}</h2>
+            <p class="account-email">{{ account.email }}</p>
+            @if (account.profile_name) {
+              <p><span>Profil</span><strong>{{ account.profile_name }}</strong></p>
+            }
+            <p><span>Rolle</span><strong>{{ accountRoleLabel }}</strong></p>
+            <p>
+              <span>E-Mail</span>
+              <strong>{{ account.email_verified ? 'Bestätigt' : 'Nicht bestätigt' }}</strong>
+            </p>
+            @if (account.created_at) {
+              <p><span>Konto seit</span><strong>{{ account.created_at | date: 'dd.MM.yyyy' }}</strong></p>
+            }
+          </section>
+        }
+      </div>
+    }
+
+    <button
+      type="button"
+      class="btn-logout"
+      (click)="logout()"
+      title="Abmelden"
+      aria-label="Abmelden">
+      Abmelden
+    </button>
+
+    <button
+      type="button"
+      class="icon-action btn-error-report"
+      (click)="openErrorReport()"
+      title="Fehler melden"
+      aria-label="Fehler melden"
+      [disabled]="isCapturingScreenshot">
+      <span aria-hidden="true">🐞</span>
+    </button>
+
+    @if (canOpenAdmin) {
+      <button
+        type="button"
+        class="icon-action btn-admin-gear"
+        (click)="adminPageOpened.emit()"
+        title="Administration / Einstellungen"
+        aria-label="Einstellungen">
+        ⚙️
+      </button>
+    }
+  </div>
+
+  <span class="app-version" [title]="'Version ' + version">v{{ version }}</span>
+</div>
+
+@if (logoutError) {
+  <p class="logout-error" role="alert">{{ logoutError }}</p>
+}
+
+@if (isCapturingScreenshot) {
+  <div class="screenshot-capture-overlay" role="status" aria-live="polite">
+    <span class="screenshot-spinner" aria-hidden="true"></span>
+    <span>Screenshot wird erstellt …</span>
+  </div>
+}
+
+@if (showErrorReport) {
+  <app-error-report-dialog
+    [screenshotDataUrl]="screenshotDataUrl"
+    [screenshotError]="screenshotError"
+    (closed)="showErrorReport = false">
+  </app-error-report-dialog>
+}

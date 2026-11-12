@@ -1,0 +1,41 @@
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  :host {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .brand-identity-block {
+    min-width: 0;
+    gap: clamp(4px, 1vw, 10px);
+  }
+
+  .brand-text-wrapper {
+    min-width: 0;
+  }
+
+  .brand-title {
+    font-size: clamp(24px, 6vw, 36px);
+    white-space: nowrap;
+  }
+
+  .brand-slogan {
+    font-size: 8px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .brand-png-icon {
+    width: clamp(32px, 8vw, 44px);
+    height: clamp(32px, 8vw, 44px);
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-title {
+    font-size: clamp(20px, 6vw, 26px);
+  }
+
+  .brand-slogan {
+    display: none;
+  }
+}

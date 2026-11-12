@@ -52,11 +52,30 @@ app-calendar-header.dashboard-frame-capsule {
 .main-content.dashboard-frame-capsule {
   flex: 1 !important;
   display: flex !important;
-  flex-direction: row !important;
+  flex-direction: column !important;
   overflow: hidden !important;
   padding: 0px !important; /* REPARIERT: Eliminiert die Verschiebung an den Kanten */
   margin: 0 !important;
   gap: 0px !important;          
+}
+
+.calendar-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.calendar-body.calendar-body-hidden {
+  display: none !important;
+}
+
+app-admin-dashboard,
+app-reward-dashboard {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 app-calendar-grid {

@@ -23,4 +23,9 @@ import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashb
 })
 export class CalendarShellComponent {
   public showAdminPage = false;
+
+  public openAdminPage(): void {
+    this.showAdminPage = true;
+  }
+
 }

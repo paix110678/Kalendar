@@ -58,8 +58,8 @@ app-calendar-shell {
 }
 
 @media (max-width: 760px) {
-  .fullscreen-admin-page,
-  .fullscreen-reward-overlay {
+  .admin-page-body,
+  .reward-page-body {
     padding: 12px !important;
     gap: 12px !important;
   }
@@ -88,6 +88,34 @@ app-calendar-shell {
   opacity: 1 !important;
   transform: translate(0, 0) !important;
   transition: none !important;
+}
+
+.screenshot-capture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: wait;
+}
+
+.screenshot-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: screenshot-spin 0.8s linear infinite;
+}
+
+@keyframes screenshot-spin {
+  to { transform: rotate(360deg); }
 }
 
 .person-event-types {
@@ -145,7 +173,7 @@ app-calendar-shell {
 }
 
 @media (max-width: 760px) {
-  .fullscreen-admin-page { gap: 8px; padding: 12px !important; }
+  .admin-page-body { gap: 8px; padding: 12px !important; }
   .admin-split-wrapper { flex-direction: row; }
   .admin-navigation-tree { padding: 5px 3px; }
   .tree-node-btn { padding: 7px 5px; font-size: 11px; }
@@ -159,7 +187,7 @@ app-calendar-shell {
 }
 
 @media (max-width: 400px) {
-  .fullscreen-admin-page { gap: 8px; padding: 8px !important; }
+  .admin-page-body { gap: 8px; padding: 8px !important; }
 }
 
 .admin-top-navigation {

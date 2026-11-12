@@ -6,6 +6,9 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './logo.component.html',
-  styleUrl: './logo.component.css'
+  styleUrls: [
+    './logo.component.css',
+    './logo.component.handy.css',
+  ]
 })
 export class LogoComponent {}

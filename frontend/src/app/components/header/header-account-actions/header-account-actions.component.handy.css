@@ -1,0 +1,35 @@
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  .action-row {
+    gap: 3px;
+  }
+
+  .account-avatar,
+  .icon-action {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .icon-action {
+    font-size: 23px;
+  }
+
+  .btn-logout {
+    min-height: 30px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .account-avatar,
+  .icon-action {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .icon-action {
+    font-size: 21px;
+  }
+}

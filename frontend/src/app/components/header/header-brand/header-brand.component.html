@@ -1,46 +1,4 @@
 <div class="header-logo-row">
   <app-logo></app-logo>
-  <div class="header-actions">
-    <span class="app-version" [title]="'Version ' + version">v{{ version }}</span>
-    <span class="account-name">{{ authService.currentAccount?.display_name }}</span>
-    <button
-      type="button"
-      class="btn-logout"
-      (click)="logout()"
-      title="Abmelden"
-      aria-label="Abmelden">
-      Abmelden
-    </button>
-    <button
-      type="button"
-      class="btn-error-report"
-      (click)="openErrorReport()"
-      title="Fehler melden"
-      aria-label="Fehler melden"
-      [disabled]="isCapturingScreenshot">
-      <span aria-hidden="true">🐞</span>
-    </button>
-    <button
-      *ngIf="canOpenAdmin"
-      type="button"
-      class="btn-admin-gear"
-      (click)="adminPageOpened.emit()"
-      title="Administration / Einstellungen"
-      aria-label="Einstellungen">
-      ⚙️
-    </button>
-  </div>
+  <app-header-account-actions (adminPageOpened)="adminPageOpened.emit()"></app-header-account-actions>
 </div>
-<p *ngIf="logoutError" class="logout-error" role="alert">{{ logoutError }}</p>
-
-<div *ngIf="isCapturingScreenshot" class="screenshot-capture-overlay" role="status" aria-live="polite">
-  <span class="screenshot-spinner" aria-hidden="true"></span>
-  <span>Screenshot wird erstellt …</span>
-</div>
-
-<app-error-report-dialog
-  *ngIf="showErrorReport"
-  [screenshotDataUrl]="screenshotDataUrl"
-  [screenshotError]="screenshotError"
-  (closed)="showErrorReport = false">
-</app-error-report-dialog>
