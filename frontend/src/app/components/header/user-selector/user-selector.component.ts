@@ -7,7 +7,10 @@ import { CalendarService, User } from '../../../services/calendar.service'; // B
   standalone: true,
   imports: [CommonModule],
   templateUrl: './user-selector.component.html',
-  styleUrl: './user-selector.component.css'
+  styleUrls: [
+    './user-selector.component.css',
+    './user-selector.component.handy.css',
+  ]
 })
 export class UserSelectorComponent {
   @Input() activeUsers: User[] = [];

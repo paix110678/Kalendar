@@ -1,0 +1,6 @@
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .dashboard-center-column {
+    padding: 6px !important;
+    gap: 6px !important;
+  }
+}

@@ -1,0 +1,27 @@
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  app-view-mode-buttons {
+    flex-basis: 84px;
+  }
+
+  app-user-selector {
+    padding-left: 0;
+  }
+
+  app-weather-widget {
+    display: none !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .controls-row {
+    gap: 3px;
+  }
+
+  app-view-mode-buttons {
+    flex-basis: 72px;
+  }
+
+  app-weather-widget {
+    flex-basis: 42px;
+  }
+}

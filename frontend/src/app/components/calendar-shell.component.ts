@@ -16,7 +16,10 @@ import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashb
     RewardDashboardComponent,
   ],
   templateUrl: './calendar-shell.component.html',
-  styleUrl: './calendar-shell.component.css'
+  styleUrls: [
+    './calendar-shell.component.css',
+    './calendar-shell.component.handy.css',
+  ]
 })
 export class CalendarShellComponent {
   public showAdminPage = false;

@@ -6,7 +6,10 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './view-mode-buttons.component.html',
-  styleUrl: './view-mode-buttons.component.css'
+  styleUrls: [
+    './view-mode-buttons.component.css',
+    './view-mode-buttons.component.handy.css',
+  ]
 })
 export class ViewModeButtonsComponent {
   @Input() currentViewMode: 'day' | '3days' | 'week' = 'day';

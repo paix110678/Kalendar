@@ -16,7 +16,10 @@ import { WeatherWidgetComponent } from '../weather-widget/weather-widget.compone
     WeatherWidgetComponent,
   ],
   templateUrl: './header-controls.component.html',
-  styleUrl: './header-controls.component.css',
+  styleUrls: [
+    './header-controls.component.css',
+    './header-controls.component.handy.css',
+  ],
 })
 export class HeaderControlsComponent {
   @Input() activeUsers: User[] = [];

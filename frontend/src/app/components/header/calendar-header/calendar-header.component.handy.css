@@ -1,0 +1,6 @@
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  .top-bar-grid-container {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+}

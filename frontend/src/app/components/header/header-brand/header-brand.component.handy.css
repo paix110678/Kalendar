@@ -1,0 +1,47 @@
+@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+  .btn-admin-gear {
+    flex-basis: 30px;
+    width: 30px;
+    font-size: 22px;
+  }
+
+  .header-actions {
+    gap: 3px;
+  }
+
+  .account-name {
+    max-width: 84px;
+    font-size: 10px;
+  }
+
+  .app-version {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .btn-logout {
+    min-height: 30px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .btn-error-report {
+    width: 36px;
+    height: 36px;
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 360px) {
+  .btn-admin-gear {
+    flex-basis: 24px;
+    width: 24px;
+    padding: 0;
+  }
+
+  .btn-error-report {
+    width: 32px;
+    height: 32px;
+    font-size: 21px;
+  }
+}

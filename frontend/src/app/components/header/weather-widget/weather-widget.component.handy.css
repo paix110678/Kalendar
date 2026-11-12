@@ -1,0 +1,43 @@
+@media (max-width: 640px) {
+  :host {
+    padding: 3px 6px !important;
+    justify-content: center !important;
+  }
+
+  .weather-widget-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .weather-temperature-bar {
+    gap: 0;
+    min-width: 0;
+  }
+
+  .temp-item:not(.current-main-temp),
+  .weather-extra-row {
+    display: none;
+  }
+
+  .current-main-temp {
+    gap: 2px;
+  }
+
+  .temp-value-text,
+  .current-main-temp .temp-value-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  :host {
+    padding: 2px 3px !important;
+  }
+
+  .temp-value-text,
+  .current-main-temp .temp-value-text {
+    font-size: 10px;
+  }
+}

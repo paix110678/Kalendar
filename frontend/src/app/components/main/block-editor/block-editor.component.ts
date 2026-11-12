@@ -9,7 +9,10 @@ import { Subscription, take } from 'rxjs';
   selector: 'app-block-editor',
   imports: [CommonModule, FormsModule],
   templateUrl: './block-editor.component.html',
-  styleUrl: './block-editor.component.css'
+  styleUrls: [
+    './block-editor.component.css',
+    './block-editor.component.handy.css',
+  ]
 })
 export class BlockEditorComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedUser: User | null = null;

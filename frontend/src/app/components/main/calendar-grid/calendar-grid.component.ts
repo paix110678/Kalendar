@@ -26,7 +26,10 @@ import { Subscription } from 'rxjs';
     BlockEditorComponent,
   ],
   templateUrl: './calendar-grid.component.html',
-  styleUrl: './calendar-grid.component.css'
+  styleUrls: [
+    './calendar-grid.component.css',
+    './calendar-grid.component.handy.css',
+  ]
 })
 export class CalendarGridComponent implements OnInit, OnDestroy {
   public calendarService = inject(CalendarService);

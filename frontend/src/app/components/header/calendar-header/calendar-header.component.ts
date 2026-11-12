@@ -17,7 +17,10 @@ import { Subscription } from 'rxjs';
     TitleBackHeaderComponent
   ],
   templateUrl: './calendar-header.component.html',
-  styleUrl: './calendar-header.component.css'
+  styleUrls: [
+    './calendar-header.component.css',
+    './calendar-header.component.handy.css',
+  ]
 })
 export class CalendarHeaderComponent implements OnInit, OnDestroy {
   @Input() activeUsers: User[] = [];

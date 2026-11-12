@@ -32,29 +32,3 @@
   display: flex !important;
   flex-direction: column !important;
 }
-
-@media (max-width: 760px) {
-  .calendar-main-layout-wrapper {
-    min-width: 0;
-  }
-
-  .calendar-scroll-viewport {
-    min-width: 0;
-    border-radius: 12px;
-    overscroll-behavior: contain;
-  }
-
-  .calendar-sidebar-editor-container {
-    position: fixed !important;
-    z-index: 1200;
-    right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    left: 8px;
-    width: auto;
-    height: min(460px, 72dvh) !important;
-    max-height: calc(100dvh - 16px);
-    flex: none !important;
-    border-radius: 14px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22) !important;
-  }
-}

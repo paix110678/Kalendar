@@ -14,7 +14,10 @@ export interface WeatherWidgetConfig {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './weather-widget.component.html',
-  styleUrl: './weather-widget.component.css'
+  styleUrls: [
+    './weather-widget.component.css',
+    './weather-widget.component.handy.css',
+  ]
 })
 export class WeatherWidgetComponent implements OnChanges, OnInit, OnDestroy {
   @Input() config!: WeatherWidgetConfig;

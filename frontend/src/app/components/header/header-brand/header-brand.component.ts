@@ -11,7 +11,10 @@ import { KALENDAR_VERSION } from '../../../version';
   standalone: true,
   imports: [CommonModule, LogoComponent, ErrorReportDialogComponent],
   templateUrl: './header-brand.component.html',
-  styleUrl: './header-brand.component.css',
+  styleUrls: [
+    './header-brand.component.css',
+    './header-brand.component.handy.css',
+  ],
 })
 export class HeaderBrandComponent {
   readonly version = KALENDAR_VERSION;
