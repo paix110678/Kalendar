@@ -15,7 +15,17 @@
     </button>
 
     <!-- WOFÜR: Hintergrund teiltransparent, Name in weiß, Sterne riesig mit Rahmen-Schrift -->
-    <button class="piggy-trigger-btn-transparent-style" [style.border-color]="u.color_code" [style.background-color]="u.color_code + '25'" [title]="u.name" (click)="rewardDashboardOpened.emit(u)">
+    <button
+      class="piggy-trigger-btn-transparent-style"
+      [style.border-color]="u.color_code"
+      [style.background-color]="u.color_code + '25'"
+      [title]="u.name"
+      (pointerdown)="startLongPress($event, u.id)"
+      (pointermove)="moveLongPress($event)"
+      (pointerup)="cancelLongPress()"
+      (pointercancel)="cancelLongPress()"
+      (pointerleave)="cancelLongPress()"
+      (click)="openRewards(u)">
       <span class="user-name-label-white">{{ u.name }}</span>
       <span class="user-name-abbreviation">{{ getUserAbbreviation(u.name) }}</span>
       <span class="user-stars-large-wrapper">

@@ -2,6 +2,7 @@ import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import auth_database
@@ -276,6 +277,72 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
         assert second_client.get("/api/blocks/all").json() == []
         assert second_client.get("/api/auth/accounts").json()[0]["email"] == "second@example.invalid"
         assert second_client.get("/api/auth/invitations").json() == []
+
+
+def test_profile_can_be_deactivated_without_revalidating_unchanged_role(tmp_path, monkeypatch):
+    monkeypatch.setattr(database, "DB_FILE", str(tmp_path / "calendar.sqlite3"))
+    monkeypatch.setattr(auth_database, "AUTH_DB_FILE", tmp_path / "auth.sqlite3")
+    monkeypatch.setattr(auth_database, "TENANT_DB_DIR", tmp_path / "families")
+    monkeypatch.setenv("KALENDAR_COOKIE_SECURE", "false")
+    monkeypatch.setenv("KALENDAR_SMTP_HOST", "mail.invalid")
+    monkeypatch.setenv("KALENDAR_SMTP_FROM", "calendar@example.invalid")
+    monkeypatch.setenv("KALENDAR_PUBLIC_URL", "http://testserver")
+
+    sent_emails: list[str] = []
+    monkeypatch.setattr(
+        "routers.auth._send_email",
+        lambda recipient, subject, body: sent_emails.append(body),
+    )
+
+    with TestClient(main.app) as client:
+        _register_admin(client, "admin@example.invalid", "One Family", sent_emails)
+        csrf = client.cookies.get("kalendar_csrf")
+        response = client.post(
+            "/api/users",
+            json={"name": "Patrizia", "role": "child_10"},
+            headers={"X-CSRF-Token": csrf or ""},
+        )
+        assert response.status_code == 200
+        user_id = response.json()["user_id"]
+
+        validation_calls: list[tuple[int, str, str]] = []
+
+        def reject_role_change(user_id: int, role: str, family_id: str) -> None:
+            validation_calls.append((user_id, role, family_id))
+            raise HTTPException(
+                status_code=409,
+                detail="Die Profilrolle passt nicht mehr zu einem verknüpften Login-Konto.",
+            )
+
+        monkeypatch.setattr("routers.users.ensure_linked_account_role", reject_role_change)
+        profile = {
+            "name": "Patrizia",
+            "role": "child_10",
+            "color_code": "#228be6",
+            "current_points": 0,
+            "status_school": "GREEN",
+            "status_sport": "BASE",
+            "state_code": None,
+            "is_active": False,
+        }
+        response = client.put(
+            f"/api/users/{user_id}/profile",
+            json=profile,
+            headers={"X-CSRF-Token": csrf or ""},
+        )
+        assert response.status_code == 200
+        assert response.json()["user"]["is_active"] is False
+        assert validation_calls == []
+
+        response = client.put(
+            f"/api/users/{user_id}/profile",
+            json={**profile, "role": "child_14", "is_active": True},
+            headers={"X-CSRF-Token": csrf or ""},
+        )
+        assert response.status_code == 409
+        assert len(validation_calls) == 1
+        assert validation_calls[0][:2] == (user_id, "child_14")
+        assert validation_calls[0][2]
 
 
 def test_legacy_calendar_requires_bootstrap_token(tmp_path, monkeypatch):

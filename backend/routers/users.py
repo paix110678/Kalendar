@@ -339,7 +339,8 @@ def update_user_profile(
 
         previous_school_status = user["status_school"]
         previous_sport_status = user["status_sport"]
-        ensure_linked_account_role(user_id, payload.role, actor.family_id)
+        if payload.role != user["role"]:
+            ensure_linked_account_role(user_id, payload.role, actor.family_id)
         state_code = (
             payload.state_code
             if "state_code" in payload.model_fields_set

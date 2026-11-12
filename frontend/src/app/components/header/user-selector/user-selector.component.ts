@@ -20,6 +20,9 @@ export class UserSelectorComponent {
 
   // Lokaler Zwischenspeicher für den Ziehvorgang
   private draggedUserIndex: number | null = null;
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressNextRewardClick = false;
+  private longPressStart: { pointerId: number; x: number; y: number } | null = null;
 
   // KORREKTUR: Injiziert den CalendarService direkt im Konstruktor des Widgets
   constructor(private calendarService: CalendarService) {}
@@ -30,6 +33,46 @@ export class UserSelectorComponent {
 
   public getUserAbbreviation(name: string): string {
     return name.split(/[_\s-]+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+  }
+
+  public startLongPress(event: PointerEvent, userId: number): void {
+    this.cancelLongPress();
+    this.suppressNextRewardClick = false;
+    if (event.pointerType !== 'touch') return;
+
+    this.longPressStart = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    this.longPressTimer = setTimeout(() => {
+      this.longPressTimer = null;
+      this.suppressNextRewardClick = true;
+      this.userVisibilityToggled.emit({ userId, event });
+    }, 600);
+  }
+
+  public moveLongPress(event: PointerEvent): void {
+    if (this.longPressStart?.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - this.longPressStart.x, event.clientY - this.longPressStart.y) > 10) {
+      this.cancelLongPress();
+    }
+  }
+
+  public cancelLongPress(): void {
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressStart = null;
+  }
+
+  public openRewards(user: User): void {
+    if (this.suppressNextRewardClick) {
+      this.suppressNextRewardClick = false;
+      return;
+    }
+    this.rewardDashboardOpened.emit(user);
   }
 
   // WOFÜR: Merkt sich den Startpunkt der gezogenen Person im Gatter
