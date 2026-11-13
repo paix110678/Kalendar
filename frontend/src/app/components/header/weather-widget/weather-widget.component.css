@@ -97,9 +97,3 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.widget-split-row { display: flex; align-items: center; gap: 14px; box-sizing: border-box; width: 100%; justify-content: space-between; }
-.clock-column { display: flex; flex-direction: column; text-align: left; }
-.vorbild-clock { font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.0; font-variant-numeric: tabular-nums; font-family: system-ui, sans-serif; }
-.vorbild-date { font-size: 11px; font-weight: 800; color: #ffffff; margin-top: 2px; font-family: system-ui, sans-serif; white-space: nowrap; }
-.weather-column-right-vorbild { display: flex; flex-direction: column; text-align: left; }

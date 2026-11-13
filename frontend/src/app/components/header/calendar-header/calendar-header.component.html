@@ -7,7 +7,11 @@
 
   <div class="header-bottom-row">
     @if (headerTitle) {
-      <app-title-back-header [title]="headerTitle" (back)="headerBack.emit()"></app-title-back-header>
+      <app-title-back-header
+        [title]="headerTitle"
+        [showBack]="showHeaderBack"
+        (back)="headerBack.emit()">
+      </app-title-back-header>
     } @else if (showControls) {
       <app-header-controls
         [activeUsers]="activeUsers"

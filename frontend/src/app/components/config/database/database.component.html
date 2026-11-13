@@ -26,8 +26,6 @@
           (change)="onBackupFileSelected($event)">
       </div>
       <p class="backup-description">Wähle ein zuvor heruntergeladenes Familienbackup. Login-Konten bleiben erhalten; passende Konten werden wieder mit ihren Personen verknüpft. Personen aus dem Backup bleiben auch ohne Login-Konto erhalten. Vorher wird ein Wiederherstellungsbackup erstellt.</p>
-      <p class="backup-message backup-error" role="alert" [hidden]="!backupError">{{ backupError }}</p>
-      <p class="backup-message backup-success" role="status" [hidden]="!backupMessage">{{ backupMessage }}</p>
       @if (backupsLoading) {
         <p class="backup-empty" role="status">Backups werden geladen …</p>
       } @else if (backups.length === 0 && backupErrors.length === 0) {

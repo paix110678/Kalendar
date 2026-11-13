@@ -3,6 +3,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, 
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../services/api.service';
+import { ToastService } from '../../../services/toast.service';
 import { TimeoutError, timeout } from 'rxjs';
 
 @Component({
@@ -32,6 +33,7 @@ export class ErrorReportDialogComponent implements AfterViewInit, OnChanges {
 
   constructor(
     private readonly apiService: ApiService,
+    private readonly toastService: ToastService,
     private readonly changeDetector: ChangeDetectorRef,
     private readonly zone: NgZone,
   ) {}
@@ -67,6 +69,7 @@ export class ErrorReportDialogComponent implements AfterViewInit, OnChanges {
     if (this.sending) return;
     if (description.length < 10) {
       this.errorMessage = 'Bitte beschreibe den Fehler mit mindestens 10 Zeichen.';
+      this.toastService.show(false, this.errorMessage);
       return;
     }
 
@@ -74,6 +77,7 @@ export class ErrorReportDialogComponent implements AfterViewInit, OnChanges {
     if (this.includeScreenshot) {
       if (!this.screenshotCanvas?.nativeElement || !this.screenshotReady) {
         this.errorMessage = 'Der Screenshot ist noch nicht bereit. Bitte warte kurz oder sende den Bericht ohne Bild.';
+        this.toastService.show(false, this.errorMessage);
         return;
       }
       screenshot = this.screenshotCanvas.nativeElement.toDataURL('image/jpeg', 0.8);
@@ -98,6 +102,7 @@ export class ErrorReportDialogComponent implements AfterViewInit, OnChanges {
         this.zone.run(() => {
           this.sending = false;
           this.errorMessage = this.getSubmitErrorMessage(error);
+          if (error instanceof TimeoutError) this.toastService.show(false, this.errorMessage);
           this.changeDetector.detectChanges();
         });
       },

@@ -55,9 +55,6 @@
         Beim Löschen werden das Konto, sein Familienprofil und persönliche Einträge entfernt.
         Gemeinsam genutzte Inhalte und andere Mitglieder bleiben erhalten.
       </p>
-      @if (accountActionError) {
-        <p class="statistics-error-message" role="alert">{{ accountActionError }}</p>
-      }
       @if (statistics.accounts.length === 0) {
         <p class="statistics-loading">Noch keine Login-Konten vorhanden.</p>
       } @else {

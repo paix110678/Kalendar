@@ -30,3 +30,13 @@ assignment, event types, and task participation. Tasks assigned only to the
 deleted profile are removed; shared tasks, plans, categories, and other
 profiles remain. The signed-in platform-admin account and the last platform
 admin cannot be removed this way.
+
+## Running tests
+
+Install the development dependencies and run the backend test suite from this
+directory:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```

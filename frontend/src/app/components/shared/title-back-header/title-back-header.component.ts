@@ -8,5 +8,6 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 })
 export class TitleBackHeaderComponent {
   @Input() title = '';
+  @Input() showBack = true;
   @Output() back = new EventEmitter<void>();
 }

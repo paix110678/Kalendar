@@ -4,6 +4,7 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, injec
 import { FormsModule } from '@angular/forms';
 import { ApiService, GERMAN_STATES, Holiday, HolidayStateData } from '../../../services/api.service';
 import { SavedHolidayData } from '../../../services/api.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
 interface HolidayYearGroup {
@@ -20,6 +21,7 @@ interface HolidayYearGroup {
 })
 export class HolidaysComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
+  private readonly toastService = inject(ToastService);
 
   @Input() selectedStateCode: string | null = null;
   @Input() savedStateCodes: string[] = [];
@@ -78,11 +80,11 @@ export class HolidaysComponent implements OnChanges {
     this.errorMessage = '';
     this.successMessage = '';
     if (!this.newStateCode) {
-      this.errorMessage = 'Bitte ein Bundesland auswählen.';
+      this.toastService.show(false, 'Bitte ein Bundesland auswählen.');
       return;
     }
     if (this.savedStateCodes.includes(this.newStateCode)) {
-      this.errorMessage = 'Dieses Bundesland ist bereits gespeichert.';
+      this.toastService.show(false, 'Dieses Bundesland ist bereits gespeichert.');
       return;
     }
 
@@ -131,7 +133,7 @@ export class HolidaysComponent implements OnChanges {
       },
       error: () => {
         this.saving = false;
-        this.errorMessage = 'Gespeicherte Ferien und Feiertage konnten nicht neu geladen werden.';
+        this.toastService.show(false, 'Gespeicherte Ferien und Feiertage konnten nicht neu geladen werden.');
         this.publishEditorActions();
       },
     });
@@ -156,7 +158,7 @@ export class HolidaysComponent implements OnChanges {
           },
           error: () => {
             this.saving = false;
-            this.errorMessage = 'Bundesland wurde gelöscht, aber die Liste konnte nicht aktualisiert werden.';
+            this.toastService.show(false, 'Bundesland wurde gelöscht, aber die Liste konnte nicht aktualisiert werden.');
             this.publishEditorActions();
           },
         });

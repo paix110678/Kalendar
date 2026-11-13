@@ -1,0 +1,54 @@
+:host {
+  position: fixed;
+  inset: auto 16px 16px;
+  z-index: 5000;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.global-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 520px);
+  padding: 12px 16px;
+  border: 1px solid #2f9e44;
+  border-radius: 8px;
+  background: #ebfbee;
+  color: #2b8a3e;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  font: inherit;
+  pointer-events: auto;
+}
+
+.global-toast-error {
+  border-color: #e03131;
+  background: #fff0f0;
+  color: #c92a2a;
+}
+
+.global-toast-pending {
+  border-color: #1971c2;
+  background: #e7f5ff;
+  color: #1864ab;
+}
+
+.global-toast button {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  :host {
+    inset: auto 10px 10px;
+  }
+}

@@ -4,18 +4,67 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test -- --watch=false
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install backend test dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest -q
+
   deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: self-hosted
     env:
       KALENDAR_PUBLIC_URL: https://famsolver.de
       KALENDAR_CORS_ORIGINS: https://famsolver.de
       KALENDAR_COOKIE_SECURE: "true"
       KALENDAR_VERSION: 1.2.${{ github.run_number }}
+      KALENDAR_BACKEND_IMAGE: kalendar_backend:${{ github.sha }}
+      KALENDAR_FRONTEND_IMAGE: kalendar_frontend:${{ github.sha }}
       KALENDAR_SMTP_HOST: ${{ secrets.KALENDAR_SMTP_HOST }}
       KALENDAR_SMTP_PORT: ${{ secrets.KALENDAR_SMTP_PORT }}
       KALENDAR_SMTP_USER: ${{ secrets.KALENDAR_SMTP_USER }}
@@ -26,10 +75,53 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Rebuild and restart containers
+      - name: Rebuild, verify, and roll back containers on failure
         run: |
-          docker-compose down
-          if docker container inspect kalendar_frontend_1 >/dev/null 2>&1; then
-            docker container rm --force kalendar_frontend_1
+          backend_container="$(docker-compose ps -q backend)"
+          frontend_container="$(docker-compose ps -q frontend)"
+          previous_backend_image=""
+          previous_frontend_image=""
+          if [ -n "$backend_container" ]; then
+            previous_backend_image="$(docker inspect --format '{{.Config.Image}}' "$backend_container")"
           fi
-          docker-compose up -d --build
+          if [ -n "$frontend_container" ]; then
+            previous_frontend_image="$(docker inspect --format '{{.Config.Image}}' "$frontend_container")"
+          fi
+
+          restore_previous_images() {
+            if [ -n "$previous_backend_image" ] && [ -n "$previous_frontend_image" ]; then
+              echo "Restoring the previous images."
+              KALENDAR_BACKEND_IMAGE="$previous_backend_image" \
+                KALENDAR_FRONTEND_IMAGE="$previous_frontend_image" \
+                docker-compose up -d --no-build
+            else
+              echo "No complete previous image pair is available for rollback."
+            fi
+          }
+
+          if ! docker-compose up -d --build --remove-orphans; then
+            echo "Container startup failed."
+            docker-compose ps
+            restore_previous_images
+            exit 1
+          fi
+
+          attempt=0
+          while [ "$attempt" -lt 30 ]; do
+            backend_container="$(docker-compose ps -q backend)"
+            frontend_container="$(docker-compose ps -q frontend)"
+            if [ -n "$backend_container" ] && [ -n "$frontend_container" ]; then
+              backend_health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$backend_container")"
+              frontend_health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$frontend_container")"
+              if [ "$backend_health" = "healthy" ] && [ "$frontend_health" = "healthy" ]; then
+                exit 0
+              fi
+            fi
+            attempt=$((attempt + 1))
+            sleep 2
+          done
+
+          docker-compose ps
+          restore_previous_images
+          echo "Deployment health check failed."
+          exit 1

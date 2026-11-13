@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
 kalender.db
+backend/auth.sqlite3
 backend/backups/

@@ -14,7 +14,6 @@
     </header>
 
     <ng-container *ngIf="submitted; else reportForm">
-      <p class="success-message" role="status">Der Fehlerbericht wurde gespeichert. Vielen Dank für deine Hilfe!</p>
       <button type="button" class="primary-button" (click)="close()">Schließen</button>
     </ng-container>
 
@@ -70,7 +69,6 @@
           </div>
         </fieldset>
 
-        <p *ngIf="errorMessage" class="error-message" role="alert">{{ errorMessage }}</p>
         <footer class="dialog-actions">
           <button type="button" class="secondary-button" [disabled]="sending" (click)="close()">Abbrechen</button>
           <button type="submit" class="primary-button" [disabled]="sending">

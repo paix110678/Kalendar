@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, injec
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CalendarService, User } from '../../../services/calendar.service';
+import { ToastService } from '../../../services/toast.service';
 import { MemberDetailsComponent } from './member-details/member-details.component';
 import { AdminEditorActions } from '../admin-editor-actions';
 
@@ -18,6 +19,7 @@ export class UsersComponent implements OnChanges {
   @Output() memberClosed = new EventEmitter<void>();
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
   private calendarService = inject(CalendarService);
+  private readonly toastService = inject(ToastService);
   public saving = false;
   public userActionError = '';
 
@@ -36,6 +38,7 @@ export class UsersComponent implements OnChanges {
     const name = this.createUserName.trim();
     if (!name) {
       this.userActionError = 'Bitte einen Namen eingeben.';
+      this.toastService.show(false, this.userActionError);
       return;
     }
     const finalRole = this.createUserGroup === 'adult' ? 'adult' : 'child_10';

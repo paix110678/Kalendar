@@ -8,6 +8,7 @@ import {
   AuthAccount,
   AuthService,
 } from '../../../services/auth.service';
+import { ToastService } from '../../../services/toast.service';
 import { User } from '../../../services/calendar.service';
 
 type InviteRole = Exclude<AccountRole, 'admin'>;
@@ -33,7 +34,10 @@ export class AccountManagementComponent implements OnInit, OnChanges {
   error = '';
   message = '';
 
-  constructor(readonly authService: AuthService) {}
+  constructor(
+    readonly authService: AuthService,
+    private readonly toastService: ToastService,
+  ) {}
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -67,6 +71,7 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       error: (error: unknown) => {
         this.loading = false;
         this.error = this.errorMessage(error, 'Konten konnten nicht geladen werden.');
+        this.toastService.show(false, this.error);
       },
     });
   }
@@ -104,6 +109,7 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       error: (error: unknown) => {
         this.invitationsLoading = false;
         this.error = this.errorMessage(error, 'Einladungen konnten nicht geladen werden.');
+        this.toastService.show(false, this.error);
       },
     });
   }

@@ -6,6 +6,7 @@ import { ApiService, PlanDefinition, PlanHour } from '../../../services/api.serv
 import { CalendarService } from '../../../services/calendar.service';
 import { catchError, map, of, switchMap, timeout } from 'rxjs';
 import { AdminEditorActions } from '../admin-editor-actions';
+import { ToastService } from '../../../services/toast.service';
 
 @Component({
   selector: 'app-plans',
@@ -18,6 +19,7 @@ export class PlansComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly toastService = inject(ToastService);
   private pendingPlanId: number | null = null;
 
   @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
@@ -93,7 +95,7 @@ export class PlansComponent implements OnChanges {
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'Pläne konnten nicht geladen werden.';
+        this.toastService.show(false, 'Pläne konnten nicht geladen werden.');
         this.changeDetector.markForCheck();
       },
     });
@@ -114,15 +116,15 @@ export class PlansComponent implements OnChanges {
     this.successMessage = '';
 
     if (!this.planName.trim()) {
-      this.errorMessage = 'Bitte einen Namen für den Plan eingeben.';
+      this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
       return;
     }
     if (this.daysOfWeek.indexOf(this.startDay) > this.daysOfWeek.indexOf(this.endDay)) {
-      this.errorMessage = 'Der erste Tag muss vor oder gleich dem letzten Tag liegen.';
+      this.toastService.show(false, 'Der erste Tag muss vor oder gleich dem letzten Tag liegen.');
       return;
     }
     if (this.hours.some((hour) => !hour.start_time || !hour.end_time || hour.end_time <= hour.start_time)) {
-      this.errorMessage = 'Für jede Stunde muss die Endzeit nach der Startzeit liegen.';
+      this.toastService.show(false, 'Für jede Stunde muss die Endzeit nach der Startzeit liegen.');
       return;
     }
 
@@ -166,6 +168,9 @@ export class PlansComponent implements OnChanges {
           : calendarRefreshed
             ? 'Plan und zugehörige wiederkehrende Termine wurden aktualisiert.'
             : 'Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
+        if (!calendarRefreshed) {
+          this.toastService.show(false, 'Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.');
+        }
         this.plans = [
           ...this.plans.filter((plan) => plan.id !== savedPlan.id),
           savedPlan,
@@ -245,6 +250,9 @@ export class PlansComponent implements OnChanges {
         this.successMessage = calendarRefreshed
           ? 'Plan und zugehörige wiederkehrende Termine wurden gelöscht.'
           : 'Plan wurde gelöscht, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
+        if (!calendarRefreshed) {
+          this.toastService.show(false, 'Plan wurde gelöscht, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.');
+        }
         this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
@@ -286,7 +294,7 @@ export class PlansComponent implements OnChanges {
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'Der gespeicherte Stand konnte nicht neu geladen werden.';
+        this.toastService.show(false, 'Der gespeicherte Stand konnte nicht neu geladen werden.');
         this.publishEditorActions();
         this.changeDetector.markForCheck();
       },

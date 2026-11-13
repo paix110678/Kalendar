@@ -118,60 +118,6 @@ app-calendar-shell {
   to { transform: rotate(360deg); }
 }
 
-.person-event-types {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid #dee2e6;
-  border-radius: 7px;
-  background: #f8f9fa;
-}
-
-.person-event-types h6,
-.person-event-types p { margin: 0; }
-.person-event-types h6 { font-size: 14px; }
-.event-type-create,
-.person-event-type-row {
-  display: flex;
-  align-items: end;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  background: #fff;
-}
-.event-type-create label,
-.person-event-type-row label {
-  display: grid;
-  flex: 1 1 180px;
-  min-width: 0;
-  gap: 5px;
-}
-.event-type-create label span,
-.person-event-type-row label span { color: #495057; font-size: 12px; font-weight: 700; }
-.event-type-create input,
-.person-event-type-row input {
-  min-width: 0;
-  min-height: 36px;
-  padding: 7px 9px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  background: #fff;
-  color: #212529;
-  font: inherit;
-}
-.event-type-create input[type="color"],
-.person-event-type-row input[type="color"] { width: 70px; padding: 3px; }
-.event-type-id { align-self: center; min-width: 42px; color: #68717b; font-size: 12px; }
-.event-type-actions { display: flex; gap: 6px; }
-
-@media (max-width: 760px) {
-  .event-type-create,
-  .person-event-type-row { align-items: stretch; flex-direction: column; }
-  .event-type-create label,
-  .person-event-type-row label { flex-basis: auto; }
-}
-
 @media (max-width: 760px) {
   .admin-page-body { gap: 8px; padding: 12px !important; }
   .admin-split-wrapper { flex-direction: row; }

@@ -22,9 +22,6 @@
     </form>
   }
 
-  <p class="form-message form-error" role="alert" [hidden]="!errorMessage">{{ errorMessage }}</p>
-  <p class="form-message form-success" role="status" [hidden]="!successMessage">{{ successMessage }}</p>
-
   @if (!selectedStateCode && availableStates.length === 0) {
     <p class="empty-state">Alle Bundesländer wurden bereits hinzugefügt.</p>
   }

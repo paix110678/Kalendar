@@ -1,19 +1,7 @@
 <main class="auth-page">
-  <section class="auth-card" aria-labelledby="auth-title">
-    <h1 id="auth-title">Familienkalender</h1>
-    <p class="auth-intro">
-      @if (mode === 'accept') {
-        Du wurdest eingeladen. Lege hier dein Login für den Familienkalender an.
-      } @else {
-        Melde dich an oder richte einen Familienkalender ein.
-      }
-    </p>
-
-    @if (error) {
+  <section class="auth-card">
+    @if (error && mode === 'login') {
       <p class="auth-message auth-error" role="alert">{{ error }}</p>
-    }
-    @if (message) {
-      <p class="auth-message auth-success" role="status">{{ message }}</p>
     }
 
     @if (mode === 'login') {
@@ -27,7 +15,7 @@
         <button type="submit" [disabled]="busy">{{ busy ? 'Anmeldung …' : 'Anmelden' }}</button>
       </form>
       <div class="auth-links">
-        <button type="button" class="auth-link" (click)="setMode('register')">Familienkalender erstellen</button>
+        <button type="button" class="auth-link" (click)="setMode('register')">Registrierung</button>
         <button type="button" class="auth-link" (click)="setMode('forgot')">Passwort vergessen?</button>
         <button type="button" class="auth-link" (click)="resendVerification()" [disabled]="busy || !email.trim()">Bestätigungs-E-Mail erneut senden</button>
       </div>
@@ -45,15 +33,13 @@
         <label for="register-password">Passwort (mindestens 12 Zeichen)</label>
         <input id="register-password" type="password" name="registerPassword" [(ngModel)]="password" autocomplete="new-password" required minlength="12" maxlength="128">
 
-        <label for="bootstrap-token">Übernahme-Token (nur beim ersten Admin eines bestehenden Kalenders)</label>
-        <input id="bootstrap-token" type="password" name="bootstrapToken" [(ngModel)]="bootstrapToken" autocomplete="off" maxlength="256">
+        <label for="register-password-confirm">Passwort wiederholen</label>
+        <input id="register-password-confirm" type="password" name="registerPasswordConfirm" [(ngModel)]="passwordConfirmation" autocomplete="new-password" required minlength="12" maxlength="128">
 
-        <button type="submit" [disabled]="busy">{{ busy ? 'Konto wird erstellt …' : 'Familie registrieren' }}</button>
+        <button type="submit" [disabled]="busy">{{ busy ? 'Registrierung läuft …' : 'Registrieren' }}</button>
       </form>
-      <button type="button" class="auth-link" (click)="setMode('login')">Zur Anmeldung</button>
     } @else if (mode === 'verify') {
       <p>Die E-Mail-Adresse wird bestätigt …</p>
-      <button type="button" class="secondary-button" (click)="setMode('login')">Zur Anmeldung</button>
     } @else if (mode === 'accept') {
       <p class="invitation-instructions">
         Gib deinen Namen ein und lege ein neues Passwort fest. Ein eigenes Familienkonto musst du nicht erstellen.
@@ -65,22 +51,18 @@
         <input id="invite-password" type="password" name="invitePassword" [(ngModel)]="password" autocomplete="new-password" required minlength="12" maxlength="128">
         <button type="submit" [disabled]="busy || !token">{{ busy ? 'Konto wird erstellt …' : 'Einladung annehmen' }}</button>
       </form>
-      <button type="button" class="auth-link" (click)="setMode('login')">Zur Anmeldung</button>
     } @else if (mode === 'forgot') {
       <form (ngSubmit)="requestPasswordReset()">
         <label for="reset-email">E-Mail</label>
         <input id="reset-email" type="email" name="resetEmail" [(ngModel)]="email" autocomplete="email" required maxlength="254">
         <button type="submit" [disabled]="busy">{{ busy ? 'Wird gesendet …' : 'Link zum Zurücksetzen anfordern' }}</button>
       </form>
-      <button type="button" class="auth-link" (click)="setMode('login')">Zur Anmeldung</button>
     } @else {
       <form (ngSubmit)="resetPassword()">
         <label for="new-password">Neues Passwort (mindestens 12 Zeichen)</label>
         <input id="new-password" type="password" name="newPassword" [(ngModel)]="password" autocomplete="new-password" required minlength="12" maxlength="128">
         <button type="submit" [disabled]="busy || !token">{{ busy ? 'Passwort wird geändert …' : 'Passwort ändern' }}</button>
       </form>
-      <button type="button" class="auth-link" (click)="setMode('login')">Zur Anmeldung</button>
     }
-    <footer class="auth-version" [title]="'Version ' + version">Version {{ version }}</footer>
   </section>
 </main>

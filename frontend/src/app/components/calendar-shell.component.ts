@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CalendarHeaderComponent } from './header/calendar-header/calendar-header.component';
 import { CalendarGridComponent } from './main/calendar-grid/calendar-grid.component';
@@ -7,6 +7,7 @@ import { RewardDashboardComponent } from './reward/reward-dashboard/reward-dashb
 import { AuthComponent } from './auth/auth.component';
 import { AuthService } from '../services/auth.service';
 import { ErrorReportDialogComponent } from './header/error-report-dialog/error-report-dialog.component';
+import { GlobalToastComponent } from './shared/global-toast/global-toast.component';
 
 @Component({
   selector: 'app-calendar-shell',
@@ -19,6 +20,7 @@ import { ErrorReportDialogComponent } from './header/error-report-dialog/error-r
     RewardDashboardComponent,
     AuthComponent,
     ErrorReportDialogComponent,
+    GlobalToastComponent,
   ],
   templateUrl: './calendar-shell.component.html',
   styleUrls: [
@@ -30,6 +32,9 @@ export class CalendarShellComponent {
   public readonly authService = inject(AuthService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   public readonly authState$ = this.authService.state$;
+  public authHeaderTitle = 'Anmeldung';
+  public authHeaderShowBack = false;
+  @ViewChild(AuthComponent) public authComponent?: AuthComponent;
   public showAdminPage = false;
   public showErrorReport = false;
   public isCapturingScreenshot = false;
@@ -38,6 +43,15 @@ export class CalendarShellComponent {
 
   public openAdminPage(): void {
     this.showAdminPage = true;
+  }
+
+  public setAuthHeader(state: { title: string; showBack: boolean }): void {
+    this.authHeaderTitle = state.title;
+    this.authHeaderShowBack = state.showBack;
+  }
+
+  public onAuthHeaderBack(): void {
+    this.authComponent?.setMode('login');
   }
 
   public async openErrorReport(): Promise<void> {
@@ -52,7 +66,7 @@ export class CalendarShellComponent {
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
-      const html2canvas = (await import('html2canvas')).default;
+      const html2canvas = (await import('html2canvas/dist/html2canvas.esm.js')).default;
       const canvas = await html2canvas(document.documentElement, {
         backgroundColor: '#ffffff',
         foreignObjectRendering: true,

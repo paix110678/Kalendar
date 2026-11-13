@@ -49,43 +49,6 @@
   font: inherit;
 }
 
-.field-wide,
-.form-actions {
-  grid-column: 1 / -1;
-}
-
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.button {
-  min-height: 2.5rem;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid transparent;
-  border-radius: 0.45rem;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-.button-primary {
-  background: #1769aa;
-  color: #fff;
-}
-
-.button-secondary {
-  border-color: #cbd5e1;
-  background: #fff;
-  color: #334155;
-}
-
 .form-message {
   margin: 0;
   padding: 0.7rem 0.85rem;

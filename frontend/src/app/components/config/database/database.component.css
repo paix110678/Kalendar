@@ -18,7 +18,6 @@
 .backup-file-input { display: none; }
 .backup-button { min-height: 34px; padding: 7px 10px; border: 1px solid #ced4da; border-radius: 5px; background: #fff; color: #343a40; font: inherit; font-size: 12px; cursor: pointer; }
 .backup-button:disabled { cursor: wait; opacity: .65; }
-.backup-create { border-color: #228be6; background: #228be6; color: #fff; }
 .backup-restore { border-color: #e67700; color: #a64b00; }
 .backup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; border: 1px solid #e9ecef; border-radius: 6px; background: #fff; }
 .backup-row-selected { border-color: #d6336c; box-shadow: 0 0 0 2px rgba(214, 51, 108, .15); }

@@ -26,6 +26,7 @@ export class CalendarHeaderComponent implements OnInit, OnDestroy {
   @Input() activeUsers: User[] = [];
   @Input() currentViewMode: 'day' | '3days' | 'week' = 'day';
   @Input() headerTitle: string | null = null;
+  @Input() showHeaderBack = true;
   @Input() showControls = true;
   @Input() isCapturingScreenshot = false;
   

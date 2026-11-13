@@ -2,62 +2,76 @@
   <div class="dashboard-center-column">
     @if (authState$ | async; as authState) {
       @if (authState.account) {
-        <app-calendar-header
-          class="dashboard-frame-capsule"
-          [isCapturingScreenshot]="isCapturingScreenshot"
-          [activeUsers]="calendarGrid.activeUsersSignal()"
-          [currentViewMode]="calendarGrid.currentViewMode"
-          [headerTitle]="showAdminPage
-            ? 'Einstellungen'
-            : calendarGrid.showRewardPage && calendarGrid.selectedUser
-              ? 'Belohnungen für ' + calendarGrid.selectedUser.name
-              : null"
-          (viewModeChanged)="calendarGrid.changeViewMode($event)"
-          (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
-          (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
-          (adminPageOpened)="calendarGrid.showRewardPage = false; openAdminPage()"
-          (errorReportRequested)="openErrorReport()"
-          (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
-        </app-calendar-header>
+        @defer (on immediate) {
+          <app-calendar-header
+            class="dashboard-frame-capsule"
+            [showHeaderBack]="false"
+            [isCapturingScreenshot]="isCapturingScreenshot"
+            [activeUsers]="calendarGrid.activeUsersSignal()"
+            [currentViewMode]="calendarGrid.currentViewMode"
+            [headerTitle]="showAdminPage
+              ? 'Einstellungen'
+              : calendarGrid.showRewardPage && calendarGrid.selectedUser
+                ? 'Belohnungen für ' + calendarGrid.selectedUser.name
+                : null"
+            (viewModeChanged)="calendarGrid.changeViewMode($event)"
+            (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
+            (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
+            (adminPageOpened)="calendarGrid.showRewardPage = false; openAdminPage()"
+            (errorReportRequested)="openErrorReport()"
+            (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
+          </app-calendar-header>
 
-        <div class="main-content dashboard-frame-capsule">
-          <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
-            <app-calendar-grid #calendarGrid></app-calendar-grid>
+          <div class="main-content dashboard-frame-capsule">
+            <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
+              <app-calendar-grid #calendarGrid></app-calendar-grid>
+            </div>
+
+            @if (showAdminPage) {
+              @defer (on immediate) {
+                <app-admin-dashboard
+                  [activeUsers]="calendarGrid.activeUsersSignal()"
+                  [activeRewards]="calendarGrid.activeRewardsSignal()"
+                  [selectedUser]="calendarGrid.selectedUser"
+                  (closeAdmin)="showAdminPage = false">
+                </app-admin-dashboard>
+              } @loading {
+                <div role="status">Einstellungen werden geladen …</div>
+              } @error {
+                <div role="alert">Die Einstellungen konnten nicht geladen werden.</div>
+              }
+            } @else if (calendarGrid.showRewardPage) {
+              @defer (on immediate) {
+                <app-reward-dashboard
+                  [user]="calendarGrid.selectedUser"
+                  [activeRewards]="calendarGrid.activeRewardsSignal()"
+                  (closeDashboard)="calendarGrid.showRewardPage = false"
+                  (adminPageOpened)="openAdminPage()">
+                </app-reward-dashboard>
+              } @loading {
+                <div role="status">Belohnungen werden geladen …</div>
+              } @error {
+                <div role="alert">Die Belohnungen konnten nicht geladen werden.</div>
+              }
+            }
           </div>
-
-          @if (showAdminPage) {
-            @defer (on immediate) {
-              <app-admin-dashboard
-                [activeUsers]="calendarGrid.activeUsersSignal()"
-                [activeRewards]="calendarGrid.activeRewardsSignal()"
-                [selectedUser]="calendarGrid.selectedUser"
-                (closeAdmin)="showAdminPage = false">
-              </app-admin-dashboard>
-            } @loading {
-              <div role="status">Einstellungen werden geladen …</div>
-            } @error {
-              <div role="alert">Die Einstellungen konnten nicht geladen werden.</div>
-            }
-          } @else if (calendarGrid.showRewardPage) {
-            @defer (on immediate) {
-              <app-reward-dashboard
-                [user]="calendarGrid.selectedUser"
-                [activeRewards]="calendarGrid.activeRewardsSignal()"
-                (closeDashboard)="calendarGrid.showRewardPage = false"
-                (adminPageOpened)="openAdminPage()">
-              </app-reward-dashboard>
-            } @loading {
-              <div role="status">Belohnungen werden geladen …</div>
-            } @error {
-              <div role="alert">Die Belohnungen konnten nicht geladen werden.</div>
-            }
-          }
-        </div>
+        } @loading {
+          <div class="main-content dashboard-frame-capsule">
+            <main class="auth-loading" role="status">Kalender wird geladen …</main>
+          </div>
+        } @error {
+          <div class="main-content dashboard-frame-capsule">
+            <main class="auth-loading" role="alert">Der Kalender konnte nicht geladen werden.</main>
+          </div>
+        }
       } @else {
         <app-calendar-header
           class="dashboard-frame-capsule"
+          [headerTitle]="authHeaderTitle"
+          [showHeaderBack]="authHeaderShowBack"
           [isCapturingScreenshot]="isCapturingScreenshot"
           (errorReportRequested)="openErrorReport()"
+          (headerBack)="onAuthHeaderBack()"
           [showControls]="false">
         </app-calendar-header>
 
@@ -70,7 +84,7 @@
               <button type="button" (click)="authService.refreshSession()">Erneut versuchen</button>
             </main>
           } @else {
-            <app-auth></app-auth>
+            <app-auth (headerStateChange)="setAuthHeader($event)"></app-auth>
           }
         </div>
       }
@@ -86,9 +100,17 @@
 }
 
 @if (showErrorReport) {
-  <app-error-report-dialog
-    [screenshotDataUrl]="screenshotDataUrl"
-    [screenshotError]="screenshotError"
-    (closed)="showErrorReport = false">
-  </app-error-report-dialog>
+  @defer (on immediate) {
+    <app-error-report-dialog
+      [screenshotDataUrl]="screenshotDataUrl"
+      [screenshotError]="screenshotError"
+      (closed)="showErrorReport = false">
+    </app-error-report-dialog>
+  } @loading {
+    <div role="status">Fehlerbericht wird geöffnet …</div>
+  } @error {
+    <div role="alert">Der Fehlerbericht konnte nicht geöffnet werden.</div>
+  }
 }
+
+<app-global-toast></app-global-toast>

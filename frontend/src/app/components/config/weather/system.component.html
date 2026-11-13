@@ -42,8 +42,6 @@
       </div>
     </div>
     <p *ngIf="locationForm.is_active" role="status">Aktiver Standort für die Wetteranzeige</p>
-    <p class="error-text-msg" role="alert" *ngIf="configMessage && configError">{{ configMessage }}</p>
-    <p role="status" *ngIf="configMessage && !configError">{{ configMessage }}</p>
     <div class="location-actions">
       <button *ngIf="!creatingLocation && !locationForm.is_active" class="btn-save-config-submit" (click)="triggerAction('activate')">Als Wetter-Standort verwenden</button>
     </div>

@@ -2,13 +2,6 @@
   <h3 id="accounts-title">Login-Konten und Einladungen</h3>
   <p>Konten melden Personen im gemeinsamen Familienkalender an. Familienprofile bleiben davon getrennt.</p>
 
-  @if (error) {
-    <p class="account-message account-error" role="alert">{{ error }}</p>
-  }
-  @if (message) {
-    <p class="account-message account-success" role="status">{{ message }}</p>
-  }
-
   <form class="invite-form" (ngSubmit)="invite()">
     <h4>Mitglied einladen</h4>
     <label>

@@ -13,6 +13,7 @@ Die Deploy-Pipeline setzt die angezeigte Kalender-Version bei erfolgreichem Depl
 Die Anmeldung, der Kalenderheader und der Fehlerbericht sind in der `CalendarShell` angeordnet. Im Einstellungsbereich sind das obere Menü, der Navigationsbaum, die Detailansicht und die Aktionsleiste getrennte Bereiche. Der Baum bleibt links, während Detailansicht und Aktionsleiste rechts dieselbe Breite verwenden.
 
 Das verschachtelte Komponentenlayout ist in [COMPONENTS.mmd](src/app/components/COMPONENTS.mmd) dargestellt.
+Der Frontend-Testlauf ist mit Vitest konfiguriert; die GitHub-Actions-Pipeline führt Frontend-Tests, Frontend-Build und Backend-Tests vor einem Deployment aus. Compose prüft die Backend- und Frontend-Healthchecks; bei fehlgeschlagenem Start oder Healthcheck werden die vorherigen Images wieder aktiviert.
 
 ## Development server
 

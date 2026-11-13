@@ -18,23 +18,9 @@
 }
 
 .auth-card {
-  width: min(100%, 440px);
-  padding: 32px;
-  border: 1px solid #dee2e6;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 12px 36px rgb(33 37 41 / 8%);
-}
-
-h1 {
-  margin: 0;
-  color: #1971c2;
-  font-size: 1.65rem;
-}
-
-.auth-intro {
-  margin: 8px 0 24px;
-  color: #687078;
+  width: min(100%, 480px);
+  padding: clamp(20px, 4vw, 32px);
+  background: transparent;
 }
 
 .invitation-instructions {
@@ -46,11 +32,13 @@ h1 {
 
 form {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 10px;
 }
 
 label {
-  margin-top: 6px;
   font-size: 0.9rem;
   font-weight: 650;
 }
@@ -83,14 +71,25 @@ button {
   cursor: pointer;
 }
 
+form button {
+  grid-column: 1 / -1;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
 
-.secondary-button {
-  background: #e9ecef;
-  color: #343a40;
+form button[type='submit'] {
+  min-height: 44px;
+  margin-top: 12px;
+  border-radius: 6px;
+  background: #1971c2;
+  font-weight: 700;
+}
+
+form button[type='submit']:hover:not(:disabled) {
+  background: #1864ab;
 }
 
 .auth-links {
@@ -107,6 +106,12 @@ button:disabled {
   background: transparent;
   color: #1971c2;
   font-size: 0.9rem;
+  text-align: left;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: #1864ab;
+  text-decoration: underline;
 }
 
 .auth-message {
@@ -125,20 +130,16 @@ button:disabled {
   color: #2b8a3e;
 }
 
-.auth-version {
-  margin-top: 20px;
-  color: #868e96;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.75rem;
-  text-align: right;
-}
-
 @media (max-width: 520px) {
   .auth-page {
     padding: 12px;
   }
 
   .auth-card {
-    padding: 24px 18px;
+    padding: 20px 16px;
+  }
+
+  form {
+    grid-template-columns: minmax(0, 110px) minmax(0, 1fr);
   }
 }

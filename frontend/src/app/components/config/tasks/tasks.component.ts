@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, TaskDefinition, TaskPayload } from '../../../services/api.service';
 import { Category, User } from '../../../services/calendar.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 
@@ -24,6 +25,7 @@ export class TasksComponent implements OnChanges {
   @Output() selectedTaskIdChange = new EventEmitter<number | null>();
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
 
+  private readonly toastService = inject(ToastService);
   title = '';
   color = '#228be6';
   categoryId: number | null = null;
@@ -88,11 +90,11 @@ export class TasksComponent implements OnChanges {
   private saveTask(): void {
     const title = this.title.trim();
     if (!title) {
-      this.errorMessage = 'Bitte einen Titel für den Task eingeben.';
+      this.toastService.show(false, 'Bitte einen Titel für den Task eingeben.');
       return;
     }
     if (this.categoryId === null || !this.categories.some((category) => category.id === this.categoryId)) {
-      this.errorMessage = 'Bitte eine gültige Kategorie auswählen.';
+      this.toastService.show(false, 'Bitte eine gültige Kategorie auswählen.');
       return;
     }
 

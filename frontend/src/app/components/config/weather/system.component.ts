@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, WeatherLocation } from '../../../services/api.service';
 import { CalendarService } from '../../../services/calendar.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
 type WeatherLocationAction = 'create' | 'save' | 'activate' | 'delete';
@@ -22,6 +23,7 @@ export class SystemComponent implements OnChanges {
 
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
+  private readonly toastService = inject(ToastService);
 
   public locations: WeatherLocation[] = [];
   public locationForm = {
@@ -92,6 +94,7 @@ export class SystemComponent implements OnChanges {
         this.loading = false;
         this.configError = true;
         this.configMessage = 'Wetterstandorte konnten nicht geladen werden.';
+        this.toastService.show(false, this.configMessage);
         this.publishEditorActions();
       }
     });
@@ -114,6 +117,7 @@ export class SystemComponent implements OnChanges {
         this.loading = false;
         this.configError = true;
         this.configMessage = 'Standortkonfiguration konnte nicht geladen werden.';
+        this.toastService.show(false, this.configMessage);
         this.publishEditorActions();
       }
     });
@@ -228,6 +232,7 @@ export class SystemComponent implements OnChanges {
       error: () => {
         this.configError = true;
         this.configMessage = 'Standort wurde gespeichert, aber die Standortliste konnte nicht aktualisiert werden.';
+        this.toastService.show(false, this.configMessage);
       }
     });
   }
@@ -236,6 +241,7 @@ export class SystemComponent implements OnChanges {
     this.loading = false;
     this.configError = !!location.location_error;
     this.configMessage = location.location_error ?? successMessage;
+    if (location.location_error) this.toastService.show(false, location.location_error);
     this.publishEditorActions();
   }
 

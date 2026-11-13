@@ -1,0 +1,13 @@
+@if (toastService.state$ | async; as toast) {
+  <div
+    class="global-toast"
+    [class.global-toast-error]="!toast.success"
+    [class.global-toast-pending]="toast.pending"
+    [attr.role]="toast.success ? 'status' : 'alert'"
+    [attr.aria-live]="toast.success ? 'polite' : 'assertive'">
+    <span>{{ toast.message }}</span>
+    @if (toast.cancelable) {
+      <button type="button" (click)="toastService.cancelAction(toast.id)">Abbrechen</button>
+    }
+  </div>
+}

@@ -1,6 +1,7 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, DatabaseBackup, DatabaseBackupList } from '../../../services/api.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
 @Component({
@@ -21,6 +22,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
   
   private apiService = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
+  private readonly toastService = inject(ToastService);
 
   public selectedTableName: string | null = null;
   public currentTableColumns: string[] = [];
@@ -66,7 +68,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
       error: (error: unknown) => {
         console.error('Datenbankbackups konnten nicht geladen werden:', error);
         this.backupsLoading = false;
-        this.backupError = 'Backups konnten nicht geladen werden.';
+        this.toastService.show(false, 'Backups konnten nicht geladen werden.');
         this.cdr.markForCheck();
       },
     });
@@ -147,7 +149,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
       },
       error: (error: unknown) => {
         console.error(`Datenbankbackup ${backup.id} konnte nicht heruntergeladen werden:`, error);
-        this.backupError = 'Backup konnte nicht heruntergeladen werden.';
+        this.toastService.show(false, 'Backup konnte nicht heruntergeladen werden.');
         this.cdr.markForCheck();
       },
     });
@@ -169,7 +171,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
       next: (result) => {
         this.backupMessage = this.restoreResultMessage(result.accounts_unlinked);
         this.cdr.markForCheck();
-        window.setTimeout(() => window.location.reload(), 800);
+        window.setTimeout(() => window.location.reload(), 3000);
       },
       error: (error: unknown) => {
         console.error(`Datenbankbackup ${backup.id} konnte nicht wiederhergestellt werden:`, error);
@@ -193,11 +195,11 @@ export class DatabaseComponent implements OnInit, OnChanges {
     this.backupError = '';
     this.backupMessage = '';
     if (!file.name.toLowerCase().endsWith('.json')) {
-      this.backupError = 'Bitte wähle ein JSON-Backup aus der Datenbankverwaltung.';
+      this.toastService.show(false, 'Bitte wähle ein JSON-Backup aus der Datenbankverwaltung.');
       return;
     }
     if (file.size > this.maxBackupFileSize) {
-      this.backupError = 'Die Backup-Datei darf höchstens 50 MB groß sein.';
+      this.toastService.show(false, 'Die Backup-Datei darf höchstens 50 MB groß sein.');
       return;
     }
     if (!confirm(
@@ -220,7 +222,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
           this.refreshBackups();
           this.publishEditorActions();
           this.cdr.markForCheck();
-          window.setTimeout(() => window.location.reload(), 1500);
+          window.setTimeout(() => window.location.reload(), 3000);
         },
         error: (error: unknown) => {
           console.error('Datenbankbackup aus Datei konnte nicht wiederhergestellt werden:', error);
@@ -233,7 +235,7 @@ export class DatabaseComponent implements OnInit, OnChanges {
     } catch (error) {
       console.error('Datenbankbackup-Datei konnte nicht gelesen werden:', error);
       this.backupUploading = false;
-      this.backupError = 'Die Datei konnte nicht gelesen werden. Bitte wähle ein gültiges JSON-Backup.';
+      this.toastService.show(false, 'Die Datei konnte nicht gelesen werden. Bitte wähle ein gültiges JSON-Backup.');
       this.publishEditorActions();
       this.cdr.markForCheck();
     }

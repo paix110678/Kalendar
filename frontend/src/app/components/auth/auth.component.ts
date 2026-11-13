@@ -1,10 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
-import { KALENDAR_VERSION } from '../../version';
+import { ToastService } from '../../services/toast.service';
 
 type AuthMode = 'login' | 'register' | 'verify' | 'accept' | 'reset' | 'forgot';
 
@@ -16,19 +16,23 @@ type AuthMode = 'login' | 'register' | 'verify' | 'accept' | 'reset' | 'forgot';
   styleUrl: './auth.component.css',
 })
 export class AuthComponent implements OnInit {
-  readonly version = KALENDAR_VERSION;
+  @Output() headerStateChange = new EventEmitter<{ title: string; showBack: boolean }>();
+
   mode: AuthMode = 'login';
   familyName = '';
   displayName = '';
   email = '';
   password = '';
-  bootstrapToken = '';
+  passwordConfirmation = '';
   token = '';
   busy = false;
   error = '';
   message = '';
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly toastService: ToastService,
+  ) {}
 
   ngOnInit(): void {
     const query = new URLSearchParams(window.location.search);
@@ -42,6 +46,7 @@ export class AuthComponent implements OnInit {
     } else if (path.endsWith('/reset-password')) {
       this.mode = 'reset';
     }
+    this.publishHeaderState();
   }
 
   setMode(mode: AuthMode): void {
@@ -49,6 +54,8 @@ export class AuthComponent implements OnInit {
     this.error = '';
     this.message = '';
     this.password = '';
+    this.passwordConfirmation = '';
+    this.publishHeaderState();
   }
 
   login(): void {
@@ -59,16 +66,23 @@ export class AuthComponent implements OnInit {
   }
 
   register(): void {
+    if (this.password !== this.passwordConfirmation) {
+      this.error = 'Die Passwörter stimmen nicht überein.';
+      this.message = '';
+      this.toastService.show(false, this.error);
+      return;
+    }
+
     const payload = {
       family_name: this.familyName,
       display_name: this.displayName,
       email: this.email,
       password: this.password,
-      ...(this.bootstrapToken.trim() ? { bootstrap_token: this.bootstrapToken.trim() } : {}),
     };
     this.run(this.authService.register(payload), (result) => {
       this.message = result.message;
       this.password = '';
+      this.passwordConfirmation = '';
     });
   }
 
@@ -76,10 +90,12 @@ export class AuthComponent implements OnInit {
     if (!this.token) {
       this.mode = 'login';
       this.error = 'Der Bestätigungslink enthält kein Token.';
+      this.publishHeaderState();
       return;
     }
     this.run(this.authService.verifyEmail(this.token), (result) => {
       this.mode = 'login';
+      this.publishHeaderState();
       this.message = result.message;
       this.clearQuery();
     });
@@ -96,6 +112,7 @@ export class AuthComponent implements OnInit {
       this.authService.acceptInvitation(this.token, this.displayName, this.password),
       (result) => {
         this.mode = 'login';
+        this.publishHeaderState();
         this.message = result.message;
         this.password = '';
         this.clearQuery();
@@ -112,6 +129,7 @@ export class AuthComponent implements OnInit {
   resetPassword(): void {
     this.run(this.authService.resetPassword(this.token, this.password), (result) => {
       this.mode = 'login';
+      this.publishHeaderState();
       this.message = result.message;
       this.password = '';
       this.clearQuery();
@@ -145,5 +163,20 @@ export class AuthComponent implements OnInit {
   private clearQuery(): void {
     window.history.replaceState({}, '', '/');
     this.token = '';
+  }
+
+  private publishHeaderState(): void {
+    const titles: Record<AuthMode, string> = {
+      login: 'Anmeldung',
+      register: 'Registrierung',
+      verify: 'E-Mail bestätigen',
+      accept: 'Einladung annehmen',
+      reset: 'Passwort zurücksetzen',
+      forgot: 'Passwort vergessen',
+    };
+    this.headerStateChange.emit({
+      title: titles[this.mode],
+      showBack: this.mode !== 'login',
+    });
   }
 }

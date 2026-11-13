@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../services/api.service';
 import { CalendarService, Category } from '../../../services/calendar.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 
@@ -20,6 +21,7 @@ export class CategoriesComponent implements OnInit, OnChanges {
 
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
+  private readonly toastService = inject(ToastService);
   public dbCategories: Category[] = [];
   public tempCatLabel = '';
   public tempCatShort = '';
@@ -64,7 +66,7 @@ export class CategoriesComponent implements OnInit, OnChanges {
     const label = this.tempCatLabel.trim();
     const short = this.tempCatShort.trim();
     if (!label || !short) {
-      this.errorMessage = 'Name und Kürzel dürfen nicht leer sein.';
+      this.toastService.show(false, 'Name und Kürzel dürfen nicht leer sein.');
       return;
     }
 
@@ -109,7 +111,7 @@ export class CategoriesComponent implements OnInit, OnChanges {
       },
       error: () => {
         this.saving = false;
-        this.errorMessage = 'Kategorien konnten nicht neu geladen werden.';
+        this.toastService.show(false, 'Kategorien konnten nicht neu geladen werden.');
         this.publishEditorActions();
       },
     });

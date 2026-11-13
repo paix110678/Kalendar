@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, HeaderPreferences } from '../../../services/api.service';
 import { CalendarService } from '../../../services/calendar.service';
+import { ToastService } from '../../../services/toast.service';
 import { AdminEditorActions } from '../admin-editor-actions';
 
 const DEFAULT_PREFERENCES: HeaderPreferences = {
@@ -24,6 +25,7 @@ export class HeaderSettingsComponent implements OnInit {
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly toastService = inject(ToastService);
   private savedPreferences: HeaderPreferences = { ...DEFAULT_PREFERENCES };
 
   public preferences: HeaderPreferences = { ...DEFAULT_PREFERENCES };
@@ -46,6 +48,7 @@ export class HeaderSettingsComponent implements OnInit {
         console.error('Kopfzeileneinstellungen konnten nicht geladen werden:', error);
         this.loading = false;
         this.error = 'Kopfzeileneinstellungen konnten nicht geladen werden.';
+        this.toastService.show(false, this.error);
         this.publishEditorActions();
         this.changeDetector.markForCheck();
       },

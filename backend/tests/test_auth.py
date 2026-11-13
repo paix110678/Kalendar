@@ -126,6 +126,7 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
     with TestClient(main.app) as client:
         assert client.get("/api/users").status_code == 401
         admin = _register_admin(client, "admin@example.invalid", "One Family", sent_emails)
+        first_family = client.get("/api/auth/family").json()
         csrf = client.cookies.get("kalendar_csrf")
         assert csrf
         assert client.get("/api/auth/me").headers["X-CSRF-Token"] == csrf
@@ -272,6 +273,10 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
 
         second_client = TestClient(main.app)
         _register_admin(second_client, "second@example.invalid", "Other Family", sent_emails)
+        second_family = second_client.get("/api/auth/family").json()
+        assert first_family["id"] != second_family["id"]
+        assert first_family["name"] == "One Family"
+        assert second_family["name"] == "Other Family"
         second_users = second_client.get("/api/users").json()
         assert [user["name"] for user in second_users] == ["Family Admin"]
         assert second_client.get("/api/blocks/all").json() == []

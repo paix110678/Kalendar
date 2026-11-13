@@ -2,9 +2,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EMPTY, asyncScheduler, catchError, finalize, firstValueFrom, observeOn, switchMap, timeout } from 'rxjs';
+import { EMPTY, TimeoutError, asyncScheduler, catchError, finalize, firstValueFrom, observeOn, switchMap, timeout } from 'rxjs';
 import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../services/api.service';
 import { CalendarService, User } from '../../../../services/calendar.service';
+import { ToastService } from '../../../../services/toast.service';
 import { AdminEditorActions } from '../../admin-editor-actions';
 import { ColorPickerComponent } from '../../color-picker/color-picker.component';
 
@@ -39,6 +40,7 @@ export class MemberDetailsComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
   private readonly calendarService = inject(CalendarService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly toastService = inject(ToastService);
 
   readonly daysOfWeek = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
   readonly bundeslaender = GERMAN_STATES;
@@ -60,12 +62,8 @@ export class MemberDetailsComponent implements OnChanges {
 
   plans: PlanDefinition[] = [];
   personEventTypes: PersonEventType[] = [];
-  eventTypeName = '';
-  eventTypeColor = '#fd7e14';
   eventTypesLoading = false;
-  eventTypeSaving = false;
   eventTypeError = '';
-  eventTypeMessage = '';
   plansLoading = false;
   assignmentLoading = false;
   selectedPlanId: number | null = null;
@@ -79,9 +77,7 @@ export class MemberDetailsComponent implements OnChanges {
   profileError = '';
   planMessage = '';
   planError = '';
-  selectedEventTypeId: number | null = null;
   private savedProfileSnapshot = '';
-  private savedEventTypesSnapshot = '';
   private savedAssignmentSnapshot = '';
 
   private loadedUserId: number | null = null;
@@ -118,9 +114,9 @@ export class MemberDetailsComponent implements OnChanges {
     this.personEventTypes = [];
     this.scheduleEntries = [];
     this.assignmentLoading = false;
-    this.eventTypeName = '';
+    this.eventTypesLoading = false;
+    this.profileSaving = false;
     this.eventTypeError = '';
-    this.eventTypeMessage = '';
     this.loadPersonEventTypes(this.user.id);
     this.loadPlans();
     this.publishEditorActions();
@@ -173,6 +169,7 @@ export class MemberDetailsComponent implements OnChanges {
         if (this.user.id !== userId) return;
         this.plansLoading = false;
         this.planError = 'Die Pläne konnten nicht geladen werden.';
+        this.toastService.show(false, this.planError);
         this.changeDetector.markForCheck();
       },
     });
@@ -184,8 +181,6 @@ export class MemberDetailsComponent implements OnChanges {
       next: (eventTypes) => {
         if (this.user.id !== userId) return;
         this.personEventTypes = eventTypes;
-        this.savedEventTypes = eventTypes.map((eventType) => ({ ...eventType }));
-        this.savedEventTypesSnapshot = this.eventTypesSnapshot();
         this.eventTypesLoading = false;
         this.publishEditorActions();
         this.changeDetector.markForCheck();
@@ -221,6 +216,7 @@ export class MemberDetailsComponent implements OnChanges {
         this.assignmentLoading = false;
         if (!assignment || assignment.plan_id !== planId) {
           this.planError = 'Die gespeicherte Plan-Zuordnung für diese Person wurde nicht gefunden.';
+          this.toastService.show(false, this.planError);
           this.changeDetector.markForCheck();
           return;
         }
@@ -242,6 +238,7 @@ export class MemberDetailsComponent implements OnChanges {
         if (this.user.id !== userId || this.selectedPlanId !== planId) return;
         this.assignmentLoading = false;
         this.planError = 'Die gespeicherte Plan-Zuordnung konnte nicht geladen werden.';
+        this.toastService.show(false, this.planError);
         this.changeDetector.markForCheck();
       },
     });
@@ -302,76 +299,58 @@ export class MemberDetailsComponent implements OnChanges {
   }
 
   async saveChanges(): Promise<void> {
+    const userId = this.user.id;
+    const profileSnapshotToSave = this.profileSnapshot();
+    const profileToSave = {
+      name: this.name.trim(),
+      role: this.role,
+      color_code: this.colorCode,
+      current_points: this.currentPoints,
+      status_school: this.schoolStatus,
+      status_sport: this.sportStatus,
+      state_code: this.stateCode,
+      is_active: this.isActive,
+    };
     this.profileError = '';
     this.profileMessage = '';
     try {
-      if (this.profileSnapshot() !== this.savedProfileSnapshot) {
-        if (!this.name.trim()) {
+      if (profileSnapshotToSave !== this.savedProfileSnapshot) {
+        if (!profileToSave.name) {
           this.profileError = 'Bitte einen Namen eingeben.';
+          this.toastService.show(false, this.profileError);
           return;
         }
         this.profileSaving = true;
         this.publishEditorActions();
-        const profile = {
-          name: this.name.trim(),
-          role: this.role,
-          color_code: this.colorCode,
-          current_points: this.currentPoints,
-          status_school: this.schoolStatus,
-          status_sport: this.sportStatus,
-          state_code: this.stateCode,
-          is_active: this.isActive,
-        };
-        if (this.stateCode) {
-          await firstValueFrom(this.calendarService.ensureHolidayState(this.stateCode).pipe(timeout({ first: 30000 })));
+        if (profileToSave.state_code) {
+          await firstValueFrom(this.calendarService.ensureHolidayState(profileToSave.state_code).pipe(timeout({ first: 30000 })));
         }
-        await firstValueFrom(this.calendarService.updateUserProfile(this.user.id, profile));
-        this.savedProfileSnapshot = this.profileSnapshot();
-        this.profileMessage = this.stateCode
+        await firstValueFrom(this.calendarService.updateUserProfile(userId, profileToSave));
+        if (this.user.id !== userId) return;
+        this.savedProfileSnapshot = profileSnapshotToSave;
+        this.profileMessage = profileToSave.state_code
           ? 'Einstellungen gespeichert; Ferien und Feiertage wurden aktualisiert.'
           : 'Einstellungen gespeichert.';
       }
 
-      for (const eventType of this.personEventTypes) {
-        const saved = this.savedEventTypes.find((item) => item.id === eventType.id);
-        if (saved && (saved.name !== eventType.name || saved.color !== eventType.color)) {
-          const updated = await firstValueFrom(
-            this.apiService.updatePersonEventType(this.user.id, eventType.id, eventType.name.trim(), eventType.color)
-              .pipe(timeout({ first: 15000 })),
-          );
-          this.personEventTypes = this.personEventTypes.map((current) =>
-            current.id === updated.id ? updated : current,
-          );
-        }
-      }
-      if (this.eventTypeName.trim()) {
-        const created = await firstValueFrom(
-          this.apiService.createPersonEventType(this.user.id, this.eventTypeName.trim(), this.eventTypeColor)
-            .pipe(timeout({ first: 15000 })),
-        );
-        this.personEventTypes = [...this.personEventTypes, created].sort((a, b) => a.id - b.id);
-        this.eventTypeName = '';
-      }
-      this.savedEventTypes = this.personEventTypes.map((eventType) => ({ ...eventType }));
-      this.savedEventTypesSnapshot = this.eventTypesSnapshot();
-      this.eventTypeMessage = 'Persönliche Fachliste wurde gespeichert.';
       if (this.assignmentSnapshot() !== this.savedAssignmentSnapshot) {
         this.applyPlan();
       }
     } catch (error: unknown) {
+      if (this.user.id !== userId) return;
       this.profileError = 'Änderungen konnten nicht vollständig gespeichert werden. Bitte prüfen und erneut versuchen.';
-      this.eventTypeError = this.getEventTypeErrorMessage(error);
+      if (error instanceof TimeoutError) this.toastService.show(false, this.profileError);
     } finally {
-      this.profileSaving = false;
-      this.eventTypeSaving = false;
-      this.publishEditorActions();
+      if (this.user.id === userId) {
+        this.profileSaving = false;
+        this.publishEditorActions();
+      }
       this.changeDetector.markForCheck();
     }
   }
 
   cancelChanges(): void {
     this.profileError = '';
-    this.eventTypeError = '';
     this.calendarService.reloadUsers().subscribe({
       next: (users) => {
         const savedUser = users.find((item) => item.id === this.user.id);
@@ -386,8 +365,6 @@ export class MemberDetailsComponent implements OnChanges {
         this.stateCode = savedUser.state_code;
         this.isActive = savedUser.is_active;
         this.savedProfileSnapshot = this.profileSnapshot();
-        this.eventTypeName = '';
-        this.selectedEventTypeId = null;
         this.loadPersonEventTypes(savedUser.id);
         this.selectedPlanId = savedUser.assigned_plan_id;
         this.loadPlans();
@@ -396,71 +373,28 @@ export class MemberDetailsComponent implements OnChanges {
       error: (error: unknown) => {
         console.error('Mitgliedsdaten konnten beim Abbrechen nicht neu geladen werden:', error);
         this.profileError = 'Der gespeicherte Stand konnte nicht neu geladen werden.';
+        this.toastService.show(false, this.profileError);
       },
     });
   }
 
   publishEditorActions(): void {
     const dirty = this.profileSnapshot() !== this.savedProfileSnapshot
-      || this.eventTypesSnapshot() !== this.savedEventTypesSnapshot
-      || this.eventTypeName.trim() !== ''
       || this.assignmentSnapshot() !== this.savedAssignmentSnapshot;
     this.editorActionsChange.emit({
       dirty,
-      canDelete: this.selectedEventTypeId !== null,
-      busy: this.profileSaving || this.eventTypeSaving || this.planApplying,
+      canDelete: false,
+      busy: this.profileSaving || this.planApplying,
       save: () => { void this.saveChanges(); },
       cancel: () => this.cancelChanges(),
-      delete: () => this.deleteSelectedEventType(),
     });
   }
-
-  selectEventType(eventType: PersonEventType): void {
-    this.selectedEventTypeId = eventType.id;
-    this.publishEditorActions();
-  }
-
-  private deleteSelectedEventType(): void {
-    const eventType = this.personEventTypes.find((item) => item.id === this.selectedEventTypeId);
-    if (!eventType || !confirm(`„${eventType.name}“ aus der Fachliste von ${this.user.name} löschen?`)) return;
-    this.eventTypeSaving = true;
-    this.apiService.deletePersonEventType(this.user.id, eventType.id).pipe(timeout({ first: 15000 })).subscribe({
-      next: () => {
-        this.personEventTypes = this.personEventTypes.filter((item) => item.id !== eventType.id);
-        this.savedEventTypes = this.personEventTypes.map((item) => ({ ...item }));
-        this.savedEventTypesSnapshot = this.eventTypesSnapshot();
-        this.selectedEventTypeId = null;
-        this.eventTypeSaving = false;
-        this.calendarService.refreshAllBlocks().subscribe({
-          error: (error: unknown) => console.error('Kalender konnte nach Löschen des persönlichen Fachs nicht aktualisiert werden:', error),
-        });
-        this.publishEditorActions();
-      },
-      error: (error: unknown) => {
-        this.eventTypeSaving = false;
-        this.eventTypeError = this.getEventTypeErrorMessage(error);
-        this.publishEditorActions();
-      },
-    });
-  }
-
-  private get savedEventTypes(): PersonEventType[] {
-    return this.savedEventTypesCache;
-  }
-  private set savedEventTypes(value: PersonEventType[]) {
-    this.savedEventTypesCache = value;
-  }
-  private savedEventTypesCache: PersonEventType[] = [];
 
   private profileSnapshot(): string {
     return JSON.stringify([
       this.name, this.role, this.colorCode, this.currentPoints,
       this.schoolStatus, this.sportStatus, this.stateCode, this.isActive,
     ]);
-  }
-
-  private eventTypesSnapshot(): string {
-    return JSON.stringify(this.personEventTypes.map(({ id, name, color }) => ({ id, name, color })));
   }
 
   private assignmentSnapshot(): string {
@@ -482,11 +416,13 @@ export class MemberDetailsComponent implements OnChanges {
     const plan = this.selectedPlan;
     if (!plan || this.scheduleEntries.length === 0) {
       this.planError = 'Bitte zuerst einen gültigen Plan auswählen.';
+      this.toastService.show(false, this.planError);
       return;
     }
 
     if (this.scheduleEntries.some((entry) => entry.event_type_id === null)) {
       this.planError = 'Bitte für jede Stunde ein Plan-Fach oder eine Eventart auswählen.';
+      this.toastService.show(false, this.planError);
       return;
     }
     const subjects: PlanSubject[] = this.scheduleEntries
@@ -499,6 +435,7 @@ export class MemberDetailsComponent implements OnChanges {
       }));
     if (!this.assignmentTitle.trim()) {
       this.planError = 'Bitte einen Titel für die Plan-Zuordnung eingeben.';
+      this.toastService.show(false, this.planError);
       return;
     }
 
@@ -506,6 +443,7 @@ export class MemberDetailsComponent implements OnChanges {
     for (const conflict of this.conflicts) {
       if (!conflict.action) {
         this.planError = 'Bitte entscheide für jeden Konflikt: verschieben oder löschen.';
+        this.toastService.show(false, this.planError);
         return;
       }
       resolutions.push(conflict.action === 'delete'
@@ -556,13 +494,6 @@ export class MemberDetailsComponent implements OnChanges {
     const green = parseInt(color.slice(3, 5), 16);
     const blue = parseInt(color.slice(5, 7), 16);
     return (red * 299 + green * 587 + blue * 114) / 1000 >= 145 ? '#212529' : '#fff';
-  }
-
-  private getEventTypeErrorMessage(error: unknown): string {
-    if (error instanceof HttpErrorResponse && typeof error.error?.detail === 'string') {
-      return error.error.detail;
-    }
-    return 'Die persönliche Fachliste konnte nicht gespeichert werden.';
   }
 
   private handlePlanError(error: HttpErrorResponse): void {

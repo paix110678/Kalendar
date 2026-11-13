@@ -54,14 +54,10 @@
         <small class="muted-message">Ferien und Feiertage werden angezeigt, wenn das Bundesland in der Ferienverwaltung gespeichert ist.</small>
       </label>
     </div>
-    <div class="form-actions">
-      <p class="error-message" role="alert" [hidden]="!profileError">{{ profileError }}</p>
-      <p class="success-message" role="status" [hidden]="!profileMessage">{{ profileMessage }}</p>
-    </div>
   </form>
 
   <section class="plan-section">
-    <h5>Plan auswählen und speichern</h5>
+    <h5>Stundenplan für dieses Mitglied</h5>
     <label class="plan-select">
       <span>Stundenplan</span>
       <select
@@ -69,7 +65,7 @@
         [value]="selectedPlanId ?? ''"
         (change)="onPlanSelection($event)"
         [disabled]="plansLoading">
-        <option value="">Bitte Plan auswählen</option>
+        <option value="">Keinen Stundenplan zuweisen</option>
         @for (plan of plans; track plan.id) {
           <option [value]="plan.id">{{ plan.name }} ({{ plan.start_day }} bis {{ plan.end_day }})</option>
         }
@@ -78,21 +74,24 @@
     @if (plansLoading) {
       <p class="muted-message">Pläne werden geladen …</p>
     } @else if (plans.length === 0) {
-      <p class="muted-message">Es sind noch keine Pläne angelegt. Erstelle zuerst einen Plan in der Planverwaltung.</p>
+      <p class="muted-message">Es gibt noch keine Stundenpläne. Lege zuerst unter Einstellungen → Pläne einen Plan an.</p>
     }
     @if (assignmentLoading) {
-      <p class="muted-message" role="status">Die gespeicherte Plan-Zuordnung wird geladen …</p>
+      <p class="muted-message" role="status">Der zugewiesene Stundenplan wird geladen …</p>
+    }
+    @if (eventTypeError) {
+      <p class="error-message" role="alert">{{ eventTypeError }}</p>
     }
 
     @if (selectedPlan && scheduleEntries.length > 0 && !assignmentLoading) {
       <p class="plan-intro">
-        Jede Stunde wird unabhängig mit einem Fach oder einer Eventart belegt; die Kalenderfarbe kommt automatisch aus dem Eintrag.
+        Wähle für jede Stunde ein Fach oder eine Eventart aus. Die Einträge erscheinen als Termine im Kalender; ihre Farbe wird automatisch übernommen.
       </p>
       @if (personEventTypes.length === 0) {
-        <p class="muted-message">Für diese Person sind noch keine Fächer oder Eventarten für den Stundenplan verfügbar.</p>
+        <p class="muted-message">Für dieses Mitglied sind noch keine Fächer oder Eventarten für den Stundenplan hinterlegt.</p>
       }
       <label class="assignment-title">
-        <span>Titel der Plan-Zuordnung</span>
+        <span>Titel der Kalendertermine</span>
         <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
       <div class="schedule-table-wrapper">
@@ -125,7 +124,7 @@
                           [name]="'event-type-' + day + '-' + period"
                           [(ngModel)]="entry.event_type_id"
                           (ngModelChange)="publishEditorActions()"
-                          [attr.aria-label]="day + ' ' + period + ' Fach oder Eventart'"
+                          [attr.aria-label]="day + ', ' + period + '. Stunde: Fach oder Eventart'"
                           [disabled]="eventTypesLoading || personEventTypes.length === 0"
                           [style.background-color]="getEventTypeColor(entry.event_type_id)"
                           [style.color]="getEventTypeTextColor(entry.event_type_id)"
@@ -140,7 +139,7 @@
                           class="visibility-toggle"
                           [class.visibility-hidden]="!entry.visible"
                           [disabled]="entry.visibilitySaving"
-                          [attr.aria-label]="entry.visible ? day + ', ' + period + '. Stunde ausblenden' : day + ', ' + period + '. Stunde einblenden'"
+                          [attr.aria-label]="entry.visible ? day + ', ' + period + '. Stunde im Kalender ausblenden' : day + ', ' + period + '. Stunde im Kalender einblenden'"
                           [attr.aria-pressed]="entry.visible"
                           (click)="toggleScheduleEventVisibility(entry)">
                           {{ entry.visible ? '👁️' : '🙈' }}
@@ -158,8 +157,8 @@
 
       <div class="conflict-backdrop" [hidden]="!conflictDialogOpen">
       <section class="conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="conflict-heading">
-        <h6 id="conflict-heading">Überschneidungen lösen</h6>
-        <p [hidden]="conflicts.length === 0">Diese bestehenden Blöcke von {{ user.name }} überschneiden sich mit dem Plan. Verschiebe oder lösche jeden betroffenen Block. Die Events anderer Personen bleiben unverändert.</p>
+        <h6 id="conflict-heading">Überschneidungen im Kalender auflösen</h6>
+        <p [hidden]="conflicts.length === 0">Die folgenden Kalendertermine von {{ user.name }} überschneiden sich mit den Planterminen. Verschiebe oder lösche jeden betroffenen Termin. Termine anderer Familienmitglieder bleiben unverändert.</p>
         @for (conflict of conflicts; track conflict.id) {
           <div class="conflict-row">
             <div class="conflict-summary">
@@ -201,7 +200,5 @@
       </section>
       </div>
 
-    <p class="error-message" role="alert" [hidden]="!planError">{{ planError }}</p>
-    <p class="success-message" role="status" [hidden]="!planMessage">{{ planMessage }}</p>
   </section>
 </section>

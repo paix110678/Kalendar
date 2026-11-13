@@ -28,9 +28,6 @@
 .account-avatar,
 .icon-action {
   display: grid;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
   place-items: center;
   padding: 0;
   border: 1px solid rgb(255 255 255 / 55%);
@@ -42,7 +39,7 @@
 .account-avatar {
   width: 30px;
   height: 30px;
-  flex-basis: 30px;
+  flex: 0 0 30px;
   font: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -50,6 +47,9 @@
 }
 
 .icon-action {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   border: 0;
   border-radius: 0;
   background: transparent;
