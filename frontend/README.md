@@ -2,6 +2,12 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.20.
 
+## Kalender-Grid und Versionsnummer
+
+Das Kalender-Grid wird als lokales npm-Paket aus `vendor/` eingebunden. Die verwendete Version ist in `package.json` und `package-lock.json` festgelegt; beide Dateien und das zugehörige Paketarchiv müssen bei einem Update gemeinsam angepasst werden.
+
+Die Deploy-Pipeline setzt die angezeigte Kalender-Version automatisch auf `1.2.<GitHub-Actions-Laufnummer>`. Jeder erfolgreiche Push auf `main` erhält dadurch beim Deployment die nächste Laufnummer.
+
 ## Development server
 
 To start a local development server, run:
