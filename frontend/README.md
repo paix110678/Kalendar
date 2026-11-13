@@ -4,9 +4,9 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Kalender-Grid und Versionsnummer
 
-Das Kalender-Grid wird als lokales npm-Paket aus `vendor/` eingebunden. Die verwendete Version ist in `package.json` und `package-lock.json` festgelegt; beide Dateien und das zugehörige Paketarchiv müssen bei einem Update gemeinsam angepasst werden.
+Das Kalender-Grid wird als lokales npm-Paket aus `vendor/` eingebunden. Aktuell wird Version `0.4.3` verwendet. Die verwendete Version ist in `package.json` und `package-lock.json` festgelegt; beide Dateien und das zugehörige Paketarchiv müssen bei einem Update gemeinsam angepasst werden.
 
-Die Deploy-Pipeline setzt die angezeigte Kalender-Version automatisch auf `1.2.<GitHub-Actions-Laufnummer>`. Jeder Push auf `main` erhält beim Deployment die nächste Laufnummer; dadurch steigt die Patch-Version automatisch um eins. Die Version wird nicht separat in `package.json` gepflegt.
+Die Deploy-Pipeline setzt die angezeigte Kalender-Version bei erfolgreichem Deployment auf `1.2.<GitHub-Actions-Laufnummer>`. Da auch Pull-Request-Prüfungen Laufnummern erhalten, können zwischen Deployments Lücken entstehen. Die Version wird nicht separat in `package.json` gepflegt.
 
 ## Komponenten und Einstellungen
 
