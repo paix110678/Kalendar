@@ -1,55 +1,87 @@
-:host { display: flex; flex: 1; min-width: 0; min-height: 0; }
+:host {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
 
-.admin-page-body { display: flex; flex: 1; min-width: 0; min-height: 0; background: #f8f9fa; padding: 0; flex-direction: column; gap: 20px; box-sizing: border-box; }
+.admin-page-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: #f8f9fa;
+  padding: 0;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
 
-/* Die IDE-Zwei-Spalten-Brücke */
-.admin-split-wrapper { display: flex; flex: 1; overflow: hidden; background: white; border: 1px solid #dee2e6; border-radius: 12px; min-height: 0; }
+.admin-split-wrapper {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  overflow: hidden;
+  min-height: 0;
+}
 
-/* Linker Navigations-Baum */
-.admin-navigation-tree { width: clamp(100px, 22vw, 220px); background: #f8f9fa; padding: 8px 4px; display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; box-sizing: border-box; overflow-y: auto; }
-.tree-headline { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #adb5bd; letter-spacing: 0.8px; margin: 12px 0 4px 4px; }
-.tree-separator { border-top: 1px dashed #dee2e6; margin: 10px 0; }
-.tree-node-btn { width: 100%; border: none; padding: 10px 14px; text-align: left; background: transparent; color: #495057; font-weight: 600; font-size: 13px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box; }
-.tree-node-btn:hover { background: #e9ecef; }
-.member-tree-navigation { display: grid; gap: 2px; margin: -4px 0 6px 12px; padding-left: 9px; border-left: 1px solid #dee2e6; }
-.member-tree-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px; font-size: 12px; }
-.member-tree-item > span:nth-child(2) { flex: 1; }
-.member-active-indicator { display: grid; width: 20px; height: 20px; flex: 0 0 20px; margin-left: auto; place-items: center; color: #2b8a3e; }
-.member-active-indicator svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-.member-active-indicator.member-inactive { color: #c92a2a; }
-.member-tree-item-active { background: #e7f5ff; color: #1971c2; font-weight: 700; }
-.member-tree-color { width: 9px; height: 9px; flex: 0 0 9px; border: 1px solid rgba(0,0,0,.15); border-radius: 50%; }
-.plan-tree-navigation { display: grid; gap: 2px; margin: -4px 0 6px 12px; padding-left: 9px; border-left: 1px solid #dee2e6; }
-.category-tree-group { display: grid; gap: 2px; }
-.category-task-navigation { display: grid; gap: 2px; margin: -2px 0 5px 16px; padding-left: 8px; border-left: 1px solid #dee2e6; }
-.category-task-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 8px; font-size: 11px; }
-.category-task-add { padding: 5px 8px; color: #1971c2; font-size: 11px; }
-.plan-tree-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px; font-size: 12px; }
-.plan-tree-item-active { background: #e7f5ff; color: #1971c2; font-weight: 700; }
-.plan-tree-marker { width: 9px; flex: 0 0 9px; color: #868e96; text-align: center; }
-.plan-tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plan-tree-message { padding: 4px 8px; color: #868e96; font-size: 11px; }
-.plan-tree-error { color: #c92a2a; }
-.plan-tree-retry { width: fit-content; margin-left: 8px; border: 0; background: transparent; color: #1971c2; font: inherit; font-size: 11px; cursor: pointer; }
+.admin-navigation-column {
+  display: flex;
+  flex: 0 0 clamp(90px, 11vw, 130px);
+  min-width: 0;
+  min-height: 0;
+}
 
-/* Reaktive Zustände im Tree */
-.node-active { background: #e7f5ff !important; color: #228be6 !important; font-weight: 700; }
-.node-db { font-weight: 700; }
-.node-db:hover { background: #fff0f6; }
-.node-db-active { background: #fff0f6 !important; color: #d6336c !important; }
+.admin-navigation-column app-admin-navigation-tree {
+  display: flex;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.admin-detail-column {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
 
 /* Rechtes Panel für die Subkomponenten */
-.admin-content-panel { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: 0; overflow: hidden; background: white; }
-.admin-content-scroll { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 0; }
+.admin-content-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: white;
+}
+.admin-content-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+}
 
 @media (max-width: 760px) {
-  .admin-navigation-tree { width: clamp(80px, 28%, 190px); flex-basis: clamp(80px, 28%, 190px); }
-  .member-tree-navigation,
-  .plan-tree-navigation { margin-left: 0; padding-left: 0; border-left: 0; }
-  .category-task-navigation {
-    width: calc(100% - 12px);
-    margin-left: 12px;
-    padding-left: 0;
-    border-left: 0;
+  .admin-page-body {
+    gap: 8px;
+  }
+  .admin-split-wrapper {
+    gap: 8px;
+  }
+  .admin-detail-column {
+    gap: 8px;
+  }
+  .admin-navigation-column {
+    flex-basis: clamp(68px, 15vw, 95px);
   }
 }

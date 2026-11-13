@@ -1,7 +1,24 @@
-import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService, DatabaseBackup, DatabaseBackupList, GERMAN_STATES, Holiday, HolidayStateData, PlanDefinition, TaskDefinition, WeatherLocation } from '../../../services/api.service';
+import {
+  ApiService,
+  DatabaseBackup,
+  DatabaseBackupList,
+  Holiday,
+  HolidayStateData,
+  PlanDefinition,
+  TaskDefinition,
+  WeatherLocation,
+} from '../../../services/api.service';
 import { CalendarService, Category } from '../../../services/calendar.service';
 import { Subscription } from 'rxjs';
 
@@ -20,40 +37,48 @@ import { AdminEditorActions } from '../admin-editor-actions';
 import { EditorActionsFooterComponent } from '../editor-actions-footer/editor-actions-footer.component';
 import { AuthService } from '../../../services/auth.service';
 import { PlatformStatisticsComponent } from '../platform-statistics/platform-statistics.component';
+import {
+  AdminNavigationAction,
+  AdminNavigationComponent,
+  AdminTab,
+} from './admin-navigation.component';
+import { AdminNavigationTreeComponent } from './admin-navigation-tree.component';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    UsersComponent, 
+    CommonModule,
+    FormsModule,
+    UsersComponent,
     AccountManagementComponent,
-    CategoriesComponent, 
-    SystemComponent, 
+    CategoriesComponent,
+    SystemComponent,
     DatabaseComponent,
     PlansComponent,
     HolidaysComponent,
     TasksComponent,
     HeaderSettingsComponent,
     EditorActionsFooterComponent,
-    PlatformStatisticsComponent
+    PlatformStatisticsComponent,
+    AdminNavigationComponent,
+    AdminNavigationTreeComponent,
   ],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css'
+  styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   @Input() activeUsers: User[] = [];
   @Input() activeRewards: any[] = [];
-  
+
   // REPARIERT: Stellt das vom Shell-Template gesuchte Eingangsfeld fehlerfrei wieder her!
   @Input() selectedUser: any = null;
-  
+
   @Output() closeAdmin = new EventEmitter<void>();
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
 
-  public activeTab: 'users' | 'accounts' | 'plans' | 'holidays' | 'categories' | 'system' | 'database' | 'tasks' | 'header' | 'statistics' = 'users';
+  public activeTab: AdminTab = 'users';
   public selectedMemberId: number | null = null;
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
@@ -80,7 +105,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public tasksLoading = false;
   public tasksLoadError = '';
   public selectedTaskId: number | null = null;
-  public expandedSections: Record<'plans' | 'holidays' | 'categories' | 'system' | 'database', boolean> = {
+  public expandedSections: Record<
+    'plans' | 'holidays' | 'categories' | 'system' | 'database',
+    boolean
+  > = {
     plans: false,
     holidays: false,
     categories: false,
@@ -106,31 +134,107 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.authService.currentAccount?.is_platform_admin === true;
   }
 
+  get showNavigationTree(): boolean {
+    return ['users', 'plans', 'holidays', 'categories', 'tasks', 'system', 'database'].includes(
+      this.activeTab,
+    );
+  }
+
   ngOnInit(): void {
-    this.subscriptions.add(this.calendarService.categories$.subscribe((categories) => {
-      this.calendarCategories = categories;
-      if (this.selectedCategoryId !== null
-        && !categories.some((category) => category.id === this.selectedCategoryId)) {
-        this.selectedCategoryId = null;
-      }
-    }));
-    this.subscriptions.add(this.calendarService.savedPlansState$.subscribe((state) => {
-      if (state.data !== null) this.savedPlans = state.data;
-      this.plansLoading = state.loading;
-      this.plansLoadError = state.error ?? '';
-    }));
-    this.subscriptions.add(this.calendarService.savedHolidayDataState$.subscribe((state) => {
-      if (state.data !== null) {
-        this.savedHolidayStates = state.data.states;
-        this.savedHolidays = state.data.holidays;
-      }
-      this.holidaysLoading = state.loading;
-      this.holidaysLoadError = state.error ?? '';
-    }));
+    this.subscriptions.add(
+      this.calendarService.categories$.subscribe((categories) => {
+        this.calendarCategories = categories;
+        if (
+          this.selectedCategoryId !== null &&
+          !categories.some((category) => category.id === this.selectedCategoryId)
+        ) {
+          this.selectedCategoryId = null;
+        }
+      }),
+    );
+    this.subscriptions.add(
+      this.calendarService.savedPlansState$.subscribe((state) => {
+        if (state.data !== null) this.savedPlans = state.data;
+        this.plansLoading = state.loading;
+        this.plansLoadError = state.error ?? '';
+      }),
+    );
+    this.subscriptions.add(
+      this.calendarService.savedHolidayDataState$.subscribe((state) => {
+        if (state.data !== null) {
+          this.savedHolidayStates = state.data.states;
+          this.savedHolidays = state.data.holidays;
+        }
+        this.holidaysLoading = state.loading;
+        this.holidaysLoadError = state.error ?? '';
+      }),
+    );
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  onNavigationAction(action: AdminNavigationAction): void {
+    switch (action.type) {
+      case 'members':
+        this.selectMembers();
+        break;
+      case 'member':
+        if (typeof action.id === 'number') this.selectMember(action.id);
+        break;
+      case 'accounts':
+        this.selectAccounts();
+        break;
+      case 'plans':
+        this.openPlans();
+        break;
+      case 'savedPlan':
+        if (typeof action.id === 'number') this.openSavedPlan(action.id);
+        break;
+      case 'holidays':
+        this.openHolidays(typeof action.id === 'string' ? action.id : null);
+        break;
+      case 'categories':
+        this.openCategories(typeof action.id === 'number' ? action.id : null);
+        break;
+      case 'task':
+        this.openTask(typeof action.id === 'number' ? action.id : null, action.categoryId ?? null);
+        break;
+      case 'weather':
+        this.openWeatherConfig();
+        break;
+      case 'weatherLocation':
+        if (typeof action.id === 'number') this.openWeatherLocation(action.id);
+        break;
+      case 'database':
+        this.openDatabase();
+        break;
+      case 'backup':
+        if (typeof action.id === 'string') this.openDatabase(action.id);
+        break;
+      case 'header':
+        this.openHeaderSettings();
+        break;
+      case 'statistics':
+        this.openStatistics();
+        break;
+      case 'refreshPlans':
+        this.refreshSavedPlans();
+        break;
+      case 'refreshHolidays':
+        this.refreshSavedHolidays();
+        break;
+      case 'refreshTasks':
+        this.refreshSavedTasks();
+        break;
+      case 'refreshWeather':
+        this.refreshWeatherLocations();
+        break;
+      case 'refreshBackups':
+        this.refreshDatabaseBackups();
+        break;
+    }
   }
 
   openPlans(): void {
@@ -213,7 +317,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.tasks = tasks;
         this.tasksLoading = false;
         this.tasksLoadError = '';
-        if (this.selectedTaskId !== null && !tasks.some((task) => task.id === this.selectedTaskId)) {
+        if (
+          this.selectedTaskId !== null &&
+          !tasks.some((task) => task.id === this.selectedTaskId)
+        ) {
           this.selectedTaskId = null;
         }
       },
@@ -234,12 +341,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  getTasksForCategory(categoryId: number): TaskDefinition[] {
-    return this.tasks
-      .filter((task) => task.category_id === categoryId)
-      .sort((left, right) => left.title.localeCompare(right.title, 'de'));
-  }
-
   refreshSavedHolidays(): void {
     this.calendarService.loadSavedHolidayData();
   }
@@ -253,8 +354,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.expandedSections.database = true;
     if (backupId === null && shouldLoad) {
       this.apiService.getDatabaseTables().subscribe({
-        next: (tables) => this.dbTables = tables,
-        error: (error: unknown) => console.error('Datenbanktabellen konnten nicht geladen werden:', error),
+        next: (tables) => (this.dbTables = tables),
+        error: (error: unknown) =>
+          console.error('Datenbanktabellen konnten nicht geladen werden:', error),
       });
       this.refreshDatabaseBackups();
     }
@@ -299,8 +401,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.weatherLocations = locations;
     this.weatherLocationsLoading = false;
     this.weatherLocationsError = '';
-    if (this.selectedWeatherLocationId !== null
-      && !locations.some((location) => location.id === this.selectedWeatherLocationId)) {
+    if (
+      this.selectedWeatherLocationId !== null &&
+      !locations.some((location) => location.id === this.selectedWeatherLocationId)
+    ) {
       this.selectedWeatherLocationId = locations.find((location) => location.is_active)?.id ?? null;
     }
   }
@@ -314,7 +418,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   saveEditorChanges(): void {
-    if (!this.editorActions || (!this.editorActions.dirty && !this.editorActions.showSave) || this.editorActions.busy) return;
+    if (
+      !this.editorActions ||
+      (!this.editorActions.dirty && !this.editorActions.showSave) ||
+      this.editorActions.busy
+    )
+      return;
     this.editorMessage = '';
     this.editorActions.save();
   }
@@ -350,15 +459,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.databaseBackupsError = '';
   }
 
-  databaseBackupLabel(backup: DatabaseBackup): string {
-    const date = new Date(backup.created_at);
-    if (Number.isNaN(date.getTime())) return backup.id;
-    return `${new Intl.DateTimeFormat('de-DE', {
-      dateStyle: 'medium',
-      timeStyle: 'medium',
-    }).format(date)} · ${backup.id.slice(-6)}`;
-  }
-
   onHolidayStateAdded(data: HolidayStateData): void {
     this.expandedSections.holidays = true;
     this.savedHolidayStates = [...new Set([...this.savedHolidayStates, data.state_code])].sort();
@@ -380,10 +480,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.selectedHolidayState && !data.states.includes(this.selectedHolidayState)) {
       this.selectedHolidayState = null;
     }
-  }
-
-  holidayStateName(code: string): string {
-    return GERMAN_STATES.find((state) => state.code === code)?.name ?? code;
   }
 
   selectMembers(): void {

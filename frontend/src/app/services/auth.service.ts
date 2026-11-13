@@ -49,22 +49,21 @@ export interface AccountUpdate {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiBase = window.location.port === '4200'
-    ? `${window.location.protocol}//${window.location.hostname}:8000/api`
-    : '/api';
+  private readonly apiBase =
+    window.location.port === '4200'
+      ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+      : '/api';
   private readonly stateSubject = new BehaviorSubject<AuthState>({
     status: 'loading',
     account: null,
     error: null,
   });
   readonly state$ = this.stateSubject.asObservable();
-  private reloadingAfterSessionExpiry = false;
 
   constructor(private readonly http: HttpClient) {
     if (typeof window !== 'undefined') {
       window.addEventListener('kalendar:session-expired', () => {
         this.stateSubject.next({ status: 'ready', account: null, error: null });
-        this.reloadToClearFamilyData();
       });
     }
     this.refreshSession();
@@ -100,28 +99,23 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthAccount> {
-    return this.http.post<AuthAccount>(`${this.apiBase}/auth/login`, { email, password }, { observe: 'response' }).pipe(
-      map((response: HttpResponse<AuthAccount>) => {
-        if (!response.body) throw new Error('Die Serverantwort zur Anmeldung war leer.');
-        return response.body;
-      }),
-      tap((account) => this.stateSubject.next({ status: 'ready', account, error: null })),
-    );
+    return this.http
+      .post<AuthAccount>(`${this.apiBase}/auth/login`, { email, password }, { observe: 'response' })
+      .pipe(
+        map((response: HttpResponse<AuthAccount>) => {
+          if (!response.body) throw new Error('Die Serverantwort zur Anmeldung war leer.');
+          return response.body;
+        }),
+        tap((account) => this.stateSubject.next({ status: 'ready', account, error: null })),
+      );
   }
 
   logout(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiBase}/auth/logout`, {}).pipe(
       tap(() => {
         this.stateSubject.next({ status: 'ready', account: null, error: null });
-        this.reloadToClearFamilyData();
       }),
     );
-  }
-
-  private reloadToClearFamilyData(): void {
-    if (typeof window === 'undefined' || this.reloadingAfterSessionExpiry) return;
-    this.reloadingAfterSessionExpiry = true;
-    window.location.reload();
   }
 
   register(payload: {
@@ -139,18 +133,29 @@ export class AuthService {
   }
 
   resendVerification(email: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.apiBase}/auth/resend-verification`, { email });
+    return this.http.post<{ message: string }>(`${this.apiBase}/auth/resend-verification`, {
+      email,
+    });
   }
 
   requestPasswordReset(email: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.apiBase}/auth/request-password-reset`, { email });
+    return this.http.post<{ message: string }>(`${this.apiBase}/auth/request-password-reset`, {
+      email,
+    });
   }
 
   resetPassword(token: string, password: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.apiBase}/auth/reset-password`, { token, password });
+    return this.http.post<{ message: string }>(`${this.apiBase}/auth/reset-password`, {
+      token,
+      password,
+    });
   }
 
-  acceptInvitation(token: string, displayName: string, password: string): Observable<{ message: string }> {
+  acceptInvitation(
+    token: string,
+    displayName: string,
+    password: string,
+  ): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiBase}/auth/accept-invitation`, {
       token,
       display_name: displayName,

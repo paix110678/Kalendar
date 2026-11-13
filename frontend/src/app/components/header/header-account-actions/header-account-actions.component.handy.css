@@ -10,6 +10,12 @@
     flex-basis: 34px;
   }
 
+  .account-profile {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
   .icon-action {
     font-size: 23px;
   }
@@ -23,7 +29,24 @@
     flex-basis: 30px;
   }
 
+  .account-profile {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
   .icon-action {
     font-size: 21px;
+  }
+
+  .account-avatar {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+  }
+
+  .icon-action svg {
+    width: 24px;
+    height: 24px;
   }
 }

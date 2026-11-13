@@ -1,292 +1,152 @@
 <div class="admin-page-body">
-  <nav class="admin-top-navigation" aria-label="Einstellungsbereiche">
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'users'" (click)="selectMembers()">👥 Mitglieder</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'plans'" (click)="openPlans()">📅 Pläne</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'holidays'" (click)="openHolidays()">🏖️ Ferien</button>
-    <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'categories' || activeTab === 'tasks'" (click)="openCategories()">🏷️ Kategorien</button>
-    @if (isAdmin) {
-      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'accounts'" (click)="selectAccounts()">🔐 Konten</button>
-      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'system'" (click)="openWeatherConfig()">🌤️ Wetter</button>
-      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'header'" (click)="openHeaderSettings()">🧭 Anzeige</button>
-      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'database'" (click)="openDatabase()">🗄️ DB-Viewer</button>
-    }
-    @if (isPlatformAdmin) {
-      <button type="button" class="top-navigation-button" [class.top-navigation-active]="activeTab === 'statistics'" (click)="openStatistics()">📊 Statistik</button>
-    }
-  </nav>
+  <app-admin-navigation
+    [activeTab]="activeTab"
+    [isAdmin]="isAdmin"
+    [isPlatformAdmin]="isPlatformAdmin"
+    (action)="onNavigationAction($event)"
+  >
+  </app-admin-navigation>
 
   <div class="admin-split-wrapper">
-    
-    <div class="admin-navigation-tree">
-      @if (activeTab === 'users' && activeUsers.length > 0) {
-        <div class="member-tree-navigation" aria-label="Familienmitglieder">
-          @for (user of activeUsers; track user.id) {
-            <button
-              type="button"
-              class="tree-node-btn member-tree-item"
-              [class.member-tree-item-active]="activeTab === 'users' && selectedMemberId === user.id"
-              (click)="selectMember(user.id)">
-              <span class="member-tree-color" [style.background-color]="user.color_code" aria-hidden="true"></span>
-              <span>{{ user.name }}</span>
-              <span class="member-active-indicator" [class.member-inactive]="!user.is_active">
-                @if (user.is_active) {
-                  <svg viewBox="0 0 24 24" role="img" [attr.aria-label]="user.name + ' aktiv'">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="m8 12 2.5 2.5L16.5 9" />
-                  </svg>
-                } @else {
-                  <svg viewBox="0 0 24 24" role="img" [attr.aria-label]="user.name + ' inaktiv'">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M8 12h8" />
-                  </svg>
-                }
-              </span>
-            </button>
+    @if (showNavigationTree) {
+      <div class="admin-navigation-column">
+        <app-admin-navigation-tree
+          [activeUsers]="activeUsers"
+          [activeTab]="activeTab"
+          [selectedMemberId]="selectedMemberId"
+          [expandedSections]="expandedSections"
+          [savedPlans]="savedPlans"
+          [selectedPlanId]="selectedPlanId"
+          [plansLoading]="plansLoading"
+          [plansLoadError]="plansLoadError"
+          [savedHolidayStates]="savedHolidayStates"
+          [selectedHolidayState]="selectedHolidayState"
+          [holidaysLoading]="holidaysLoading"
+          [holidaysLoadError]="holidaysLoadError"
+          [calendarCategories]="calendarCategories"
+          [selectedCategoryId]="selectedCategoryId"
+          [tasks]="tasks"
+          [tasksLoading]="tasksLoading"
+          [tasksLoadError]="tasksLoadError"
+          [selectedTaskId]="selectedTaskId"
+          [selectedTaskCategoryId]="selectedTaskCategoryId"
+          [weatherLocations]="weatherLocations"
+          [weatherLocationsLoading]="weatherLocationsLoading"
+          [weatherLocationsError]="weatherLocationsError"
+          [selectedWeatherLocationId]="selectedWeatherLocationId"
+          [databaseBackups]="databaseBackups"
+          [databaseBackupErrors]="databaseBackupErrors"
+          [databaseBackupsLoading]="databaseBackupsLoading"
+          [databaseBackupsError]="databaseBackupsError"
+          [selectedDatabaseBackupId]="selectedDatabaseBackupId"
+          (action)="onNavigationAction($event)"
+        >
+        </app-admin-navigation-tree>
+      </div>
+    }
+
+    <div class="admin-detail-column">
+      <div class="admin-content-panel">
+        <div class="admin-content-scroll">
+          @if (activeTab === 'users') {
+            <app-users
+              [activeUsers]="activeUsers"
+              [selectedUserId]="selectedMemberId"
+              (editorActionsChange)="onEditorActionsChanged($event)"
+              (memberClosed)="selectedMemberId = null"
+            >
+            </app-users>
+          }
+          @if (activeTab === 'accounts' && isAdmin) {
+            <app-account-management [familyProfiles]="activeUsers"></app-account-management>
+          }
+          @defer (on immediate) {
+            @if (activeTab === 'plans') {
+              <app-plans
+                [initialPlans]="savedPlans"
+                [selectedPlanId]="selectedPlanId"
+                (editorActionsChange)="onEditorActionsChanged($event)"
+                (plansChanged)="onPlansChanged($event)"
+              >
+              </app-plans>
+            }
+            @if (activeTab === 'holidays') {
+              <app-holidays
+                [selectedStateCode]="selectedHolidayState"
+                [savedStateCodes]="savedHolidayStates"
+                [savedHolidays]="savedHolidays"
+                [loadingSavedHolidays]="holidaysLoading"
+                [savedHolidaysError]="holidaysLoadError"
+                (editorActionsChange)="onEditorActionsChanged($event)"
+                (stateAdded)="onHolidayStateAdded($event)"
+                (dataChanged)="onSavedHolidayDataChanged($event)"
+                (selectedStateChange)="selectedHolidayState = $event"
+              >
+              </app-holidays>
+            }
+          } @placeholder {
+            @if (activeTab === 'plans') {
+              <p role="status">Pläne werden geladen …</p>
+            } @else if (activeTab === 'holidays') {
+              <p role="status">Ferien und Feiertage werden geladen …</p>
+            }
+          }
+          @if (activeTab === 'categories') {
+            <app-categories
+              [selectedCategoryId]="selectedCategoryId"
+              (editorActionsChange)="onEditorActionsChanged($event)"
+              (selectedCategoryChange)="selectedCategoryId = $event"
+            >
+            </app-categories>
+          }
+          @if (activeTab === 'system') {
+            <app-system
+              [selectedLocationId]="selectedWeatherLocationId"
+              (editorActionsChange)="onEditorActionsChanged($event)"
+              (locationsChanged)="onWeatherLocationsChanged($event)"
+              (selectedLocationChanged)="onWeatherLocationSelected($event)"
+            >
+            </app-system>
+          }
+          @if (activeTab === 'tasks') {
+            <app-tasks
+              [activeUsers]="activeUsers"
+              [categories]="calendarCategories"
+              [tasks]="tasks"
+              [selectedTaskId]="selectedTaskId"
+              [defaultCategoryId]="selectedTaskCategoryId"
+              (tasksChanged)="onTasksChanged($event)"
+              (selectedTaskIdChange)="selectedTaskId = $event"
+              (editorActionsChange)="onEditorActionsChanged($event)"
+            >
+            </app-tasks>
+          }
+          @if (activeTab === 'database') {
+            <app-database
+              [dbTables]="dbTables"
+              [selectedBackupId]="selectedDatabaseBackupId"
+              (editorActionsChange)="onEditorActionsChanged($event)"
+              (selectedBackupIdChange)="selectedDatabaseBackupId = $event"
+              (backupsChanged)="onDatabaseBackupsChanged($event)"
+            >
+            </app-database>
+          }
+          @if (activeTab === 'header') {
+            <app-header-settings (editorActionsChange)="onEditorActionsChanged($event)">
+            </app-header-settings>
+          }
+          @if (activeTab === 'statistics' && isPlatformAdmin) {
+            <app-platform-statistics></app-platform-statistics>
           }
         </div>
-      }
-
-      @if (activeTab === 'plans' && expandedSections.plans) {
-      <div class="plan-tree-navigation" aria-label="Gespeicherte Pläne">
-        @if (plansLoading && savedPlans.length === 0) {
-          <span class="plan-tree-message">Pläne werden geladen …</span>
-        } @else if (plansLoadError && savedPlans.length === 0) {
-          <span class="plan-tree-message plan-tree-error" role="alert">{{ plansLoadError }}</span>
-          <button type="button" class="plan-tree-retry" (click)="refreshSavedPlans()">Erneut versuchen</button>
-        } @else if (savedPlans.length === 0) {
-          <span class="plan-tree-message">Keine Pläne gespeichert</span>
-        } @else {
-          @for (plan of savedPlans; track plan.id) {
-            <button
-              type="button"
-              class="tree-node-btn plan-tree-item"
-              [class.plan-tree-item-active]="activeTab === 'plans' && selectedPlanId === plan.id"
-              (click)="openSavedPlan(plan.id)">
-              <span class="plan-tree-marker" aria-hidden="true">◷</span>
-              <span class="plan-tree-name">{{ plan.name }}</span>
-            </button>
-          }
-        }
-      </div>
-      }
-
-      @if (activeTab === 'holidays' && expandedSections.holidays) {
-      <div class="plan-tree-navigation" aria-label="Gespeicherte Bundesländer">
-        @if (holidaysLoading && savedHolidayStates.length === 0) {
-          <span class="plan-tree-message">Bundesländer werden geladen …</span>
-        } @else if (holidaysLoadError && savedHolidayStates.length === 0) {
-          <span class="plan-tree-message plan-tree-error" role="alert">{{ holidaysLoadError }}</span>
-          <button type="button" class="plan-tree-retry" (click)="refreshSavedHolidays()">Erneut versuchen</button>
-        } @else if (savedHolidayStates.length === 0) {
-          <span class="plan-tree-message">Keine Bundesländer hinzugefügt</span>
-        } @else {
-          @for (state of savedHolidayStates; track state) {
-            <button
-              type="button"
-              class="tree-node-btn plan-tree-item"
-              [class.plan-tree-item-active]="activeTab === 'holidays' && selectedHolidayState === state"
-              (click)="openHolidays(state)">
-              <span class="plan-tree-marker" aria-hidden="true">◷</span>
-              <span class="plan-tree-name">{{ holidayStateName(state) }}</span>
-            </button>
-          }
-        }
-      </div>
-      }
-
-      @if ((activeTab === 'categories' || activeTab === 'tasks') && expandedSections.categories) {
-      <div class="plan-tree-navigation" aria-label="Kategorien">
-        @if (tasksLoading) {
-          <span class="plan-tree-message">Tasks werden geladen …</span>
-        } @else if (tasksLoadError) {
-          <span class="plan-tree-message plan-tree-error" role="alert">{{ tasksLoadError }}</span>
-          <button type="button" class="plan-tree-retry" (click)="refreshSavedTasks()">Erneut versuchen</button>
-        }
-        @if (calendarCategories.length === 0) {
-          <span class="plan-tree-message">Keine Kategorien vorhanden</span>
-        } @else {
-          @for (category of calendarCategories; track category.id) {
-            <div class="category-tree-group">
-              <button
-                type="button"
-                class="tree-node-btn plan-tree-item"
-                [class.plan-tree-item-active]="activeTab === 'categories' && selectedCategoryId === category.id"
-                (click)="openCategories(category.id)">
-                <span class="member-tree-color" [style.background-color]="category.color" aria-hidden="true"></span>
-                <span class="plan-tree-name">{{ category.label }}</span>
-              </button>
-              <div class="category-task-navigation" [attr.aria-label]="'Tasks in ' + category.label">
-                @for (task of getTasksForCategory(category.id); track task.id) {
-                  <button
-                    type="button"
-                    class="tree-node-btn category-task-item"
-                    [class.plan-tree-item-active]="activeTab === 'tasks' && selectedTaskId === task.id"
-                    (click)="openTask(task.id, category.id)">
-                    <span class="member-tree-color" [style.background-color]="task.color" aria-hidden="true"></span>
-                    <span class="plan-tree-name">{{ task.title }}</span>
-                  </button>
-                }
-                <button
-                  type="button"
-                  class="tree-node-btn category-task-add"
-                  [class.plan-tree-item-active]="activeTab === 'tasks' && selectedTaskId === null && selectedTaskCategoryId === category.id"
-                  (click)="openTask(null, category.id)">
-                  ＋ Task hinzufügen
-                </button>
-              </div>
-            </div>
-          }
-        }
-      </div>
-      }
-      
-      @if (activeTab === 'system' && expandedSections.system) {
-      <div class="plan-tree-navigation" aria-label="Gespeicherte Wetterstandorte">
-        @if (weatherLocationsLoading) {
-          <span class="plan-tree-message">Standorte werden geladen …</span>
-        } @else if (weatherLocationsError) {
-          <span class="plan-tree-message plan-tree-error" role="alert">{{ weatherLocationsError }}</span>
-          <button type="button" class="plan-tree-retry" (click)="refreshWeatherLocations()">Erneut versuchen</button>
-        } @else if (weatherLocations.length === 0) {
-          <span class="plan-tree-message">Keine Standorte gespeichert</span>
-        } @else {
-          @for (location of weatherLocations; track location.id) {
-            <button
-              type="button"
-              class="tree-node-btn plan-tree-item"
-              [class.plan-tree-item-active]="activeTab === 'system' && selectedWeatherLocationId === location.id"
-              (click)="openWeatherLocation(location.id)">
-              <span class="plan-tree-marker" aria-hidden="true">{{ location.is_active ? '●' : '◷' }}</span>
-              <span class="plan-tree-name">{{ location.name }}{{ location.weather_city ? ' · ' + location.weather_city : '' }}</span>
-            </button>
-          }
-        }
-      </div>
-      }
-
-      @if (activeTab === 'database' && expandedSections.database) {
-      <div class="plan-tree-navigation" aria-label="Datenbank-Backups">
-        @if (databaseBackupsLoading) {
-          <span class="plan-tree-message">Backups werden geladen …</span>
-        } @else if (databaseBackupsError) {
-          <span class="plan-tree-message plan-tree-error" role="alert">{{ databaseBackupsError }}</span>
-          <button type="button" class="plan-tree-retry" (click)="refreshDatabaseBackups()">Erneut versuchen</button>
-        } @else if (databaseBackups.length === 0 && databaseBackupErrors.length === 0) {
-          <span class="plan-tree-message">Keine Backups vorhanden</span>
-        } @else {
-          @for (backup of databaseBackups; track backup.id) {
-            <button
-              type="button"
-              class="tree-node-btn plan-tree-item"
-              [class.plan-tree-item-active]="activeTab === 'database' && selectedDatabaseBackupId === backup.id"
-              (click)="openDatabase(backup.id)">
-              <span class="plan-tree-marker" aria-hidden="true">◷</span>
-              <span class="plan-tree-name">{{ databaseBackupLabel(backup) }}</span>
-            </button>
-          }
-          @for (error of databaseBackupErrors; track error.file) {
-            <span class="plan-tree-message plan-tree-error" role="alert">{{ error.file }}: {{ error.error }}</span>
-          }
-        }
-      </div>
-      }
-    </div>
-
-    <!-- RECHTER INHALTSBEREICH: LÄDT REAKTIV DIE MODULARISIERTEN EINZEL-COMPONENTS -->
-    <div class="admin-content-panel">
-      <div class="admin-content-scroll">
-      @if (activeTab === 'users') {
-        <app-users
-          [activeUsers]="activeUsers"
-          [selectedUserId]="selectedMemberId"
-          (editorActionsChange)="onEditorActionsChanged($event)"
-          (memberClosed)="selectedMemberId = null">
-        </app-users>
-      }
-      @if (activeTab === 'accounts' && isAdmin) {
-        <app-account-management [familyProfiles]="activeUsers"></app-account-management>
-      }
-      @defer (on immediate) {
-        @if (activeTab === 'plans') {
-          <app-plans
-            [initialPlans]="savedPlans"
-            [selectedPlanId]="selectedPlanId"
-            (editorActionsChange)="onEditorActionsChanged($event)"
-            (plansChanged)="onPlansChanged($event)">
-          </app-plans>
-        }
-        @if (activeTab === 'holidays') {
-          <app-holidays
-            [selectedStateCode]="selectedHolidayState"
-            [savedStateCodes]="savedHolidayStates"
-            [savedHolidays]="savedHolidays"
-            [loadingSavedHolidays]="holidaysLoading"
-            [savedHolidaysError]="holidaysLoadError"
-            (editorActionsChange)="onEditorActionsChanged($event)"
-            (stateAdded)="onHolidayStateAdded($event)"
-            (dataChanged)="onSavedHolidayDataChanged($event)"
-            (selectedStateChange)="selectedHolidayState = $event">
-          </app-holidays>
-        }
-      } @placeholder {
-        @if (activeTab === 'plans') {
-          <p role="status">Pläne werden geladen …</p>
-        } @else if (activeTab === 'holidays') {
-          <p role="status">Ferien und Feiertage werden geladen …</p>
-        }
-      }
-      @if (activeTab === 'categories') {
-        <app-categories
-          [selectedCategoryId]="selectedCategoryId"
-          (editorActionsChange)="onEditorActionsChanged($event)"
-          (selectedCategoryChange)="selectedCategoryId = $event">
-        </app-categories>
-      }
-      @if (activeTab === 'system') {
-        <app-system
-          [selectedLocationId]="selectedWeatherLocationId"
-          (editorActionsChange)="onEditorActionsChanged($event)"
-          (locationsChanged)="onWeatherLocationsChanged($event)"
-          (selectedLocationChanged)="onWeatherLocationSelected($event)">
-        </app-system>
-      }
-      @if (activeTab === 'tasks') {
-        <app-tasks
-          [activeUsers]="activeUsers"
-          [categories]="calendarCategories"
-          [tasks]="tasks"
-          [selectedTaskId]="selectedTaskId"
-          [defaultCategoryId]="selectedTaskCategoryId"
-          (tasksChanged)="onTasksChanged($event)"
-          (selectedTaskIdChange)="selectedTaskId = $event"
-          (editorActionsChange)="onEditorActionsChanged($event)">
-        </app-tasks>
-      }
-      @if (activeTab === 'database') {
-        <app-database
-          [dbTables]="dbTables"
-          [selectedBackupId]="selectedDatabaseBackupId"
-          (editorActionsChange)="onEditorActionsChanged($event)"
-          (selectedBackupIdChange)="selectedDatabaseBackupId = $event"
-          (backupsChanged)="onDatabaseBackupsChanged($event)">
-        </app-database>
-      }
-      @if (activeTab === 'header') {
-        <app-header-settings
-          (editorActionsChange)="onEditorActionsChanged($event)">
-        </app-header-settings>
-      }
-      @if (activeTab === 'statistics' && isPlatformAdmin) {
-        <app-platform-statistics></app-platform-statistics>
-      }
       </div>
       <app-editor-actions-footer
         [actions]="editorActions"
         (save)="saveEditorChanges()"
         (cancel)="cancelEditorChanges()"
-        (delete)="deleteEditorItem()">
+        (delete)="deleteEditorItem()"
+      >
       </app-editor-actions-footer>
     </div>
-
   </div>
 </div>

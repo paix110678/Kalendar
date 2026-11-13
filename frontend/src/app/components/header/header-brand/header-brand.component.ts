@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LogoComponent } from '../logo/logo.component';
 import { HeaderAccountActionsComponent } from '../header-account-actions/header-account-actions.component';
@@ -14,5 +14,7 @@ import { HeaderAccountActionsComponent } from '../header-account-actions/header-
   ],
 })
 export class HeaderBrandComponent {
+  @Input() isCapturingScreenshot = false;
   @Output() adminPageOpened = new EventEmitter<void>();
+  @Output() errorReportRequested = new EventEmitter<void>();
 }

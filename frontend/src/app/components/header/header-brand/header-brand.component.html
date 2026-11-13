@@ -1,4 +1,8 @@
 <div class="header-logo-row">
   <app-logo></app-logo>
-  <app-header-account-actions (adminPageOpened)="adminPageOpened.emit()"></app-header-account-actions>
+  <app-header-account-actions
+    [isCapturingScreenshot]="isCapturingScreenshot"
+    (adminPageOpened)="adminPageOpened.emit()"
+    (errorReportRequested)="errorReportRequested.emit()">
+  </app-header-account-actions>
 </div>

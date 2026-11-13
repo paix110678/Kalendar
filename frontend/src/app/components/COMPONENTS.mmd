@@ -1,0 +1,61 @@
+flowchart TD
+  Root["app-root<br/>AppComponent"] --> Shell["app-calendar-shell<br/>CalendarShellComponent"]
+
+  Shell --> AuthState{"Anmeldestatus"}
+  AuthState -->|nicht angemeldet| Auth["app-auth<br/>AuthComponent"]
+  AuthState -->|angemeldet| AppHeader["app-calendar-header<br/>CalendarHeaderComponent"]
+  AuthState -->|angemeldet| Main["Kalender-/Inhaltsbereich"]
+  AuthState -. Fehlerbericht .-> ErrorDialog["app-error-report-dialog<br/>ErrorReportDialogComponent"]
+
+  AppHeader --> Brand["app-header-brand<br/>HeaderBrandComponent"]
+  AppHeader --> HeaderTitle["app-title-back-header<br/>TitleBackHeaderComponent"]
+  AppHeader --> HeaderControls["app-header-controls<br/>HeaderControlsComponent"]
+  Brand --> Logo["app-logo<br/>LogoComponent"]
+  Brand --> Account["app-header-account-actions<br/>HeaderAccountActionsComponent"]
+  Account -. Fehler melden .-> ErrorDialog
+  HeaderControls --> ViewMode["app-view-mode-buttons<br/>ViewModeButtonsComponent"]
+  HeaderControls --> UserSelector["app-user-selector<br/>UserSelectorComponent"]
+  HeaderControls --> Weather["app-weather-widget<br/>WeatherWidgetComponent"]
+
+  Main --> Calendar["app-calendar-grid<br/>CalendarGridComponent"]
+  Calendar --> GridPackage["glc-grid-calendar<br/>Grid-Paket"]
+  Calendar --> BlockEditor["app-block-editor<br/>BlockEditorComponent"]
+  Main --> Admin["app-admin-dashboard<br/>DashboardComponent"]
+  Main --> Rewards["app-reward-dashboard<br/>RewardDashboardComponent"]
+  Rewards --> RewardSidebar["app-sidebar<br/>SidebarComponent"]
+
+  Admin --> Menu["app-admin-navigation<br/>separat umrahmtes oberes Menü"]
+  Admin --> Split["Menüinhalt · zwei Spalten"]
+  Split --> Sidebar["Linke Spalte"]
+  Sidebar --> Tree["app-admin-navigation-tree<br/>eigener Rahmen, volle Höhe"]
+  Split --> DetailsColumn["Rechte Spalte"]
+  DetailsColumn --> Details["Detailbereich<br/>eigener Rahmen"]
+  DetailsColumn --> Actions["app-editor-actions-footer<br/>eigener Rahmen, Detailbreite"]
+
+  Menu --> Members["Mitglieder"]
+  Menu --> Plans["Pläne"]
+  Menu --> Holidays["Ferien"]
+  Menu --> Categories["Kategorien"]
+  Menu --> AdminSections["Konten · Wetter · Anzeige · DB · Statistik"]
+
+  Tree --> MemberList["Familienmitglieder"]
+  Tree --> PlanList["Gespeicherte Pläne"]
+  Tree --> HolidayStates["Bundesländer"]
+  Tree --> CategoryTasks["Kategorien und Tasks"]
+  Tree --> WeatherLocations["Wetterstandorte"]
+  Tree --> Backups["Datenbank-Backups"]
+
+  Details --> Users["app-users<br/>UsersComponent"]
+  Users --> MemberDetails["app-member-details<br/>MemberDetailsComponent"]
+  MemberDetails --> ColorPicker["app-color-picker<br/>ColorPickerComponent"]
+  Details --> Accounts["app-account-management<br/>AccountManagementComponent"]
+  Details --> PlansComponent["app-plans<br/>PlansComponent"]
+  Details --> HolidaysComponent["app-holidays<br/>HolidaysComponent"]
+  Details --> CategoriesComponent["app-categories<br/>CategoriesComponent"]
+  CategoriesComponent --> ColorPicker
+  Details --> TasksComponent["app-tasks<br/>TasksComponent"]
+  TasksComponent --> ColorPicker
+  Details --> System["app-system<br/>SystemComponent"]
+  Details --> Database["app-database<br/>DatabaseComponent"]
+  Details --> HeaderSettings["app-header-settings<br/>HeaderSettingsComponent"]
+  Details --> Statistics["app-platform-statistics<br/>PlatformStatisticsComponent"]

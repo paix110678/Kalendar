@@ -1,9 +1,8 @@
 :host { display: block; }
 .member-details { display: grid; gap: 20px; color: #212529; }
-.details-header, .form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.details-header { padding-bottom: 12px; border-bottom: 1px solid #dee2e6; }
-.details-header h4, .details-header p, .plan-intro { margin: 0; }
-.details-header p, .muted-message, .plan-intro { color: #68717b; font-size: 13px; }
+.form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plan-intro { margin: 0; }
+.muted-message, .plan-intro { color: #68717b; font-size: 13px; }
 .settings-form, .plan-section { display: grid; gap: 12px; }
 .settings-form h5, .plan-section h5 { margin: 0; font-size: 16px; }
 .settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

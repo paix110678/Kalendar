@@ -32,16 +32,6 @@ export class UsersComponent implements OnChanges {
     if (changes['selectedUserId'] || changes['activeUsers']) this.publishEditorActions();
   }
 
-  roleLabel(role: User['role']): string {
-    const labels: Record<User['role'], string> = {
-      adult: 'Erwachsene',
-      child_10: 'Kind (10+)',
-      child_14: 'Jugendliche (14+)',
-      patchwork_guest: 'Gast',
-    };
-    return labels[role];
-  }
-
   submitNewUser(): void {
     const name = this.createUserName.trim();
     if (!name) {

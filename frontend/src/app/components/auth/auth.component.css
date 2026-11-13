@@ -1,15 +1,20 @@
 :host {
-  display: block;
-  min-height: 100vh;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .auth-page {
   display: grid;
-  min-height: 100vh;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   place-items: center;
-  padding: 24px;
+  padding: clamp(16px, 4vw, 48px);
   box-sizing: border-box;
-  background: #f1f3f5;
+  background: transparent;
 }
 
 .auth-card {

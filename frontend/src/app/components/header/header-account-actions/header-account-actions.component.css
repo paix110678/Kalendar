@@ -18,6 +18,11 @@
 
 .account-profile {
   position: relative;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
 }
 
 .account-avatar,
@@ -35,6 +40,9 @@
 }
 
 .account-avatar {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
   font: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -48,6 +56,17 @@
   font-size: 26px;
   line-height: 1;
   transition: transform 0.2s ease;
+}
+
+.icon-action svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .icon-action:hover {

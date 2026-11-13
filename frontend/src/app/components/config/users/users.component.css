@@ -6,9 +6,7 @@
 .btn-action-add { height: 36px; padding: 0 16px; background: #228be6; color: #fff; }
 .btn-delete { padding: 6px 10px; background: #ffe3e3; color: #c92a2a; font-size: 12px; }
 .selected-member-panel { display: flex; flex-direction: column; gap: 12px; }
-.selected-member-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.selected-member-heading h4 { margin: 0 0 4px; }
-.selected-member-heading span, .empty-members { color: #868e96; font-size: 13px; }
+.empty-members { color: #868e96; font-size: 13px; }
 
 @media (max-width: 640px) {
   .admin-section { padding: 14px; }

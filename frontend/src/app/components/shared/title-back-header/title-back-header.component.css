@@ -31,6 +31,7 @@
 }
 
 .header-title svg {
+  display: block;
   flex: 0 0 auto;
   width: 26px;
   height: 26px;

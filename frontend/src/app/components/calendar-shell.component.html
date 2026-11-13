@@ -1,57 +1,94 @@
 <div class="app-layout">
-  
   <div class="dashboard-center-column">
-    
-    <!-- Die Shell reicht die Events sauber an den Header und das Gitter weiter -->
-    <app-calendar-header 
-      class="dashboard-frame-capsule"
-      [activeUsers]="calendarGrid.activeUsersSignal()"
-      [currentViewMode]="calendarGrid.currentViewMode"
-      [headerTitle]="showAdminPage
-        ? 'Einstellungen'
-        : calendarGrid.showRewardPage && calendarGrid.selectedUser
-          ? 'Belohnungen für ' + calendarGrid.selectedUser.name
-          : null"
-      (viewModeChanged)="calendarGrid.changeViewMode($event)"
-      (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
-      (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
-      (adminPageOpened)="calendarGrid.showRewardPage = false; openAdminPage()"
-      (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
-    </app-calendar-header>
+    @if (authState$ | async; as authState) {
+      @if (authState.account) {
+        <app-calendar-header
+          class="dashboard-frame-capsule"
+          [isCapturingScreenshot]="isCapturingScreenshot"
+          [activeUsers]="calendarGrid.activeUsersSignal()"
+          [currentViewMode]="calendarGrid.currentViewMode"
+          [headerTitle]="showAdminPage
+            ? 'Einstellungen'
+            : calendarGrid.showRewardPage && calendarGrid.selectedUser
+              ? 'Belohnungen für ' + calendarGrid.selectedUser.name
+              : null"
+          (viewModeChanged)="calendarGrid.changeViewMode($event)"
+          (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
+          (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
+          (adminPageOpened)="calendarGrid.showRewardPage = false; openAdminPage()"
+          (errorReportRequested)="openErrorReport()"
+          (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
+        </app-calendar-header>
 
-    <div class="main-content dashboard-frame-capsule">
-      <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
-        <app-calendar-grid #calendarGrid></app-calendar-grid>
-      </div>
+        <div class="main-content dashboard-frame-capsule">
+          <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
+            <app-calendar-grid #calendarGrid></app-calendar-grid>
+          </div>
 
-      @if (showAdminPage) {
-        @defer (on immediate) {
-          <app-admin-dashboard
-            [activeUsers]="calendarGrid.activeUsersSignal()"
-            [activeRewards]="calendarGrid.activeRewardsSignal()"
-            [selectedUser]="calendarGrid.selectedUser"
-            (closeAdmin)="showAdminPage = false">
-          </app-admin-dashboard>
-        } @loading {
-          <div role="status">Einstellungen werden geladen …</div>
-        } @error {
-          <div role="alert">Die Einstellungen konnten nicht geladen werden.</div>
-        }
-      } @else if (calendarGrid.showRewardPage) {
-        @defer (on immediate) {
-          <app-reward-dashboard
-            [user]="calendarGrid.selectedUser"
-            [activeRewards]="calendarGrid.activeRewardsSignal()"
-            (closeDashboard)="calendarGrid.showRewardPage = false"
-            (adminPageOpened)="openAdminPage()">
-          </app-reward-dashboard>
-        } @loading {
-          <div role="status">Belohnungen werden geladen …</div>
-        } @error {
-          <div role="alert">Die Belohnungen konnten nicht geladen werden.</div>
-        }
+          @if (showAdminPage) {
+            @defer (on immediate) {
+              <app-admin-dashboard
+                [activeUsers]="calendarGrid.activeUsersSignal()"
+                [activeRewards]="calendarGrid.activeRewardsSignal()"
+                [selectedUser]="calendarGrid.selectedUser"
+                (closeAdmin)="showAdminPage = false">
+              </app-admin-dashboard>
+            } @loading {
+              <div role="status">Einstellungen werden geladen …</div>
+            } @error {
+              <div role="alert">Die Einstellungen konnten nicht geladen werden.</div>
+            }
+          } @else if (calendarGrid.showRewardPage) {
+            @defer (on immediate) {
+              <app-reward-dashboard
+                [user]="calendarGrid.selectedUser"
+                [activeRewards]="calendarGrid.activeRewardsSignal()"
+                (closeDashboard)="calendarGrid.showRewardPage = false"
+                (adminPageOpened)="openAdminPage()">
+              </app-reward-dashboard>
+            } @loading {
+              <div role="status">Belohnungen werden geladen …</div>
+            } @error {
+              <div role="alert">Die Belohnungen konnten nicht geladen werden.</div>
+            }
+          }
+        </div>
+      } @else {
+        <app-calendar-header
+          class="dashboard-frame-capsule"
+          [isCapturingScreenshot]="isCapturingScreenshot"
+          (errorReportRequested)="openErrorReport()"
+          [showControls]="false">
+        </app-calendar-header>
+
+        <div class="main-content dashboard-frame-capsule">
+          @if (authState.status === 'loading') {
+            <main class="auth-loading" role="status">Anmeldestatus wird geprüft …</main>
+          } @else if (authState.status === 'error') {
+            <main class="auth-loading" role="alert">
+              <p>{{ authState.error }}</p>
+              <button type="button" (click)="authService.refreshSession()">Erneut versuchen</button>
+            </main>
+          } @else {
+            <app-auth></app-auth>
+          }
+        </div>
       }
-    </div>
-
+    }
   </div>
 </div>
+
+@if (isCapturingScreenshot) {
+  <div class="screenshot-capture-overlay" role="status" aria-live="polite">
+    <span class="screenshot-spinner" aria-hidden="true"></span>
+    <span>Screenshot wird erstellt …</span>
+  </div>
+}
+
+@if (showErrorReport) {
+  <app-error-report-dialog
+    [screenshotDataUrl]="screenshotDataUrl"
+    [screenshotError]="screenshotError"
+    (closed)="showErrorReport = false">
+  </app-error-report-dialog>
+}

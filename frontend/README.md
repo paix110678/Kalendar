@@ -6,7 +6,13 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 Das Kalender-Grid wird als lokales npm-Paket aus `vendor/` eingebunden. Die verwendete Version ist in `package.json` und `package-lock.json` festgelegt; beide Dateien und das zugehörige Paketarchiv müssen bei einem Update gemeinsam angepasst werden.
 
-Die Deploy-Pipeline setzt die angezeigte Kalender-Version automatisch auf `1.2.<GitHub-Actions-Laufnummer>`. Jeder erfolgreiche Push auf `main` erhält dadurch beim Deployment die nächste Laufnummer.
+Die Deploy-Pipeline setzt die angezeigte Kalender-Version automatisch auf `1.2.<GitHub-Actions-Laufnummer>`. Jeder Push auf `main` erhält beim Deployment die nächste Laufnummer; dadurch steigt die Patch-Version automatisch um eins. Die Version wird nicht separat in `package.json` gepflegt.
+
+## Komponenten und Einstellungen
+
+Die Anmeldung, der Kalenderheader und der Fehlerbericht sind in der `CalendarShell` angeordnet. Im Einstellungsbereich sind das obere Menü, der Navigationsbaum, die Detailansicht und die Aktionsleiste getrennte Bereiche. Der Baum bleibt links, während Detailansicht und Aktionsleiste rechts dieselbe Breite verwenden.
+
+Das verschachtelte Komponentenlayout ist in [COMPONENTS.mmd](src/app/components/COMPONENTS.mmd) dargestellt.
 
 ## Development server
 

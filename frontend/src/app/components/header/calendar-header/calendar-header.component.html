@@ -1,10 +1,14 @@
 <div class="top-bar-grid-container">
-  <app-header-brand (adminPageOpened)="adminPageOpened.emit()"></app-header-brand>
+  <app-header-brand
+    [isCapturingScreenshot]="isCapturingScreenshot"
+    (adminPageOpened)="adminPageOpened.emit()"
+    (errorReportRequested)="errorReportRequested.emit()">
+  </app-header-brand>
 
   <div class="header-bottom-row">
     @if (headerTitle) {
       <app-title-back-header [title]="headerTitle" (back)="headerBack.emit()"></app-title-back-header>
-    } @else {
+    } @else if (showControls) {
       <app-header-controls
         [activeUsers]="activeUsers"
         [currentViewMode]="currentViewMode"

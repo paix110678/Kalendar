@@ -1,14 +1,6 @@
 <section class="admin-section">
-  <h3>👥 Familienmitglieder</h3>
-
   @if (selectedUser; as user) {
     <section class="selected-member-panel">
-      <div class="selected-member-heading">
-        <div>
-          <h4>{{ user.name }}</h4>
-          <span>{{ roleLabel(user.role) }}</span>
-        </div>
-      </div>
       @defer (when selectedUserId === user.id) {
         <app-member-details
           [user]="user"

@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.admin-menu-panel {
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-top-navigation {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.top-navigation-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #495057;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-navigation-button:hover {
+  background: #e9ecef;
+}
+
+.top-navigation-button.top-navigation-active {
+  background: #e7f5ff;
+  color: #1971c2;
+}
+
+@media (max-width: 760px) {
+  .admin-top-navigation {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .top-navigation-button {
+    min-height: 40px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+}
