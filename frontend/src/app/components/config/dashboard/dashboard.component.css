@@ -27,7 +27,7 @@
 
 .admin-navigation-column {
   display: flex;
-  flex: 0 0 clamp(90px, 11vw, 130px);
+  flex: 0 0 10vw;
   min-width: 0;
   min-height: 0;
 }
@@ -72,6 +72,9 @@
 }
 
 @media (max-width: 760px) {
+  .admin-navigation-column {
+    flex-basis: 35vw;
+  }
   .admin-page-body {
     gap: 8px;
   }
@@ -80,8 +83,5 @@
   }
   .admin-detail-column {
     gap: 8px;
-  }
-  .admin-navigation-column {
-    flex-basis: clamp(68px, 15vw, 95px);
   }
 }
