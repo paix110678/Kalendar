@@ -80,6 +80,23 @@ describe('toastInterceptor', () => {
     expect(latestState).toBeNull();
   });
 
+  it('sends a mutation immediately when its toast is confirmed', () => {
+    let response: unknown;
+    client.post('/api/categories', {}).subscribe((value) => {
+      response = value;
+    });
+    const actionId = latestState?.id;
+    if (actionId === undefined || actionId === null) throw new Error('Pending action was not shown.');
+
+    toastService.acknowledge(actionId);
+
+    httpTesting.expectOne('/api/categories').flush({ message: 'Kategorie gespeichert.' });
+    expect(response).toEqual({ message: 'Kategorie gespeichert.' });
+    expect(latestState?.message).toBe('Wurde gespeichert.');
+    vi.advanceTimersByTime(1000);
+    expect(latestState).toBeNull();
+  });
+
   it('shows request failures as red toasts', () => {
     client.post('/api/categories', {}).subscribe({ error: () => undefined });
     vi.advanceTimersByTime(3000);

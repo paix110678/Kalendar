@@ -15,9 +15,9 @@
 }
 
 .plans-page {
-  max-width: 1000px;
+  max-width: none;
 
-  margin: 0 auto;
+  margin: 0;
 
   color: #212529;
 }
@@ -46,11 +46,7 @@
 }
 
 .plan-form {
-  padding: 22px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 10px;
+  padding: 0;
 }
 
 .form-grid {
@@ -68,11 +64,9 @@
 
   margin: 20px 0 0;
 
-  padding: 14px;
+  padding: 0;
 
-  border: 1px solid #dee2e6;
-
-  border-radius: 8px;
+  border: 0;
 }
 
 .holiday-options legend {
@@ -199,12 +193,6 @@
   align-items: end;
 
   gap: 10px;
-
-  padding: 12px;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 8px;
 }
 
 .hour-row > strong {

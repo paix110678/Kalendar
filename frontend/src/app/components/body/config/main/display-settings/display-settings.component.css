@@ -10,24 +10,16 @@
   display: block;
 }
 
-.header-settings {
+.display-settings {
   display: grid;
 
-  max-width: 720px;
+  max-width: 100%;
 
   gap: 12px;
-
-  padding: 22px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 10px;
-
-  box-shadow: 0 4px 10px rgb(0 0 0 / 2%);
 }
 
-.header-settings h3,
-.header-settings .settings-description {
+.display-settings h3,
+.display-settings .settings-description {
   margin: 0;
 }
 
@@ -37,7 +29,7 @@
   font-size: 13px;
 }
 
-.header-settings fieldset {
+.display-settings fieldset {
   display: grid;
 
   min-width: 0;
@@ -46,14 +38,12 @@
 
   margin: 4px 0 0;
 
-  padding: 14px;
+  padding: 0;
 
-  border: 1px solid #dee2e6;
-
-  border-radius: 8px;
+  border: 0;
 }
 
-.header-settings legend {
+.display-settings legend {
   padding: 0 5px;
 
   color: #495057;
@@ -73,10 +63,6 @@
   border-radius: 6px;
 
   cursor: pointer;
-}
-
-.preference-row:hover {
-  background: #f8f9fa;
 }
 
 .preference-row input {

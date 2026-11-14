@@ -14,8 +14,6 @@
   display: grid;
 
   gap: 16px;
-
-  padding: 20px;
 }
 
 .account-management h3,
@@ -34,12 +32,6 @@
   display: grid;
 
   gap: 12px;
-
-  padding: 16px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 10px;
 }
 
 .invite-form {
@@ -107,41 +99,6 @@
   opacity: 0.55;
 }
 
-.account-list,
-.invitation-list {
-  display: grid;
-
-  gap: 10px;
-}
-
-.account-heading {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  align-items: center;
-
-  gap: 8px 14px;
-}
-
-.account-heading span {
-  color: #687078;
-
-  font-size: 0.9rem;
-}
-
-.account-heading .account-state {
-  margin-left: auto;
-
-  color: #2b8a3e;
-
-  font-weight: 650;
-}
-
-.account-heading .account-disabled {
-  color: #c92a2a;
-}
-
 .account-fields {
   display: grid;
 
@@ -152,16 +109,6 @@
   gap: 10px;
 }
 
-.account-fields .account-active {
-  display: flex;
-
-  align-items: center;
-
-  gap: 8px;
-
-  min-height: 38px;
-}
-
 .account-hint {
   color: #687078;
 
@@ -170,6 +117,6 @@
 
 @media (max-width: 600px) {
   .account-management {
-    padding: 12px;
+    gap: 14px;
   }
 }

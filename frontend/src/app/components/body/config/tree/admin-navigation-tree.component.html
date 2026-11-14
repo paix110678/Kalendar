@@ -36,6 +36,36 @@
           }
         }
       }
+        @case ('accounts') {
+          @if (accountsError) {
+            <p class="tree-message tree-error" role="alert">{{ accountsError }}</p>
+          } @else if (accountsLoading) {
+            <p class="tree-message">Konten und Einladungen werden geladen …</p>
+          } @else if (accounts.length === 0 && pendingInvitations.length === 0) {
+            <p class="tree-message">Keine Konten oder offenen Einladungen vorhanden</p>
+          } @else {
+            @for (account of accounts; track account.id) {
+              <button
+                type="button"
+                class="tree-item"
+                [class.tree-item-active]="selectedAccountItemId === accountItemId(account)"
+                (click)="emit('account', account.id)">
+                <span class="item-marker">●</span>
+                <span class="item-name">{{ account.display_name }} · {{ account.email }}</span>
+              </button>
+            }
+            @for (invitation of pendingInvitations; track invitation.id) {
+              <button
+                type="button"
+                class="tree-item"
+                [class.tree-item-active]="selectedAccountItemId === invitationItemId(invitation)"
+                (click)="emit('invitation', invitation.id)">
+                <span class="item-marker">✉</span>
+                <span class="item-name">{{ invitation.email }} · Einladung offen</span>
+              </button>
+            }
+          }
+        }
       @case ('plans') {
         @if (plansLoading && savedPlans.length === 0) {
           <p class="tree-message">Pläne werden geladen …</p>
@@ -108,9 +138,7 @@
               (click)="emit('weatherLocation', location.id)"
             >
               <span class="item-marker">◷</span>
-              <span class="item-name"
-                >{{ location.weather_plz }} · {{ location.weather_city || 'Ort noch nicht ermittelt' }}</span
-              >
+              <span class="item-name">{{ location.weather_city || 'Ort noch nicht ermittelt' }}</span>
             </button>
           }
         }

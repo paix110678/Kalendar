@@ -10,16 +10,17 @@ import {
 } from '../../../../services/api.service';
 import { Category, User } from '../../../../services/calendar.service';
 import { AdminEditorActions } from '../action-footer/action-footer.component';
+import { AccountTreeData } from './accounts/account-management.component';
 import { AdminTab } from '../menu/admin-navigation.component';
 import { UsersComponent } from './users/users.component';
-import { AccountManagementComponent } from './users/account-management.component';
+import { AccountManagementComponent } from './accounts/account-management.component';
 import { CategoriesComponent } from './categories/categories.component';
 import { SystemComponent } from './weather/system.component';
 import { DatabaseComponent } from './database/database.component';
 import { PlansComponent } from './plans/plans.component';
 import { HolidaysComponent } from './holidays/holidays.component';
 import { TasksComponent } from './tasks/tasks.component';
-import { HeaderSettingsComponent } from '../../../header/header-settings/header-settings.component';
+import { DisplaySettingsComponent } from './display-settings/display-settings.component';
 import { PlatformStatisticsComponent } from './platform-statistics/platform-statistics.component';
 
 @Component({
@@ -35,7 +36,7 @@ import { PlatformStatisticsComponent } from './platform-statistics/platform-stat
     PlansComponent,
     HolidaysComponent,
     TasksComponent,
-    HeaderSettingsComponent,
+    DisplaySettingsComponent,
     PlatformStatisticsComponent,
   ],
   templateUrl: './config-main.component.html',
@@ -46,6 +47,7 @@ export class ConfigMainComponent {
   @Input() isAdmin = false;
   @Input() isPlatformAdmin = false;
   @Input() activeUsers: User[] = [];
+  @Input() selectedAccountItemId: string | null = null;
   @Input() selectedMemberId: number | null = null;
   @Input() savedPlans: PlanDefinition[] = [];
   @Input() selectedPlanId: number | null = null;
@@ -65,7 +67,9 @@ export class ConfigMainComponent {
   @Input() selectedTaskId: number | null = null;
   @Input() selectedTaskCategoryId: number | null = null;
 
-  @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
+  @Output() editorActionsChange = new EventEmitter<AdminEditorActions | null>();
+  @Output() accountTreeDataChange = new EventEmitter<AccountTreeData>();
+  @Output() accountTreeItemChange = new EventEmitter<string | null>();
   @Output() memberClosed = new EventEmitter<void>();
   @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
   @Output() stateAdded = new EventEmitter<HolidayStateData>();

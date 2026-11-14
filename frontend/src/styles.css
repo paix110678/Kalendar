@@ -194,7 +194,7 @@ app-calendar-shell {
 .admin-content-scroll .plans-page,
 .admin-content-scroll .tasks-page,
 .admin-content-scroll .holidays-page,
-.admin-content-scroll .header-settings {
+.admin-content-scroll .display-settings {
   max-width: none;
 }
 
@@ -210,7 +210,7 @@ app-calendar-shell {
 .admin-content-scroll > app-system,
 .admin-content-scroll > app-tasks,
 .admin-content-scroll > app-database,
-.admin-content-scroll > app-header-settings {
+.admin-content-scroll > app-display-settings {
   display: block;
   width: 100%;
   max-width: none;

@@ -37,7 +37,7 @@
 .config-content-scroll > app-system,
 .config-content-scroll > app-tasks,
 .config-content-scroll > app-database,
-.config-content-scroll > app-header-settings,
+.config-content-scroll > app-display-settings,
 .config-content-scroll > app-account-management,
 .config-content-scroll > app-platform-statistics {
   width: 100%;
@@ -46,7 +46,24 @@
 
   min-height: 100%;
 
+  padding: 14px;
+
   background: var(--config-background);
 
   box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .config-content-scroll > app-users,
+  .config-content-scroll > app-plans,
+  .config-content-scroll > app-holidays,
+  .config-content-scroll > app-categories,
+  .config-content-scroll > app-system,
+  .config-content-scroll > app-tasks,
+  .config-content-scroll > app-database,
+  .config-content-scroll > app-display-settings,
+  .config-content-scroll > app-account-management,
+  .config-content-scroll > app-platform-statistics {
+    padding: 12px;
+  }
 }

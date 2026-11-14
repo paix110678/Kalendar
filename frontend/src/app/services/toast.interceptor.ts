@@ -29,14 +29,17 @@ export function toastInterceptor(
   });
 
   return race(
-    timer(pending.cancelWindowMs).pipe(map(() => true)),
-    pending.cancelled$.pipe(map(() => false)),
+    timer(pending.cancelWindowMs).pipe(map(() => 'elapsed' as const)),
+    pending.cancelled$.pipe(map(() => 'cancelled' as const)),
+    pending.confirmed$.pipe(map(() => 'confirmed' as const)),
   ).pipe(
     take(1),
-    tap((confirmed) => {
-      if (confirmed) toastService.confirmAction(pending.id);
+    tap((decision) => {
+      if (decision === 'elapsed') toastService.confirmAction(pending.id);
     }),
-    switchMap((confirmed) => confirmed ? next(request) : throwError(() => cancelledError)),
+    switchMap((decision) => decision === 'cancelled'
+      ? throwError(() => cancelledError)
+      : next(request)),
     tap((event) => {
       if (!(event instanceof HttpResponse)) return;
       toastService.finishAction(

@@ -8,6 +8,7 @@ import {
   WeatherLocation,
 } from '../../../../services/api.service';
 import { Category, User } from '../../../../services/calendar.service';
+import { AccountInvitationRecord, AuthAccount } from '../../../../services/auth.service';
 import { AdminNavigationAction, AdminTab } from '../menu/admin-navigation.component';
 
 @Component({
@@ -20,6 +21,11 @@ import { AdminNavigationAction, AdminTab } from '../menu/admin-navigation.compon
 export class AdminNavigationTreeComponent {
   @Input() activeUsers: User[] = [];
   @Input() activeTab: AdminTab = 'users';
+  @Input() accounts: AuthAccount[] = [];
+  @Input() invitations: AccountInvitationRecord[] = [];
+  @Input() accountsLoading = false;
+  @Input() accountsError = '';
+  @Input() selectedAccountItemId: string | null = null;
   @Input() selectedMemberId: number | null = null;
   @Input() expandedSections: Record<
     'plans' | 'holidays' | 'categories' | 'system' | 'database',
@@ -68,7 +74,7 @@ export class AdminNavigationTreeComponent {
       system: 'Wetterstandorte',
       database: 'Datenbank-Backups',
       accounts: 'Konten',
-      header: 'Kopfzeile',
+      display: 'Anzeige',
       statistics: 'Statistik',
     }[this.activeTab];
   }
@@ -77,6 +83,10 @@ export class AdminNavigationTreeComponent {
     return this.tasks
       .filter((task) => task.category_id === categoryId)
       .sort((left, right) => left.title.localeCompare(right.title, 'de'));
+  }
+
+  get pendingInvitations(): AccountInvitationRecord[] {
+    return this.invitations.filter((invitation) => invitation.status === 'pending');
   }
 
   holidayStateName(code: string): string {
@@ -90,6 +100,14 @@ export class AdminNavigationTreeComponent {
       dateStyle: 'medium',
       timeStyle: 'medium',
     }).format(date)} · ${backup.id.slice(-6)}`;
+  }
+
+  accountItemId(account: AuthAccount): string {
+    return `account:${account.id}`;
+  }
+
+  invitationItemId(invitation: AccountInvitationRecord): string {
+    return `invitation:${invitation.id}`;
   }
 
   emit(

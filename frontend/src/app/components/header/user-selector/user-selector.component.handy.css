@@ -1,6 +1,15 @@
 @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
   .user-selector-container {
-    justify-content: space-between;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .user-btn-wrapper-hover {
+    flex: 1 0 88px;
+    min-width: 88px;
   }
 
   .user-stars-large-wrapper {
@@ -8,36 +17,27 @@
   }
 
   .user-name-label-white {
+    flex: 1 1 auto;
     min-width: 0;
     font-size: 12px;
   }
 
   .piggy-trigger-btn-transparent-style {
+    flex: 1 1 auto;
+    width: 100%;
     padding: 2px 4px;
   }
 }
 
 @media (max-width: 480px) {
-  .user-name-label-white {
-    display: none;
-  }
-
   .user-name-abbreviation {
-    display: inline;
-  }
-
-  .piggy-trigger-btn-transparent-style {
-    padding: 2px;
+    display: none;
   }
 }
 
 @media (max-width: 360px) {
   .user-selector-container {
     gap: 1px;
-  }
-
-  .user-name-abbreviation {
-    font-size: 10px;
   }
 
   .piggy-trigger-btn-transparent-style {

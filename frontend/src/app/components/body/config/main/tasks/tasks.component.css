@@ -50,9 +50,9 @@
 }
 
 .tasks-page {
-  max-width: 760px;
+  max-width: none;
 
-  margin: 0 auto;
+  margin: 0;
 
   color: #212529;
 }
@@ -73,14 +73,6 @@
   grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
 
   gap: 16px;
-
-  padding: 22px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 10px;
-
-  box-shadow: 0 4px 12px rgb(0 0 0 / 3%);
 }
 
 .tasks-page .field {
@@ -115,11 +107,9 @@
 
   margin: 0;
 
-  padding: 14px;
+  padding: 0;
 
-  border: 1px solid #dee2e6;
-
-  border-radius: 8px;
+  border: 0;
 }
 
 .participants legend {
@@ -172,8 +162,6 @@
 @media (max-width: 700px) {
   .task-form {
     grid-template-columns: minmax(0, 1fr) 100px;
-
-    padding: 16px;
   }
 
   .tasks-page .field:nth-child(3),

@@ -10,7 +10,10 @@
   display: block;
 }
 
-.config-content-scroll > app-database .admin-section {
+.admin-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
 }
 
@@ -50,12 +53,6 @@
 
 .live-table-data-box {
   margin-top: 15px;
-
-  padding: 20px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 8px;
 }
 
 .admin-section .database-description {
@@ -82,10 +79,6 @@
   max-height: 400px;
 
   overflow-x: auto;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 6px;
 }
 
 .generative-sql-table {
@@ -142,10 +135,6 @@
 
 .backup-inspector {
   margin-bottom: 12px;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 8px;
 }
 
 .backup-inspector > summary {
@@ -162,8 +151,6 @@
   display: grid;
 
   gap: 10px;
-
-  padding: 0 14px 14px;
 }
 
 .backup-description,
@@ -232,18 +219,10 @@
   justify-content: space-between;
 
   gap: 12px;
-
-  padding: 10px;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 6px;
 }
 
 .backup-row-selected {
-  border-color: #d6336c;
-
-  box-shadow: 0 0 0 2px rgb(214 51 108 / 15%);
+  color: #d6336c;
 }
 
 .backup-info {

@@ -108,7 +108,6 @@ class AcceptInvitationPayload(TokenPayload):
 
 class InvitePayload(BaseModel):
     email: str = Field(..., min_length=3, max_length=254)
-    role: str = Field(..., pattern="^(adult|teen|child|guest)$")
     profile_id: int = Field(..., ge=1)
 
     @field_validator("email")
@@ -232,7 +231,7 @@ def _validate_profile_for_role(profile_id: int, role: str):
     conn = database.get_db_connection()
     try:
         profile = conn.execute(
-            "SELECT id, role FROM users WHERE id = ? AND is_active = 1",
+            "SELECT id, role FROM users WHERE id = ?",
             (profile_id,),
         ).fetchone()
     finally:
@@ -251,6 +250,29 @@ def _validate_profile_for_role(profile_id: int, role: str):
             status_code=422,
             detail="Die Rolle passt nicht zum ausgewählten Familienprofil.",
         )
+
+
+def _account_role_for_profile(profile_id: int) -> str:
+    conn = database.get_db_connection()
+    try:
+        profile = conn.execute(
+            "SELECT role FROM users WHERE id = ?",
+            (profile_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Familienprofil nicht gefunden.")
+    account_role_by_profile_role = {
+        "adult": "adult",
+        "child_14": "teen",
+        "child_10": "child",
+        "patchwork_guest": "guest",
+    }
+    role = account_role_by_profile_role.get(profile["role"])
+    if role is None:
+        raise HTTPException(status_code=422, detail="Für dieses Familienprofil ist keine Kontorolle möglich.")
+    return role
 
 
 def _account_response(row):
@@ -783,7 +805,7 @@ def invite_account(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="E-Mail-Versand muss vor dem Einladen konfiguriert werden.",
         )
-    _validate_profile_for_role(payload.profile_id, payload.role)
+    role = _account_role_for_profile(payload.profile_id)
     conn = auth_database.get_auth_connection()
     token = create_token()
     try:
@@ -829,7 +851,7 @@ def invite_account(
                 hash_token(token),
                 actor.family_id,
                 payload.email,
-                payload.role,
+                role,
                 payload.profile_id,
                 actor.id,
                 _utc_now().isoformat(),

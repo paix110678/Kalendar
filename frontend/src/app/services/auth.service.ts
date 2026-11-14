@@ -26,7 +26,6 @@ export interface AuthState {
 
 export interface AccountInvitation {
   email: string;
-  role: Exclude<AccountRole, 'admin'>;
   profile_id: number;
 }
 

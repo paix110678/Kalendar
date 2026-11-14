@@ -10,7 +10,10 @@
   display: block;
 }
 
-.config-content-scroll > app-categories .admin-section {
+.admin-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
 }
 

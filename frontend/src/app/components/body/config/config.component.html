@@ -6,11 +6,18 @@
     (action)="onNavigationAction($event)">
   </app-admin-navigation>
 
-  <div class="config-workspace">
+  <div
+    class="config-workspace"
+    [class.config-workspace-full-width]="activeTab === 'display'">
     <div class="config-tree-column">
       <app-admin-navigation-tree
         [activeUsers]="activeUsers"
         [activeTab]="activeTab"
+        [accounts]="accountTreeData.accounts"
+        [invitations]="accountTreeData.invitations"
+        [accountsLoading]="accountTreeData.loading || accountTreeData.invitationsLoading"
+        [accountsError]="accountTreeData.error"
+        [selectedAccountItemId]="selectedAccountItemId"
         [selectedMemberId]="selectedMemberId"
         [expandedSections]="expandedSections"
         [savedPlans]="savedPlans"
@@ -47,6 +54,7 @@
         [isAdmin]="isAdmin"
         [isPlatformAdmin]="isPlatformAdmin"
         [activeUsers]="activeUsers"
+        [selectedAccountItemId]="selectedAccountItemId"
         [selectedMemberId]="selectedMemberId"
         [savedPlans]="savedPlans"
         [selectedPlanId]="selectedPlanId"
@@ -66,6 +74,8 @@
         [selectedTaskId]="selectedTaskId"
         [selectedTaskCategoryId]="selectedTaskCategoryId"
         (editorActionsChange)="onEditorActionsChanged($event)"
+        (accountTreeDataChange)="accountTreeData = $event"
+        (accountTreeItemChange)="selectedAccountItemId = $event"
         (memberClosed)="selectedMemberId = null"
         (plansChanged)="onPlansChanged($event)"
         (stateAdded)="onHolidayStateAdded($event)"

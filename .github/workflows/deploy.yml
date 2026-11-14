@@ -62,7 +62,7 @@ jobs:
       KALENDAR_PUBLIC_URL: https://famsolver.de
       KALENDAR_CORS_ORIGINS: https://famsolver.de
       KALENDAR_COOKIE_SECURE: "true"
-      KALENDAR_VERSION: 1.3.0
+      KALENDAR_VERSION: 1.3.1
       KALENDAR_BACKEND_IMAGE: kalendar_backend:${{ github.sha }}
       KALENDAR_FRONTEND_IMAGE: kalendar_frontend:${{ github.sha }}
       KALENDAR_SMTP_HOST: ${{ secrets.KALENDAR_SMTP_HOST }}

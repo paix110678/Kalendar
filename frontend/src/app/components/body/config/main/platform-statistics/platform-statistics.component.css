@@ -11,11 +11,9 @@
 }
 
 .platform-statistics {
-  max-width: 1100px;
+  max-width: none;
 
-  margin: 0 auto;
-
-  padding: clamp(20px, 4vw, 40px);
+  margin: 0;
 
   color: #343a40;
 }
@@ -89,12 +87,6 @@
   justify-content: center;
 
   gap: 8px;
-
-  padding: 20px;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 12px;
 }
 
 .statistics-label {
@@ -151,12 +143,6 @@
   justify-content: space-between;
 
   gap: 16px;
-
-  padding: 14px 16px;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 8px;
 }
 
 .statistics-account-identity {
@@ -237,12 +223,6 @@
   justify-content: space-between;
 
   gap: 16px;
-
-  padding: 14px;
-
-  border: 1px solid #ffc9c9;
-
-  border-radius: 8px;
 
   color: #c92a2a;
 }

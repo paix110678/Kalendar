@@ -29,6 +29,7 @@ import {
   AdminEditorActions,
 } from './action-footer/action-footer.component';
 import { AuthService } from '../../../services/auth.service';
+import { AccountTreeData } from './main/accounts/account-management.component';
 import {
   AdminNavigationAction,
   AdminNavigationComponent,
@@ -64,6 +65,14 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   public activeTab: AdminTab = 'users';
   public selectedMemberId: number | null = null;
+  public selectedAccountItemId: string | null = null;
+  public accountTreeData: AccountTreeData = {
+    accounts: [],
+    invitations: [],
+    loading: true,
+    invitationsLoading: true,
+    error: '',
+  };
   public savedPlans: PlanDefinition[] = [];
   public selectedPlanId: number | null = null;
   public plansLoading = false;
@@ -205,6 +214,18 @@ export class ConfigComponent implements OnInit, OnDestroy {
       case 'accounts':
         this.selectAccounts();
         break;
+      case 'account':
+        if (typeof action.id === 'number') {
+          this.activeTab = 'accounts';
+          this.selectedAccountItemId = `account:${action.id}`;
+        }
+        break;
+      case 'invitation':
+        if (typeof action.id === 'string') {
+          this.activeTab = 'accounts';
+          this.selectedAccountItemId = `invitation:${action.id}`;
+        }
+        break;
       case 'plans':
         this.openPlans();
         break;
@@ -235,8 +256,8 @@ export class ConfigComponent implements OnInit, OnDestroy {
       case 'backup':
         if (typeof action.id === 'string') this.openDatabase(action.id);
         break;
-      case 'header':
-        this.openHeaderSettings();
+      case 'display':
+        this.openDisplaySettings();
         break;
       case 'statistics':
         this.openStatistics();
@@ -324,9 +345,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.expandedSections.categories = true;
   }
 
-  openHeaderSettings(): void {
+  openDisplaySettings(): void {
     this.editorActions = null;
-    this.activeTab = 'header';
+    this.activeTab = 'display';
   }
 
   public selectedTaskCategoryId: number | null = null;
@@ -435,9 +456,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedWeatherLocationId = locationId;
   }
 
-  onEditorActionsChanged(actions: AdminEditorActions): void {
+  onEditorActionsChanged(actions: AdminEditorActions | null): void {
     this.editorActions = actions;
-    this.calendarService.setFamilyDataRefreshPaused(Boolean(actions.dirty || actions.busy));
+    this.calendarService.setFamilyDataRefreshPaused(Boolean(actions?.dirty || actions?.busy));
   }
 
   saveEditorChanges(): void {
@@ -514,6 +535,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
   selectAccounts(): void {
     if (!this.isAdmin) return;
     this.editorActions = null;
+    this.selectedAccountItemId = null;
     this.activeTab = 'accounts';
   }
 

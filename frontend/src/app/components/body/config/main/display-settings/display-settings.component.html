@@ -1,10 +1,8 @@
-<section class="header-settings">
-  <h3>🧭 Kopfzeile</h3>
-  <p class="settings-description">Lege fest, welche Bedienelemente in der Kalender-Kopfzeile angezeigt werden.</p>
-
+<section class="display-settings">
+  <h3>🧭 Anzeige</h3>
   <p *ngIf="loading" role="status">Einstellungen werden geladen …</p>
   <fieldset [disabled]="loading || saving">
-    <legend>Elemente der Kopfzeile</legend>
+    <legend>Elemente in der Kalender-Kopfzeile</legend>
     <label class="preference-row">
       <input type="checkbox" [(ngModel)]="preferences.show_users" (ngModelChange)="publishEditorActions()">
       <span>

@@ -185,7 +185,6 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             "/api/auth/invitations",
             json={
                 "email": "child@example.invalid",
-                "role": "child",
                 "profile_id": child_profile_id,
             },
             headers={"X-CSRF-Token": csrf},
@@ -338,6 +337,16 @@ def test_profile_can_be_deactivated_without_revalidating_unchanged_role(tmp_path
         assert response.status_code == 200
         assert response.json()["user"]["is_active"] is False
         assert validation_calls == []
+
+        invitation = client.post(
+            "/api/auth/invitations",
+            json={"email": "inactive@example.invalid", "profile_id": user_id},
+            headers={"X-CSRF-Token": csrf or ""},
+        )
+        assert invitation.status_code == 201
+        invitation_record = client.get("/api/auth/invitations").json()[0]
+        assert invitation_record["role"] == "child"
+        assert invitation_record["profile_id"] == user_id
 
         response = client.put(
             f"/api/users/{user_id}/profile",

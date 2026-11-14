@@ -9,10 +9,10 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService, HeaderPreferences } from '../../../services/api.service';
-import { CalendarService } from '../../../services/calendar.service';
-import { ToastService } from '../../../services/toast.service';
-import { AdminEditorActions } from '../../body/config/action-footer/action-footer.component';
+import { ApiService, HeaderPreferences } from '../../../../../services/api.service';
+import { CalendarService } from '../../../../../services/calendar.service';
+import { ToastService } from '../../../../../services/toast.service';
+import { AdminEditorActions } from '../../action-footer/action-footer.component';
 import { Subscription } from 'rxjs';
 
 const DEFAULT_PREFERENCES: HeaderPreferences = {
@@ -22,13 +22,13 @@ const DEFAULT_PREFERENCES: HeaderPreferences = {
 };
 
 @Component({
-  selector: 'app-header-settings',
+  selector: 'app-display-settings',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './header-settings.component.html',
-  styleUrl: './header-settings.component.css',
+  templateUrl: './display-settings.component.html',
+  styleUrl: './display-settings.component.css',
 })
-export class HeaderSettingsComponent implements OnInit, OnDestroy {
+export class DisplaySettingsComponent implements OnInit, OnDestroy {
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
 
   private readonly apiService = inject(ApiService);

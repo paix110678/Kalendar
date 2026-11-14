@@ -74,6 +74,17 @@ export class ColorPickerComponent implements OnInit {
     }
   }
 
+  openCustomPalette(input: HTMLInputElement): void {
+    input.click();
+  }
+
+  closePalette(event: Event): void {
+    const palette = event.currentTarget instanceof HTMLButtonElement
+      ? event.currentTarget.closest('details')
+      : null;
+    if (palette) palette.open = false;
+  }
+
   selectStandardColor(value: string, event: Event): void {
     this.valueChange.emit(value);
     if (event.currentTarget instanceof HTMLButtonElement) {

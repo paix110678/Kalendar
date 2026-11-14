@@ -1,0 +1,94 @@
+<section class="account-management" aria-labelledby="accounts-title">
+  <h3 id="accounts-title">🔐 Konten und Einladungen</h3>
+  @if (loading || invitationsLoading) {
+    <p role="status">Konten und Einladungen werden geladen …</p>
+  } @else if (selectedAccountDetails; as account) {
+    <article class="account-card">
+      <h4>{{ account.display_name }}</h4>
+      <p><strong>E-Mail:</strong> {{ account.email }}</p>
+      <p><strong>E-Mail bestätigt:</strong> {{ account.email_verified ? 'Ja' : 'Nein' }}</p>
+      @if (account.created_at) {
+        <p>
+          <strong>Konto erstellt:</strong>
+          <time [attr.datetime]="account.created_at">{{ account.created_at | date:'dd.MM.yyyy, HH:mm' }}</time>
+        </p>
+      }
+      <div class="account-fields">
+        <label>
+          Rolle
+          <select
+            [name]="'role-' + account.id"
+            [(ngModel)]="account.role"
+            (ngModelChange)="onRoleChanged(account)"
+            [disabled]="isCurrentAccount(account) || saving">
+            <option value="admin">Admin</option>
+            <option value="adult">Erwachsener</option>
+            <option value="teen">Jugendlicher</option>
+            <option value="child">Kind</option>
+            <option value="guest">Gast</option>
+          </select>
+        </label>
+        <label>
+          Familienprofil
+          <select
+            [name]="'profile-' + account.id"
+            [(ngModel)]="account.profile_id"
+            (ngModelChange)="publishEditorActions()"
+            [disabled]="isCurrentAccount(account) || saving">
+            @for (profile of profileOptions(account); track profile.id) {
+              <option [ngValue]="profile.id">{{ profile.name }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <p class="account-hint">Verknüpftes Profil: {{ accountProfileName(account) }}</p>
+    </article>
+  } @else if (selectedInvitationDetails; as invitation) {
+    <article class="invitation-card">
+      <h4>Offene Einladung</h4>
+      <p><strong>E-Mail:</strong> {{ invitation.email }}</p>
+      <p><strong>Rolle:</strong> {{ roleLabel(invitation.role) }}</p>
+      <p><strong>Familienprofil:</strong> {{ invitation.profile_name || 'Nicht mehr vorhanden' }}</p>
+      <p>
+        <strong>Gesendet:</strong>
+        <time [attr.datetime]="invitation.created_at">{{ invitation.created_at | date:'dd.MM.yyyy, HH:mm' }}</time>
+      </p>
+      <p>
+        <strong>Gültig bis:</strong>
+        <time [attr.datetime]="invitation.expires_at">{{ invitation.expires_at | date:'dd.MM.yyyy, HH:mm' }}</time>
+      </p>
+      <p class="account-hint">Über den zentralen Aktions-Footer kannst du die Einladung erneut senden.</p>
+    </article>
+  } @else if (error) {
+    <p class="account-hint" role="alert">{{ error }}</p>
+  } @else if (showInviteForm()) {
+    <form class="invite-form" (ngSubmit)="invite()">
+      <h4>Mitglied einladen</h4>
+      <label>
+        E-Mail-Adresse
+        <input type="email" name="inviteEmail" [(ngModel)]="inviteEmail" required maxlength="254" autocomplete="email">
+      </label>
+      <label>
+        Familienprofil
+        <select name="inviteProfile" [(ngModel)]="inviteProfileId" required>
+          <option [ngValue]="null" disabled>Familienprofil auswählen …</option>
+          @for (profile of inviteProfiles; track profile.id) {
+            <option [ngValue]="profile.id">{{ profile.name }}</option>
+          }
+        </select>
+      </label>
+      <button type="submit" [disabled]="saving || !accountsLoaded || !invitationsLoaded || !inviteEmail.trim() || inviteProfileId === null">
+        {{ saving ? 'Wird gesendet …' : 'Einladung per E-Mail senden' }}
+      </button>
+      @if (inviteProfiles.length === 0) {
+        <p class="account-hint">Es gibt keine Familienprofile ohne verknüpftes Konto oder offene Einladung.</p>
+      }
+    </form>
+  }
+  @if (error && (selectedAccountDetails || selectedInvitationDetails)) {
+    <p class="account-hint" role="alert">{{ error }}</p>
+  }
+  @if (message) {
+    <p class="account-hint" role="status">{{ message }}</p>
+  }
+</section>

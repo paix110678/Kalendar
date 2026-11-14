@@ -14,6 +14,7 @@ export interface ToastState {
 export interface PendingToast {
   id: number;
   cancelled$: Observable<void>;
+  confirmed$: Observable<void>;
   cancelWindowMs: number;
 }
 
@@ -27,6 +28,7 @@ export class ToastService {
   private readonly stateSubject = new BehaviorSubject<ToastState | null>(null);
   readonly state$ = this.stateSubject.asObservable();
   private readonly pendingActions = new Map<number, Subject<void>>();
+  private readonly pendingConfirmations = new Map<number, Subject<void>>();
   private readonly pendingMessages = new Map<number, string>();
   private readonly pendingSuccess = new Map<number, boolean>();
   private readonly countdownDeadlines = new Map<number, number>();
@@ -63,8 +65,10 @@ export class ToastService {
     this.clearWarnings();
     const id = ++this.nextId;
     const cancelled = new Subject<void>();
+    const confirmed = new Subject<void>();
     const deadline = Date.now() + (options.cancelWindowMs ?? 3000);
     this.pendingActions.set(id, cancelled);
+    this.pendingConfirmations.set(id, confirmed);
     this.pendingMessages.set(id, message);
     this.pendingSuccess.set(id, success);
     this.countdownDeadlines.set(id, deadline);
@@ -82,6 +86,7 @@ export class ToastService {
     return {
       id,
       cancelled$: cancelled.asObservable(),
+      confirmed$: confirmed.asObservable(),
       cancelWindowMs: options.cancelWindowMs ?? 3000,
     };
   }
@@ -101,11 +106,14 @@ export class ToastService {
     if (!this.pendingActions.has(id)) return;
     for (const [actionId, cancelled] of this.pendingActions) {
       this.pendingActions.delete(actionId);
+      const confirmed = this.pendingConfirmations.get(actionId);
+      this.pendingConfirmations.delete(actionId);
       this.pendingMessages.delete(actionId);
       this.pendingSuccess.delete(actionId);
       this.countdownDeadlines.delete(actionId);
       cancelled.next();
       cancelled.complete();
+      confirmed?.complete();
     }
     this.stopCountdownTimer();
     if (this.stateSubject.value?.pending) this.stateSubject.next(null);
@@ -173,6 +181,11 @@ export class ToastService {
       this.pendingActions.delete(id);
       cancelled.complete();
     }
+    const confirmed = this.pendingConfirmations.get(id);
+    if (confirmed) {
+      this.pendingConfirmations.delete(id);
+      confirmed.complete();
+    }
     this.pendingMessages.delete(id);
     this.pendingSuccess.delete(id);
     this.countdownDeadlines.delete(id);
@@ -182,6 +195,12 @@ export class ToastService {
   }
 
   confirmAction(id: number): void {
+    const confirmed = this.pendingConfirmations.get(id);
+    if (confirmed) {
+      this.pendingConfirmations.delete(id);
+      confirmed.next();
+      confirmed.complete();
+    }
     const cancelled = this.pendingActions.get(id);
     if (cancelled) {
       this.pendingActions.delete(id);

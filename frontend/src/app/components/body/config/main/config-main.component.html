@@ -8,7 +8,13 @@
     </app-users>
   }
   @if (activeTab === 'accounts' && isAdmin) {
-    <app-account-management [familyProfiles]="activeUsers"></app-account-management>
+    <app-account-management
+      [familyProfiles]="activeUsers"
+      [selectedTreeItemId]="selectedAccountItemId"
+      (editorActionsChange)="editorActionsChange.emit($event)"
+      (treeDataChange)="accountTreeDataChange.emit($event)"
+      (selectedTreeItemChange)="accountTreeItemChange.emit($event)">
+    </app-account-management>
   }
   @defer (on immediate) {
     @if (activeTab === 'plans') {
@@ -75,9 +81,9 @@
       (backupsChanged)="backupsChanged.emit($event)">
     </app-database>
   }
-  @if (activeTab === 'header') {
-    <app-header-settings (editorActionsChange)="editorActionsChange.emit($event)">
-    </app-header-settings>
+  @if (activeTab === 'display') {
+    <app-display-settings (editorActionsChange)="editorActionsChange.emit($event)">
+    </app-display-settings>
   }
   @if (activeTab === 'statistics' && isPlatformAdmin) {
     <app-platform-statistics></app-platform-statistics>

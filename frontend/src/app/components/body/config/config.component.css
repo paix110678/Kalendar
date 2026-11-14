@@ -44,6 +44,10 @@ app-config {
   overflow: hidden;
 }
 
+.config-workspace-full-width .config-tree-column {
+  display: none;
+}
+
 .config-tree-column {
   position: relative;
 
@@ -113,11 +117,11 @@ app-config .admin-section {
 
   gap: 15px;
 
-  padding: 25px;
+  padding: 0;
 
-  border: 1px solid #dee2e6;
+  border: 0;
 
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 app-config .error-message {
@@ -148,11 +152,11 @@ app-config .form-error {
 app-config .empty-state {
   margin: 0;
 
-  padding: 1rem;
+  padding: 0;
 
-  border: 1px dashed #cbd5e1;
+  border: 0;
 
-  border-radius: 0.55rem;
+  border-radius: 0;
 
   color: #68778a;
 }
@@ -181,7 +185,7 @@ app-config .plans-page .form-error {
 
 @media (max-width: 640px) {
   app-config .admin-section {
-    padding: 14px;
+    padding: 0;
   }
 }
 
@@ -189,30 +193,4 @@ app-config .task-item {
   width: calc(100% - 14px);
 
   margin-left: 14px;
-}
-
-app-config .account-actions button {
-  min-height: 38px;
-
-  padding: 7px 12px;
-
-  border: 0;
-
-  border-radius: 6px;
-
-  color: #fff;
-
-  font: inherit;
-
-  font-weight: 650;
-
-  cursor: pointer;
-}
-
-app-config .account-actions {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 8px;
 }

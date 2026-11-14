@@ -10,18 +10,15 @@
   display: block;
 }
 
-.config-content-scroll > app-users .admin-section {
+.admin-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
 }
 
 .inline-create-card {
   margin-bottom: 5px;
-
-  padding: 15px;
-
-  border: 1px solid #e9ecef;
-
-  border-radius: 6px;
 }
 
 .input-row {

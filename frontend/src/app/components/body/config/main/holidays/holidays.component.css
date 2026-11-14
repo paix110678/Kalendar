@@ -40,12 +40,6 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 
   gap: 1rem;
-
-  padding: 1rem;
-
-  border: 1px solid #dce4ec;
-
-  border-radius: 0.75rem;
 }
 
 .holidays-page .field input,
@@ -128,10 +122,6 @@
   gap: 1rem;
 
   padding: 0.7rem 0.8rem;
-
-  border: 1px solid #dce4ec;
-
-  border-radius: 0.45rem;
 }
 
 .holiday-name {

@@ -10,7 +10,7 @@ export type AdminTab =
   | 'system'
   | 'database'
   | 'tasks'
-  | 'header'
+  | 'display'
   | 'statistics';
 
 export interface AdminNavigationAction {
@@ -18,6 +18,8 @@ export interface AdminNavigationAction {
     | 'members'
     | 'member'
     | 'accounts'
+    | 'account'
+    | 'invitation'
     | 'plans'
     | 'savedPlan'
     | 'holidays'
@@ -27,7 +29,7 @@ export interface AdminNavigationAction {
     | 'weatherLocation'
     | 'database'
     | 'backup'
-    | 'header'
+    | 'display'
     | 'statistics'
     | 'refreshPlans'
     | 'refreshHolidays'

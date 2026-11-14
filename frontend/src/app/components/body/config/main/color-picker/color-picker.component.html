@@ -4,23 +4,41 @@
     <span>{{ value }}</span>
   </summary>
   <div class="palette-panel" role="group" aria-label="Farbpalette">
-    <div class="palette-tabs" role="tablist" aria-label="Farbauswahl">
+    <div class="palette-tabs" role="group" aria-label="Farbauswahl">
       <button
         type="button"
-        role="tab"
+        [attr.aria-pressed]="activeTab === 'standard'"
         [class.palette-tab-active]="activeTab === 'standard'"
-        [attr.aria-selected]="activeTab === 'standard'"
         (click)="setActiveTab('standard')">
-        Standardfarben
+        Standard
       </button>
       <button
         type="button"
-        role="tab"
+        [attr.aria-pressed]="activeTab === 'created'"
         [class.palette-tab-active]="activeTab === 'created'"
-        [attr.aria-selected]="activeTab === 'created'"
         (click)="setActiveTab('created')">
-        Erstellte Farben
+        Eigene
       </button>
+      <button
+        type="button"
+        (click)="openCustomPalette(customColorInput)">
+        Custom
+      </button>
+      <button
+        type="button"
+        class="palette-close"
+        aria-label="Farbpalette schließen"
+        title="Schließen"
+        (click)="closePalette($event)">
+        ×
+      </button>
+      <input
+        #customColorInput
+        class="native-color-input"
+        type="color"
+        [value]="value"
+        (change)="onPaletteChange($event)"
+        aria-label="Eigene Farbe auswählen">
     </div>
     @if (activeTab === 'standard') {
       <div class="standard-colors" role="tabpanel" aria-label="Standardfarben">
@@ -36,16 +54,8 @@
             (click)="selectStandardColor(color.value, $event)">
           </button>
         }
-        <label class="custom-color">
-          <span>Eigene Farbe</span>
-          <input
-            type="color"
-            [value]="value"
-            (change)="onPaletteChange($event)"
-            aria-label="Eigene Farbe aus der Farbpalette auswählen">
-        </label>
       </div>
-    } @else {
+    } @else if (activeTab === 'created') {
       <div class="standard-colors" role="tabpanel" aria-label="Erstellte Farben">
         @for (color of createdColors; track color) {
           <button
