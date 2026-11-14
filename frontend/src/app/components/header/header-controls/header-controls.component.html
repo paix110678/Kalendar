@@ -19,7 +19,7 @@
       high_temp: config?.high_temp || '--',
       low_temp: config?.low_temp || '--',
       live_rain: config?.live_rain || '--',
-      weather_city: config?.weather_city || 'Bremen'
+      weather_city: config?.weather_city || (config?.weather_plz ? 'Ort noch nicht ermittelt' : 'Standort wählen')
     }">
   </app-weather-widget>
 </div>

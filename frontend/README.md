@@ -6,14 +6,22 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 Das Kalender-Grid wird als lokales npm-Paket aus `vendor/` eingebunden. Aktuell wird Version `0.4.3` verwendet. Die verwendete Version ist in `package.json` und `package-lock.json` festgelegt; beide Dateien und das zugehörige Paketarchiv müssen bei einem Update gemeinsam angepasst werden.
 
-Die Deploy-Pipeline setzt die angezeigte Kalender-Version bei erfolgreichem Deployment auf `1.2.<GitHub-Actions-Laufnummer>`. Da auch Pull-Request-Prüfungen Laufnummern erhalten, können zwischen Deployments Lücken entstehen. Die Version wird nicht separat in `package.json` gepflegt.
+Die Deploy-Pipeline setzt die angezeigte Kalender-Version bei erfolgreichem Deployment auf `1.3.0`. Der Releasewert wird in `.github/workflows/deploy.yml` gepflegt; die Version wird nicht separat in `package.json` gepflegt.
 
 ## Komponenten und Einstellungen
 
-Die Anmeldung, der Kalenderheader und der Fehlerbericht sind in der `CalendarShell` angeordnet. Im Einstellungsbereich sind das obere Menü, der Navigationsbaum, die Detailansicht und die Aktionsleiste getrennte Bereiche. Der Baum bleibt links, während Detailansicht und Aktionsleiste rechts dieselbe Breite verwenden.
+Die Anmeldung, der Kalenderheader und der Fehlerbericht sind in der `CalendarShell` angeordnet. Die `ConfigComponent` koordiniert Menü, Navigationsbaum, Hauptbereich und Aktionsleiste als vier eigene Komponenten. Der Baum bleibt links, während Hauptbereich und Aktionsleiste rechts dieselbe Breite verwenden. Die Config-Komponente gibt den gemeinsamen Hintergrund vor; ihre vier Teilbereiche verwenden keine abweichenden Flächenhintergründe.
+
+Die Einstellungsstruktur ist unter `components/body/config/` in die vier Bereiche `menu/`, `tree/`, `main/` und `action-footer/` gegliedert. `config.component.ts`, `.html` und `.css` bilden die gemeinsame Konfigurationsfläche und binden diese vier Komponenten ein. Die Inhaltskomponenten der Einstellungen liegen innerhalb von `main/`; die Kopfzeileneinstellungen liegen bei den Header-Komponenten unter `components/header/header-settings/`. Der Navigationsbaum bleibt in allen Einstellungsbereichen sichtbar.
+
+Wetterstandorte werden in den Einstellungen ausschließlich über die Postleitzahl angelegt; Ort und Koordinaten werden ermittelt und nur lesbar angezeigt. Die Auswahl des Wetterstandorts erfolgt pro Konto in den Kontodetails im Kopfbereich.
 
 Das verschachtelte Komponentenlayout ist in [COMPONENTS.mmd](src/app/components/COMPONENTS.mmd) dargestellt.
 Der Frontend-Testlauf ist mit Vitest konfiguriert; die GitHub-Actions-Pipeline führt Frontend-Tests, Frontend-Build und Backend-Tests vor einem Deployment aus. Compose prüft die Backend- und Frontend-Healthchecks; bei fehlgeschlagenem Start oder Healthcheck werden die vorherigen Images wieder aktiviert.
+
+## Screenshot im Fehlerbericht
+
+Für den Screenshot verwendet die `CalendarShell` `html2canvas`. Die eingesetzte Version 1.x kann moderne CSS-Farbfunktionen wie `oklch()`, `oklab()`, `lch()` und `lab()` nicht verarbeiten und bricht die Aufnahme mit „unsupported color function“ ab. Vor dem Rendern werden diese Farben deshalb ausschließlich im geklonten Dokument in RGBA umgewandelt. So bleibt die Darstellung der laufenden Anwendung unverändert. Diese Umwandlung darf erst entfernt werden, wenn die eingesetzte Screenshot-Bibliothek die betreffenden CSS-Farben nachweislich unterstützt.
 
 ## Development server
 

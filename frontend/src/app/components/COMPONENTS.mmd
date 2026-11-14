@@ -1,11 +1,12 @@
 flowchart TD
   Root["app-root<br/>AppComponent"] --> Shell["app-calendar-shell<br/>CalendarShellComponent"]
 
-  Shell --> AuthState{"Anmeldestatus"}
+  Shell --> AppHeader["app-calendar-header<br/>CalendarHeaderComponent"]
+  Shell --> Body["app-calendar-body<br/>CalendarBodyComponent"]
+  Body --> ErrorDialog["app-error-report-dialog<br/>ErrorReportDialogComponent"]
+  Body --> AuthState{"Anmeldestatus"}
   AuthState -->|nicht angemeldet| Auth["app-auth<br/>AuthComponent"]
-  AuthState -->|angemeldet| AppHeader["app-calendar-header<br/>CalendarHeaderComponent"]
   AuthState -->|angemeldet| Main["Kalender-/Inhaltsbereich"]
-  AuthState -. Fehlerbericht .-> ErrorDialog["app-error-report-dialog<br/>ErrorReportDialogComponent"]
 
   AppHeader --> Brand["app-header-brand<br/>HeaderBrandComponent"]
   AppHeader --> HeaderTitle["app-title-back-header<br/>TitleBackHeaderComponent"]
@@ -20,17 +21,17 @@ flowchart TD
   Main --> Calendar["app-calendar-grid<br/>CalendarGridComponent"]
   Calendar --> GridPackage["glc-grid-calendar<br/>Grid-Paket"]
   Calendar --> BlockEditor["app-block-editor<br/>BlockEditorComponent"]
-  Main --> Admin["app-admin-dashboard<br/>DashboardComponent"]
+  Main --> Admin["app-config<br/>ConfigComponent"]
   Main --> Rewards["app-reward-dashboard<br/>RewardDashboardComponent"]
   Rewards --> RewardSidebar["app-sidebar<br/>SidebarComponent"]
 
-  Admin --> Menu["app-admin-navigation<br/>separat umrahmtes oberes Menü"]
-  Admin --> Split["Menüinhalt · zwei Spalten"]
+  Admin --> Menu["app-admin-navigation<br/>config/menu"]
+  Admin --> Split["config-workspace"]
   Split --> Sidebar["Linke Spalte"]
-  Sidebar --> Tree["app-admin-navigation-tree<br/>eigener Rahmen, volle Höhe"]
+  Sidebar --> Tree["app-admin-navigation-tree<br/>config/tree · immer sichtbar"]
   Split --> DetailsColumn["Rechte Spalte"]
-  DetailsColumn --> Details["Detailbereich<br/>eigener Rahmen"]
-  DetailsColumn --> Actions["app-editor-actions-footer<br/>eigener Rahmen, Detailbreite"]
+  DetailsColumn --> Details["app-config-main<br/>config/main"]
+  DetailsColumn --> Actions["app-action-footer<br/>config/action-footer"]
 
   Menu --> Members["Mitglieder"]
   Menu --> Plans["Pläne"]
@@ -57,5 +58,5 @@ flowchart TD
   TasksComponent --> ColorPicker
   Details --> System["app-system<br/>SystemComponent"]
   Details --> Database["app-database<br/>DatabaseComponent"]
-  Details --> HeaderSettings["app-header-settings<br/>HeaderSettingsComponent"]
+  Admin --> HeaderSettings["app-header-settings<br/>components/header/header-settings"]
   Details --> Statistics["app-platform-statistics<br/>PlatformStatisticsComponent"]

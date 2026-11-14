@@ -1,0 +1,155 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: block;
+}
+
+.config-content-scroll > app-holidays .holidays-form {
+  background: transparent;
+}
+
+.holidays-page {
+  display: grid;
+
+  gap: 1.25rem;
+
+  color: #263445;
+}
+
+.holidays-header h3,
+.saved-heading h4,
+.holiday-year h5 {
+  margin: 0;
+}
+
+.holidays-header p {
+  margin: 0.4rem 0 0;
+
+  color: #68778a;
+}
+
+.holidays-form {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+
+  gap: 1rem;
+
+  padding: 1rem;
+
+  border: 1px solid #dce4ec;
+
+  border-radius: 0.75rem;
+}
+
+.holidays-page .field input,
+.holidays-page .field select {
+  box-sizing: border-box;
+
+  width: 100%;
+
+  min-height: 2.5rem;
+
+  padding: 0.5rem 0.65rem;
+
+  border: 1px solid #cbd5e1;
+
+  border-radius: 0.4rem;
+
+  color: inherit;
+
+  font: inherit;
+}
+
+.saved-holidays {
+  display: grid;
+
+  gap: 0.85rem;
+}
+
+.saved-heading {
+  display: flex;
+
+  align-items: baseline;
+
+  justify-content: space-between;
+
+  gap: 1rem;
+}
+
+.saved-heading > span,
+.holiday-dates {
+  color: #68778a;
+
+  font-size: 0.9rem;
+}
+
+.holiday-year {
+  display: grid;
+
+  gap: 0.5rem;
+}
+
+.holiday-year h5 {
+  color: #42566f;
+
+  font-size: 1rem;
+}
+
+.holiday-year ul {
+  display: grid;
+
+  gap: 0.4rem;
+
+  margin: 0;
+
+  padding: 0;
+
+  list-style: none;
+}
+
+.holiday-entry {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  width: 100%;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 1rem;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid #dce4ec;
+
+  border-radius: 0.45rem;
+}
+
+.holiday-name {
+  font-weight: 600;
+}
+
+.holiday-type {
+  display: inline-block;
+
+  margin-right: 0.4rem;
+
+  padding: 0.15rem 0.4rem;
+
+  border-radius: 999px;
+
+  color: #1971c2;
+
+  font-size: 0.75rem;
+
+  font-weight: 700;
+}

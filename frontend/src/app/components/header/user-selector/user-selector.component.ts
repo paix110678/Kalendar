@@ -17,10 +17,13 @@ export class UserSelectorComponent {
 
   @Output() userVisibilityToggled = new EventEmitter<{userId: number, event: MouseEvent}>();
   @Output() rewardDashboardOpened = new EventEmitter<User>();
+  public readonly isCoarsePointer =
+    typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true;
 
   // Lokaler Zwischenspeicher für den Ziehvorgang
   private draggedUserIndex: number | null = null;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressClickTimer: ReturnType<typeof setTimeout> | null = null;
   private suppressNextRewardClick = false;
   private longPressStart: { pointerId: number; x: number; y: number } | null = null;
 
@@ -37,6 +40,8 @@ export class UserSelectorComponent {
 
   public startLongPress(event: PointerEvent, userId: number): void {
     this.cancelLongPress();
+    if (this.suppressClickTimer !== null) clearTimeout(this.suppressClickTimer);
+    this.suppressClickTimer = null;
     this.suppressNextRewardClick = false;
     if (event.pointerType !== 'touch') return;
 
@@ -48,13 +53,17 @@ export class UserSelectorComponent {
     this.longPressTimer = setTimeout(() => {
       this.longPressTimer = null;
       this.suppressNextRewardClick = true;
+      this.suppressClickTimer = setTimeout(() => {
+        this.suppressNextRewardClick = false;
+        this.suppressClickTimer = null;
+      }, 1000);
       this.userVisibilityToggled.emit({ userId, event });
     }, 600);
   }
 
   public moveLongPress(event: PointerEvent): void {
     if (this.longPressStart?.pointerId !== event.pointerId) return;
-    if (Math.hypot(event.clientX - this.longPressStart.x, event.clientY - this.longPressStart.y) > 10) {
+    if (Math.hypot(event.clientX - this.longPressStart.x, event.clientY - this.longPressStart.y) > 18) {
       this.cancelLongPress();
     }
   }
@@ -70,6 +79,8 @@ export class UserSelectorComponent {
   public openRewards(user: User): void {
     if (this.suppressNextRewardClick) {
       this.suppressNextRewardClick = false;
+      if (this.suppressClickTimer !== null) clearTimeout(this.suppressClickTimer);
+      this.suppressClickTimer = null;
       return;
     }
     this.rewardDashboardOpened.emit(user);

@@ -9,7 +9,7 @@
           [attr.aria-expanded]="showAccountDetails"
           aria-haspopup="dialog"
           aria-label="Kontodetails für {{ account.display_name }}"
-          (click)="showAccountDetails = !showAccountDetails">
+          (click)="toggleAccountDetails()">
           {{ accountInitials }}
         </button>
 
@@ -27,6 +27,29 @@
             @if (account.profile_name) {
               <p><span>Profil</span><strong>{{ account.profile_name }}</strong></p>
             }
+            <div class="account-weather-settings">
+              <label for="profile-weather-location">Standort der Wetteranzeige</label>
+              @if (weatherLocationLoading && weatherLocations.length === 0) {
+                <p role="status">Wetterstandorte werden geladen …</p>
+              } @else if (weatherLocations.length > 0) {
+                <select
+                  id="profile-weather-location"
+                  [ngModel]="selectedWeatherLocationId"
+                  [disabled]="weatherLocationLoading"
+                  (ngModelChange)="onWeatherLocationChange($event)">
+                  @for (location of weatherLocations; track location.id) {
+                    <option [ngValue]="location.id">
+                      {{ location.weather_city || 'Ort noch nicht ermittelt' }} ({{ location.weather_plz }})
+                    </option>
+                  }
+                </select>
+              } @else if (!weatherLocationLoading && !weatherLocationError) {
+                <p>Es sind noch keine Wetterstandorte eingerichtet.</p>
+              }
+              @if (weatherLocationError) {
+                <p class="weather-location-error" role="alert">{{ weatherLocationError }}</p>
+              }
+            </div>
             <p><span>Rolle</span><strong>{{ accountRoleLabel }}</strong></p>
             <p>
               <span>E-Mail</span>

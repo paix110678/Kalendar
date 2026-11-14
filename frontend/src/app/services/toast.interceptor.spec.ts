@@ -34,13 +34,20 @@ describe('toastInterceptor', () => {
     vi.useRealTimers();
   });
 
-  it('waits three seconds before sending a mutation and shows a success toast', () => {
+  it('shows a save countdown and a brief green completion toast', () => {
     let response: unknown;
     client.post('/api/categories', {}).subscribe((value) => {
       response = value;
     });
 
-    vi.advanceTimersByTime(2999);
+    expect(latestState?.message).toBe('Wird gespeichert');
+    expect(latestState?.success).toBe(true);
+    expect(latestState?.countdownSeconds).toBe(3);
+    vi.advanceTimersByTime(1000);
+    expect(latestState?.countdownSeconds).toBe(2);
+    vi.advanceTimersByTime(1000);
+    expect(latestState?.countdownSeconds).toBe(1);
+    vi.advanceTimersByTime(999);
     httpTesting.expectNone('/api/categories');
     expect(latestState?.cancelable).toBe(true);
 
@@ -48,7 +55,12 @@ describe('toastInterceptor', () => {
     httpTesting.expectOne('/api/categories').flush({ message: 'Kategorie gespeichert.' });
     expect(response).toEqual({ message: 'Kategorie gespeichert.' });
     expect(latestState?.success).toBe(true);
-    expect(latestState?.message).toBe('Kategorie gespeichert.');
+    expect(latestState?.message).toBe('Wurde gespeichert.');
+    expect(latestState?.countdownSeconds).toBeNull();
+    vi.advanceTimersByTime(999);
+    expect(latestState).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(latestState).toBeNull();
   });
 
   it('does not send a mutation cancelled during the delay', () => {
@@ -78,6 +90,23 @@ describe('toastInterceptor', () => {
 
     expect(latestState?.success).toBe(false);
     expect(latestState?.message).toBe('Name ist bereits vergeben.');
+  });
+
+  it('shows deletes in red with a countdown and a brief completion message', () => {
+    client.delete('/api/config/locations/1').subscribe();
+    expect(latestState?.message).toBe('Wird gelöscht');
+    expect(latestState?.success).toBe(false);
+    expect(latestState?.countdownSeconds).toBe(3);
+    vi.advanceTimersByTime(3000);
+    httpTesting.expectOne('/api/config/locations/1').flush({
+      status: 'success',
+      message: 'Wetterstandort wurde gelöscht.',
+    });
+
+    expect(latestState?.success).toBe(false);
+    expect(latestState?.message).toBe('Wurde gelöscht.');
+    vi.advanceTimersByTime(1000);
+    expect(latestState).toBeNull();
   });
 
   it('uses the cancel window and cancelability configured for a request', () => {

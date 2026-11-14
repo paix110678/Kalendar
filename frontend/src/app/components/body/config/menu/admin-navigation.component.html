@@ -1,0 +1,80 @@
+<div class="admin-menu-panel">
+  <nav class="admin-top-navigation" aria-label="Einstellungsbereiche">
+    <button
+      type="button"
+      class="top-navigation-button"
+      [class.top-navigation-active]="activeTab === 'users'"
+      (click)="emit('members')"
+    >
+      👥 Mitglieder
+    </button>
+    <button
+      type="button"
+      class="top-navigation-button"
+      [class.top-navigation-active]="activeTab === 'plans'"
+      (click)="emit('plans')"
+    >
+      📅 Pläne
+    </button>
+    <button
+      type="button"
+      class="top-navigation-button"
+      [class.top-navigation-active]="activeTab === 'holidays'"
+      (click)="emit('holidays')"
+    >
+      🏖️ Ferien
+    </button>
+    <button
+      type="button"
+      class="top-navigation-button"
+      [class.top-navigation-active]="activeTab === 'categories' || activeTab === 'tasks'"
+      (click)="emit('categories')"
+    >
+      🏷️ Kategorien
+    </button>
+    @if (isAdmin) {
+      <button
+        type="button"
+        class="top-navigation-button"
+        [class.top-navigation-active]="activeTab === 'accounts'"
+        (click)="emit('accounts')"
+      >
+        🔐 Konten
+      </button>
+      <button
+        type="button"
+        class="top-navigation-button"
+        [class.top-navigation-active]="activeTab === 'system'"
+        (click)="emit('weather')"
+      >
+        🌤️ Wetter
+      </button>
+      <button
+        type="button"
+        class="top-navigation-button"
+        [class.top-navigation-active]="activeTab === 'header'"
+        (click)="emit('header')"
+      >
+        🧭 Kopfzeile
+      </button>
+      <button
+        type="button"
+        class="top-navigation-button"
+        [class.top-navigation-active]="activeTab === 'database'"
+        (click)="emit('database')"
+      >
+        🗄️ DB-Viewer
+      </button>
+    }
+    @if (isPlatformAdmin) {
+      <button
+        type="button"
+        class="top-navigation-button"
+        [class.top-navigation-active]="activeTab === 'statistics'"
+        (click)="emit('statistics')"
+      >
+        📊 Statistik
+      </button>
+    }
+  </nav>
+</div>

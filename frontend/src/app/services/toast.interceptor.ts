@@ -16,9 +16,11 @@ export function toastInterceptor(
   if (!isMutation || /\/auth\/(login|logout)$/.test(url.pathname)) return next(request);
 
   const options = request.context.get(SAVE_TOAST_OPTIONS);
+  const isDelete = request.method === 'DELETE';
   const pending = toastService.beginAction(
-    `${actionName(url.pathname)} in ${Math.ceil((options.cancelWindowMs ?? 3000) / 1000)} Sekunden …`,
+    isDelete ? 'Wird gelöscht' : 'Wird gespeichert',
     options,
+    !isDelete,
   );
   const cancelledError = new HttpErrorResponse({
     status: 499,
@@ -37,11 +39,12 @@ export function toastInterceptor(
     switchMap((confirmed) => confirmed ? next(request) : throwError(() => cancelledError)),
     tap((event) => {
       if (!(event instanceof HttpResponse)) return;
-      const body = event.body as { message?: unknown } | null;
-      const successMessage = typeof body?.message === 'string'
-        ? body.message
-        : `${actionName(url.pathname)} abgeschlossen.`;
-      toastService.finishAction(pending.id, true, successMessage);
+      toastService.finishAction(
+        pending.id,
+        !isDelete,
+        isDelete ? 'Wurde gelöscht.' : 'Wurde gespeichert.',
+        1000,
+      );
     }),
     catchError((error: unknown) => {
       if (error === cancelledError) return throwError(() => error);
@@ -49,20 +52,6 @@ export function toastInterceptor(
       return throwError(() => error);
     }),
   );
-}
-
-function actionName(path: string): string {
-  if (path.includes('/auth/')) return 'Kontoaktion';
-  if (path.includes('/error-reports')) return 'Fehlerbericht';
-  if (path.includes('/users/') || path.endsWith('/users')) return 'Familienmitgliedänderung';
-  if (path.includes('/blocks')) return 'Kalenderänderung';
-  if (path.includes('/plans')) return 'Stundenplanänderung';
-  if (path.includes('/tasks')) return 'Aufgabenänderung';
-  if (path.includes('/categories')) return 'Fachänderung';
-  if (path.includes('/holidays')) return 'Ferienänderung';
-  if (path.includes('/backups')) return 'Backupaktion';
-  if (path.includes('/config')) return 'Einstellungsänderung';
-  return 'Änderung';
 }
 
 function errorMessage(error: unknown): string {

@@ -1,121 +1,112 @@
-/* Haupt-Container der Leiste: Verteilt den Platz hochelastisch im Header */
 .user-selector-container {
   display: flex;
-  gap: clamp(2px, 0.6vw, 8px);
   flex: 1;
   justify-content: center;
-  flex-wrap: nowrap;
-  overflow: visible !important; /* ERZWUNGEN: Verhindert, dass das Auge seitlich abgeschnitten wird! */
-  flex-shrink: 1;
-  /* KORREKTUR: Schafft exakt 6 Pixel sicheren Raum nach oben hin, damit das Auge voll sichtbar wird! */
-  padding-top: 6px !important; 
-  padding-bottom: 2px;
-  box-sizing: border-box;
+  gap: clamp(2px, 0.6vw, 8px);
   min-width: 0;
+  padding: 6px 0 2px;
+  overflow: visible;
+  box-sizing: border-box;
 }
 
 .user-btn-wrapper-hover {
+  position: relative;
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
-  position: relative !important;
-  flex-shrink: 1;
   min-width: 0;
-  flex: 1 1 0;
 }
 
-/* Transparenter Kapsel-Button in der jeweiligen Spurfarbe */
 .piggy-trigger-btn-transparent-style {
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: center;
   gap: clamp(2px, 0.4vw, 6px);
+  width: auto;
+  min-width: 0;
+  height: 38px;
   padding: 4px clamp(3px, 0.8vw, 12px);
+  overflow: hidden;
   border: 2px solid;
   border-radius: 28px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.02);
-  cursor: pointer;
-  height: 38px;
   box-sizing: border-box;
-  transition: all 0.15s ease-in-out;
-  flex-shrink: 1;
-  overflow: hidden;
-  width: 100%;
-  min-width: 0;
-}
-.piggy-trigger-btn-transparent-style:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 2%);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease-in-out;
 }
 
-/* Fetter weißer Namenstext mit Drei-Punkt-Abschneideschutz bei kleinen Monitoren */
 .user-name-label-white {
-  font-family: system-ui, sans-serif;
-  font-weight: 900;
-  font-size: 15px;
-  color: #ffffff !important;
-  text-shadow: 0 1.5px 3px rgba(0,0,0,0.15);
-  letter-spacing: -0.3px;
-  white-space: nowrap;
   overflow: hidden;
+  color: #fff !important;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
   text-overflow: ellipsis;
+  text-shadow: 0 1.5px 3px rgb(0 0 0 / 15%);
+  white-space: nowrap;
 }
 
 .user-stars-large-wrapper {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 3px;
-  flex-shrink: 0;
 }
 
 .star-icon-giant {
   font-size: 16px;
-  filter: drop-shadow(0 1.5px 3px rgba(0,0,0,0.25));
+  filter: drop-shadow(0 1.5px 3px rgb(0 0 0 / 25%));
 }
 
-/* Umrandete gelbe Sterne-Zahl */
 .star-count-stroke-number {
-  font-family: system-ui, sans-serif;
-  font-weight: 950;
-  font-size: 16px;
   color: #ffd43b !important;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, -1px 1px 0 #000;
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 950;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
-/* Das schwebende Auge (Erscheint reaktiv bei Mausberührung/Hover) */
 .eye-toggle-badge-hover-mode {
   position: absolute;
+  z-index: 1;
+  top: -6px;
   left: -6px;
-  /* KORREKTUR: Haargenau mit dem neuen Padding-Top der Kapsel synchronisiert */
-  top: -6px; 
-  background: #ffffff; 
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1.5px solid #dee2e6;
-  font-size: 11px; 
-  cursor: pointer; 
-  z-index: 30; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  width: 22px; 
-  height: 22px; 
-  border-radius: 50%; 
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  opacity: 0; 
-  transition: all 0.15s ease-in-out;
-  pointer-events: none; 
-}
-
-.user-btn-wrapper-hover:hover .eye-toggle-badge-hover-mode {
-  opacity: 1 !important; 
-  pointer-events: auto !important; 
-  transform: scale(1.05);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 15%);
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
 }
 
 .user-name-abbreviation {
   display: none;
-  color: #ffffff;
+  color: #fff;
   font-family: system-ui, sans-serif;
   font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .piggy-trigger-btn-transparent-style:hover {
+    box-shadow: 0 6px 20px rgb(0 0 0 / 6%);
+  }
+
+  .user-btn-wrapper-hover:hover .eye-toggle-badge-hover-mode {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }

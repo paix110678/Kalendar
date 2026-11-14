@@ -1,15 +1,32 @@
 import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  Subscription,
+  Subject,
+  catchError,
+  distinctUntilChanged,
+  exhaustMap,
+  filter,
+  fromEvent,
+  map,
+  merge,
+  of,
+  pairwise,
+  switchMap,
+  tap,
+  throwError,
+  timer,
+} from 'rxjs';
 import {
   ApiService,
   HeaderPreferences,
   PlanConflictResolution,
   PlanDefinition,
   PlanSubject,
+  ProfileWeatherData,
   SavedHolidayData,
-  SystemConfigLocationResult,
-  SystemConfigUpdateResult,
   UpdateUserProfileResult,
 } from './api.service';
 import { AuthService } from './auth.service';
@@ -61,8 +78,6 @@ export interface SystemConfig {
   weather_plz: string;
   weather_latitude: number | null;
   weather_longitude: number | null;
-  weather_service: 'open_meteo' | 'weather_api';
-  api_key: string;
   live_temp: string;
   live_rain: string;
   high_temp: string;
@@ -89,19 +104,17 @@ export class CalendarService {
   public blocks$: Observable<TimeBlock[]> = this.blocksSubject.asObservable();
   private rewardsSubject = new BehaviorSubject<Reward[]>([]);
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
-  private configSubject = new BehaviorSubject<SystemConfig>({
-    weather_city: 'Bremen',
-    weather_plz: '28790',
+  private profileWeatherSubject = new BehaviorSubject<SystemConfig>({
+    weather_city: '',
+    weather_plz: '',
     weather_latitude: null,
     weather_longitude: null,
-    weather_service: 'open_meteo',
-    api_key: '',
     live_temp: '--',
     live_rain: '--',
     high_temp: '--',
     low_temp: '--',
   });
-  public config$: Observable<SystemConfig> = this.configSubject.asObservable();
+  public profileWeather$: Observable<SystemConfig> = this.profileWeatherSubject.asObservable();
   private headerPreferencesSubject = new BehaviorSubject<HeaderPreferences>({
     show_users: true,
     show_view_mode: true,
@@ -121,7 +134,12 @@ export class CalendarService {
     error: null,
   });
   public savedHolidayDataState$ = this.savedHolidayDataState.asObservable();
+  private familyDataChangesSubject = new Subject<void>();
+  public familyDataChanges$ = this.familyDataChangesSubject.asObservable();
   private loadedAccountId: number | null = null;
+  private familySyncSubscription: Subscription | null = null;
+  private familyDataRefreshPaused = false;
+  private pendingFamilyDataRefresh = false;
 
   public readonly START_HOUR = 6;
   public readonly END_HOUR = 24;
@@ -132,6 +150,7 @@ export class CalendarService {
   ) {
     this.authService.state$.subscribe(({ account }) => {
       if (!account) {
+        this.stopFamilySync();
         if (this.loadedAccountId !== null) {
           this.loadedAccountId = null;
           this.clearFamilyData();
@@ -142,7 +161,7 @@ export class CalendarService {
       if (this.loadedAccountId === account.id) return;
       this.clearFamilyData();
       this.loadedAccountId = account.id;
-      this.loadInitialData();
+      this.startFamilySync();
     });
   }
 
@@ -168,7 +187,7 @@ export class CalendarService {
     this.loadUsers();
     this.loadAllBlocks();
     this.loadRewards();
-    this.loadInitialSystemConfig();
+    this.loadProfileWeather();
     this.loadHeaderPreferences();
     if (['admin', 'adult'].includes(this.authService.currentAccount?.role ?? '')) {
       this.loadSavedPlans();
@@ -183,13 +202,11 @@ export class CalendarService {
     this.categoriesSubject.next([]);
     this.blocksSubject.next([]);
     this.rewardsSubject.next([]);
-    this.configSubject.next({
-      weather_city: 'Bremen',
-      weather_plz: '28790',
+    this.profileWeatherSubject.next({
+      weather_city: '',
+      weather_plz: '',
       weather_latitude: null,
       weather_longitude: null,
-      weather_service: 'open_meteo',
-      api_key: '',
       live_temp: '--',
       live_rain: '--',
       high_temp: '--',
@@ -202,6 +219,95 @@ export class CalendarService {
     });
     this.savedPlansState.next({ data: null, loading: false, error: null });
     this.savedHolidayDataState.next({ data: null, loading: false, error: null });
+  }
+  private startFamilySync(): void {
+    this.stopFamilySync();
+    let initialDataLoaded = false;
+    let initialSyncChecked = false;
+    let syncErrorLogged = false;
+    this.familySyncSubscription = merge(
+      timer(0, 5000),
+      fromEvent(document, 'visibilitychange').pipe(
+        filter(() => document.visibilityState === 'visible'),
+      ),
+    )
+      .pipe(
+      filter(
+        () => !initialSyncChecked || document.visibilityState === 'visible',
+      ),
+      exhaustMap(() =>
+        this.apiService.getFamilyDataRevision().pipe(
+          tap(() => {
+            initialSyncChecked = true;
+            syncErrorLogged = false;
+          }),
+          catchError((error: unknown) => {
+            initialSyncChecked = true;
+            if (!syncErrorLogged) {
+                console.error('Familienänderungen konnten nicht geprüft werden:', error);
+                syncErrorLogged = true;
+              }
+              if (!initialDataLoaded) {
+                initialDataLoaded = true;
+                this.loadInitialData();
+              }
+              return of(null);
+            }),
+          ),
+        ),
+        filter((revision): revision is number => revision !== null),
+        tap(() => {
+          if (!initialDataLoaded) {
+            initialDataLoaded = true;
+            this.loadInitialData();
+          }
+        }),
+        distinctUntilChanged(),
+        pairwise(),
+        filter(([previous, current]) => previous !== current),
+      )
+      .subscribe(() => this.refreshFamilyData());
+  }
+  private stopFamilySync(): void {
+    this.familySyncSubscription?.unsubscribe();
+    this.familySyncSubscription = null;
+    this.familyDataRefreshPaused = false;
+    this.pendingFamilyDataRefresh = false;
+  }
+  private refreshFamilyData(): void {
+    if (this.familyDataRefreshPaused) {
+      this.pendingFamilyDataRefresh = true;
+      return;
+    }
+
+    this.familyDataChangesSubject.next();
+    this.reloadUsers().subscribe({
+      error: (error: unknown) => console.error('Familienmitglieder konnten nicht aktualisiert werden:', error),
+    });
+    this.reloadCategories().subscribe({
+      error: (error: unknown) => console.error('Fächer konnten nicht aktualisiert werden:', error),
+    });
+    this.refreshAllBlocks().subscribe({
+      error: (error: unknown) => console.error('Kalendertermine konnten nicht aktualisiert werden:', error),
+    });
+    this.refreshRewards().subscribe({
+      error: (error: unknown) => console.error('Belohnungen konnten nicht aktualisiert werden:', error),
+    });
+    this.refreshProfileWeather().subscribe({
+      error: (error: unknown) => console.error('Profil-Wetterdaten konnten nicht aktualisiert werden:', error),
+    });
+    this.loadHeaderPreferences();
+    this.loadSavedHolidayData();
+    if (['admin', 'adult'].includes(this.authService.currentAccount?.role ?? '')) {
+      this.loadSavedPlans();
+    }
+  }
+  public setFamilyDataRefreshPaused(paused: boolean): void {
+    this.familyDataRefreshPaused = paused;
+    if (!paused && this.pendingFamilyDataRefresh) {
+      this.pendingFamilyDataRefresh = false;
+      this.refreshFamilyData();
+    }
   }
   public loadSavedPlans(): void {
     this.savedPlansState.next({ ...this.savedPlansState.value, loading: true, error: null });
@@ -281,15 +387,21 @@ export class CalendarService {
       error: (error: unknown) => console.error('Kategorien konnten nicht geladen werden:', error),
     });
   }
-  public loadSystemConfig(): void {
-    this.apiService.getSystemConfigSettings().subscribe({
-      next: (config: SystemConfig) => {
-        this.configSubject.next(config);
-        this.refreshWeatherSnapshot();
-      },
+  public refreshProfileWeather(): Observable<ProfileWeatherData> {
+    return this.apiService.getProfileWeather().pipe(
+      tap((data) => this.profileWeatherSubject.next(data)),
+    );
+  }
+  public loadProfileWeather(): void {
+    this.refreshProfileWeather().subscribe({
       error: (error: unknown) =>
-        console.error('Systemkonfiguration konnte nicht geladen werden:', error),
+        console.error('Profil-Wetterdaten konnten nicht geladen werden:', error),
     });
+  }
+  public updateProfileWeatherLocation(locationId: number): Observable<ProfileWeatherData> {
+    return this.apiService.updateProfileWeatherLocation(locationId).pipe(
+      tap((data) => this.profileWeatherSubject.next(data)),
+    );
   }
   public loadHeaderPreferences(): void {
     this.apiService.getHeaderPreferences().subscribe({
@@ -302,56 +414,6 @@ export class CalendarService {
     return this.apiService
       .updateHeaderPreferences(preferences)
       .pipe(tap((savedPreferences) => this.headerPreferencesSubject.next(savedPreferences)));
-  }
-  private loadInitialSystemConfig(): void {
-    this.apiService.getSystemConfigSettings().subscribe({
-      next: (config: SystemConfig) => {
-        this.configSubject.next(config);
-        if (config.weather_latitude !== null && config.weather_longitude !== null) {
-          this.refreshWeatherSnapshot();
-          return;
-        }
-
-        this.apiService.resolveWeatherLocation().subscribe({
-          next: (result: SystemConfigLocationResult) => {
-            if (result.location_error) {
-              console.warn(
-                'Standort konnte beim Frontend-Start nicht ermittelt werden:',
-                result.location_error,
-              );
-            }
-            if (result.location_resolved) {
-              this.loadSystemConfig();
-            }
-          },
-          error: (error: unknown) => {
-            console.error('Standortprüfung beim Frontend-Start fehlgeschlagen:', error);
-          },
-        });
-      },
-      error: (error: unknown) => {
-        console.error(
-          'Systemkonfiguration konnte beim Frontend-Start nicht geladen werden:',
-          error,
-        );
-      },
-    });
-  }
-  private refreshWeatherSnapshot(): void {
-    this.apiService.getSystemConfig().subscribe({
-      next: (weather) => {
-        const current = this.configSubject.value;
-        this.configSubject.next({
-          ...current,
-          live_temp: weather.live_temp,
-          live_rain: weather.live_rain,
-          high_temp: weather.high_temp,
-          low_temp: weather.low_temp,
-        });
-      },
-      error: (error: unknown) =>
-        console.error('Wetterdaten konnten nicht aktualisiert werden:', error),
-    });
   }
   public loadAllBlocks(): void {
     this.refreshAllBlocks().subscribe({
@@ -372,9 +434,14 @@ export class CalendarService {
     return this.apiService.getUsers().pipe(tap((users) => this.usersSubject.next(users)));
   }
   private loadRewards(): void {
-    this.apiService
+    this.refreshRewards().subscribe({
+      error: (error: unknown) => console.error('Belohnungen konnten nicht geladen werden:', error),
+    });
+  }
+  public refreshRewards(): Observable<Reward[]> {
+    return this.apiService
       .getRewards()
-      .subscribe((rewards: Reward[]) => this.rewardsSubject.next(rewards));
+      .pipe(tap((rewards) => this.rewardsSubject.next(rewards)));
   }
   public updateUserProfile(
     userId: number,
@@ -542,10 +609,6 @@ export class CalendarService {
         ),
       );
   }
-  public updateSystemConfig(cfg: SystemConfig): Observable<SystemConfigUpdateResult> {
-    return this.apiService.updateSystemConfig(cfg).pipe(tap(() => this.loadSystemConfig()));
-  }
-
   // KORREKTUR: Steuert den Entwurfs-Typ nun voll-reaktiv über den RAM-Safe
   public getDrawnCategory(): string {
     return this.drawnCategorySubject.value;

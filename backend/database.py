@@ -164,16 +164,6 @@ def _init_db_connection(conn):
         )
     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS error_reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            description TEXT NOT NULL,
-            diagnostics TEXT NOT NULL,
-            screenshot BLOB,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
     # NEU: Das geänderte Tabellenmodell für die Zeitblöcke mit dem Abkürzungsfeld 'short_title'
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS time_blocks (
@@ -213,16 +203,14 @@ def _init_db_connection(conn):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS weather_locations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
             weather_city TEXT NOT NULL DEFAULT '',
             weather_plz TEXT NOT NULL DEFAULT '',
-            weather_service TEXT NOT NULL DEFAULT 'open_meteo',
-            api_key TEXT NOT NULL DEFAULT '',
             weather_latitude REAL,
             weather_longitude REAL,
             is_active INTEGER NOT NULL DEFAULT 0
         )
     """)
+    _migrate_weather_locations(cursor)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS plans (
@@ -661,17 +649,13 @@ def _init_db_connection(conn):
             cursor.execute(
                 """
                 INSERT INTO weather_locations (
-                    name, weather_city, weather_plz, weather_service, api_key,
-                    weather_latitude, weather_longitude, is_active
+                    weather_city, weather_plz, weather_latitude, weather_longitude, is_active
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                VALUES (?, ?, ?, ?, 1)
                 """,
                 (
                     legacy_config["weather_city"] or "",
-                    legacy_config["weather_city"] or "",
                     legacy_config["weather_plz"] or "",
-                    legacy_config["weather_service"] or "open_meteo",
-                    legacy_config["api_key"] or "",
                     legacy_config["weather_latitude"],
                     legacy_config["weather_longitude"],
                 ),
@@ -681,4 +665,124 @@ def _init_db_connection(conn):
     cursor.execute("DROP TABLE IF EXISTS holiday_settings")
     conn.commit()
 
+    _install_family_data_revision_triggers(cursor)
+    conn.commit()
+
     print("✅ System-Datenbank erfolgreich geprüft!")
+
+
+def _install_family_data_revision_triggers(cursor):
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS family_data_revision (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            revision INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    cursor.execute(
+        "INSERT OR IGNORE INTO family_data_revision (id, revision) VALUES (1, 0)"
+    )
+
+    tables = (
+        "users",
+        "rewards",
+        "categories",
+        "tasks",
+        "task_participants",
+        "task_event_type_migrations",
+        "time_blocks",
+        "weather_locations",
+        "plans",
+        "holiday_states",
+        "holiday_years",
+        "holidays",
+        "plan_event_types",
+        "person_event_types",
+        "user_plan_assignments",
+    )
+    for table in tables:
+        for operation in ("INSERT", "UPDATE", "DELETE"):
+            trigger_name = f"trg_family_revision_{table}_{operation.lower()}"
+            cursor.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS {trigger_name}
+                AFTER {operation} ON {table}
+                BEGIN
+                    UPDATE family_data_revision
+                    SET revision = revision + 1
+                    WHERE id = 1;
+                END
+                """
+            )
+
+    for operation in ("INSERT", "DELETE"):
+        trigger_name = f"trg_family_revision_system_config_{operation.lower()}"
+        cursor.execute(
+            f"""
+            CREATE TRIGGER IF NOT EXISTS {trigger_name}
+            AFTER {operation} ON system_config
+            BEGIN
+                UPDATE family_data_revision
+                SET revision = revision + 1
+                WHERE id = 1;
+            END
+            """
+        )
+
+    cursor.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS trg_family_revision_system_config_update
+        AFTER UPDATE ON system_config
+        WHEN OLD.weather_city IS NOT NEW.weather_city
+          OR OLD.weather_plz IS NOT NEW.weather_plz
+          OR OLD.weather_service IS NOT NEW.weather_service
+          OR OLD.api_key IS NOT NEW.api_key
+          OR OLD.weather_latitude IS NOT NEW.weather_latitude
+          OR OLD.weather_longitude IS NOT NEW.weather_longitude
+          OR OLD.header_show_users IS NOT NEW.header_show_users
+          OR OLD.header_show_view_mode IS NOT NEW.header_show_view_mode
+          OR OLD.header_show_weather IS NOT NEW.header_show_weather
+          OR OLD.api_url_open_meteo IS NOT NEW.api_url_open_meteo
+          OR OLD.api_url_weather_api IS NOT NEW.api_url_weather_api
+          OR OLD.api_url_zippopotam IS NOT NEW.api_url_zippopotam
+        BEGIN
+            UPDATE family_data_revision
+            SET revision = revision + 1
+            WHERE id = 1;
+        END
+        """
+    )
+
+
+def _migrate_weather_locations(cursor):
+    columns = {
+        row["name"] for row in cursor.execute("PRAGMA table_info(weather_locations)")
+    }
+    if not {"name", "weather_service", "api_key"}.intersection(columns):
+        return
+
+    cursor.execute("DROP TABLE IF EXISTS weather_locations_new")
+    cursor.execute(
+        """
+        CREATE TABLE weather_locations_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            weather_city TEXT NOT NULL DEFAULT '',
+            weather_plz TEXT NOT NULL DEFAULT '',
+            weather_latitude REAL,
+            weather_longitude REAL,
+            is_active INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO weather_locations_new (
+            id, weather_city, weather_plz, weather_latitude, weather_longitude, is_active
+        )
+        SELECT id, weather_city, weather_plz, weather_latitude, weather_longitude, is_active
+        FROM weather_locations
+        """
+    )
+    cursor.execute("DROP TABLE weather_locations")
+    cursor.execute("ALTER TABLE weather_locations_new RENAME TO weather_locations")

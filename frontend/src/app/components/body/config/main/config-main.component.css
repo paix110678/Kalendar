@@ -1,0 +1,52 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: flex;
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  min-height: 0;
+}
+
+.config-content-scroll {
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  overflow-x: hidden;
+
+  overflow-y: auto;
+
+  overscroll-behavior: contain;
+}
+
+.config-content-scroll > app-users,
+.config-content-scroll > app-plans,
+.config-content-scroll > app-holidays,
+.config-content-scroll > app-categories,
+.config-content-scroll > app-system,
+.config-content-scroll > app-tasks,
+.config-content-scroll > app-database,
+.config-content-scroll > app-header-settings,
+.config-content-scroll > app-account-management,
+.config-content-scroll > app-platform-statistics {
+  width: 100%;
+
+  max-width: none;
+
+  min-height: 100%;
+
+  background: var(--config-background);
+
+  box-sizing: border-box;
+}

@@ -1,0 +1,175 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: block;
+}
+
+.account-management {
+  display: grid;
+
+  gap: 16px;
+
+  padding: 20px;
+}
+
+.account-management h3,
+.account-management h4,
+.account-management p {
+  margin: 0;
+}
+
+.account-management > p {
+  color: #687078;
+}
+
+.invite-form,
+.account-card,
+.invitation-card {
+  display: grid;
+
+  gap: 12px;
+
+  padding: 16px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 10px;
+}
+
+.invite-form {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+
+  align-items: end;
+}
+
+.invite-form h4 {
+  grid-column: 1 / -1;
+}
+
+.invite-form label,
+.account-fields label {
+  display: grid;
+
+  gap: 5px;
+
+  color: #495057;
+
+  font-size: 0.85rem;
+
+  font-weight: 650;
+}
+
+.invite-form input,
+.invite-form select,
+.account-fields select {
+  width: 100%;
+
+  min-height: 38px;
+
+  padding: 7px 9px;
+
+  border: 1px solid #ced4da;
+
+  border-radius: 6px;
+
+  color: #212529;
+
+  font: inherit;
+}
+
+.invite-form button {
+  min-height: 38px;
+
+  padding: 7px 12px;
+
+  border: 0;
+
+  border-radius: 6px;
+
+  color: #fff;
+
+  font: inherit;
+
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.account-management button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.55;
+}
+
+.account-list,
+.invitation-list {
+  display: grid;
+
+  gap: 10px;
+}
+
+.account-heading {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  gap: 8px 14px;
+}
+
+.account-heading span {
+  color: #687078;
+
+  font-size: 0.9rem;
+}
+
+.account-heading .account-state {
+  margin-left: auto;
+
+  color: #2b8a3e;
+
+  font-weight: 650;
+}
+
+.account-heading .account-disabled {
+  color: #c92a2a;
+}
+
+.account-fields {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+
+  align-items: end;
+
+  gap: 10px;
+}
+
+.account-fields .account-active {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  min-height: 38px;
+}
+
+.account-hint {
+  color: #687078;
+
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .account-management {
+    padding: 12px;
+  }
+}

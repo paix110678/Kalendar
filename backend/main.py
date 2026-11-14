@@ -32,6 +32,7 @@ from routers import (
     tasks,
     error_reports,
     platform,
+    sync,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -185,6 +186,7 @@ app.include_router(backups.router)
 app.include_router(tasks.router)
 app.include_router(error_reports.router)
 app.include_router(platform.router)
+app.include_router(sync.router)
 
 @app.get("/")
 def read_root():

@@ -6,7 +6,7 @@ import sqlite3
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-import database
+import auth_database
 
 router = APIRouter(prefix="/api/error-reports", tags=["Error reports"])
 MAX_SCREENSHOT_BYTES = 6 * 1024 * 1024
@@ -65,7 +65,7 @@ def create_error_report(payload: ErrorReportPayload):
         if payload.screenshot is not None
         else None
     )
-    conn = database.get_db_connection()
+    conn = auth_database.get_auth_connection()
     try:
         cursor = conn.execute(
             """

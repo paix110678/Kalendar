@@ -1,0 +1,108 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: block;
+}
+
+.config-content-scroll > app-system .admin-section {
+  background: transparent;
+}
+
+.weather-location-settings {
+  gap: 12px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 0;
+}
+
+.weather-location-settings h3,
+.weather-location-settings h4,
+.weather-location-settings p {
+  margin: 0;
+}
+
+.weather-location-form {
+  display: grid;
+
+  max-width: 420px;
+
+  gap: 12px;
+}
+
+.weather-location-form h4 {
+  font-size: 16px;
+}
+
+.weather-location-settings .field-item {
+  display: grid;
+
+  gap: 5px;
+
+  color: #495057;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.weather-location-settings .field-item input {
+  box-sizing: border-box;
+
+  width: 100%;
+
+  min-height: 36px;
+
+  padding: 7px 9px;
+
+  border: 1px solid #ced4da;
+
+  border-radius: 5px;
+
+  color: #212529;
+
+  font: inherit;
+}
+
+.weather-location-settings .field-item input[readonly] {
+  background: #f8f9fa;
+}
+
+.weather-location-settings > .error-message {
+  color: #c92a2a;
+}
+
+.field-item {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 5px;
+
+  color: #495057;
+
+  font-family: sans-serif;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.field-item input,
+.field-item select {
+  height: 36px;
+
+  padding: 8px 12px;
+
+  border: 1px solid #ced4da;
+
+  border-radius: 6px;
+}

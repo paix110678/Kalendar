@@ -24,6 +24,20 @@ The statistics contain aggregate counts for calendars, login accounts, family
 profiles, time blocks, and tasks; they do not return account or calendar
 contents.
 
+## Family data synchronization
+
+Each family calendar database keeps a revision counter that SQLite triggers
+advance when shared calendar data changes. Authenticated clients can check
+`GET /api/sync/version`; the frontend polls this endpoint every five seconds
+while visible and reloads shared data when the revision changes. This is a
+change signal, not a per-client event queue, so clients that reconnect simply
+reload the current family data.
+
+Error reports are stored in the central `auth.sqlite3` database so reports
+about the application are not tied to an individual family's calendar. On
+startup, reports from older family databases are moved into the central
+database.
+
 Platform admins can remove another login account from the statistics page.
 This also removes its linked family profile and personal time blocks, plan
 assignment, event types, and task participation. Tasks assigned only to the

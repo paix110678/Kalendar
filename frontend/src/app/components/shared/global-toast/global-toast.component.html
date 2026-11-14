@@ -2,12 +2,38 @@
   <div
     class="global-toast"
     [class.global-toast-error]="!toast.success"
-    [class.global-toast-pending]="toast.pending"
+    [class.global-toast-warning]="toast.warning"
     [attr.role]="toast.success ? 'status' : 'alert'"
     [attr.aria-live]="toast.success ? 'polite' : 'assertive'">
-    <span>{{ toast.message }}</span>
-    @if (toast.cancelable) {
-      <button type="button" (click)="toastService.cancelAction(toast.id)">Abbrechen</button>
+    <span class="global-toast-message">{{ toast.message }}</span>
+    @if (toast.countdownSeconds !== null) {
+      <span class="global-toast-countdown">{{ toast.countdownSeconds }}s</span>
     }
+    @if (toast.cancelable) {
+      <button
+        class="global-toast-dismiss"
+        type="button"
+        aria-label="Aktion abbrechen"
+        title="Abbrechen"
+        (click)="toastService.cancelAction(toast.id)">
+        ×
+      </button>
+    }
+    <button
+      class="global-toast-confirm"
+      type="button"
+      [attr.aria-label]="toast.warning
+        ? 'Wechsel bestätigen und Änderungen verwerfen'
+        : toast.pending
+          ? 'Aktion jetzt bestätigen'
+          : 'Meldung schließen'"
+      [title]="toast.warning
+        ? 'Jetzt wechseln und Änderungen verwerfen'
+        : toast.pending
+          ? 'Jetzt bestätigen'
+          : 'Meldung schließen'"
+      (click)="toastService.acknowledge(toast.id)">
+      ✓
+    </button>
   </div>
 }

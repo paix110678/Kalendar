@@ -48,8 +48,8 @@ export class CalendarHeaderComponent implements OnInit, OnDestroy {
   constructor(private calendarService: CalendarService) {}
 
   ngOnInit(): void {
-    this.sub.add(this.calendarService.config$.subscribe(c => {
-      if (c) this.sysConfig = c;
+    this.sub.add(this.calendarService.profileWeather$.subscribe(weather => {
+      this.sysConfig = weather;
     }));
     this.sub.add(this.calendarService.headerPreferences$.subscribe(preferences => {
       this.headerPreferences = preferences;

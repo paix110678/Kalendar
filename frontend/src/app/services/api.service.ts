@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { User, TimeBlock, Reward, SystemConfig, Category } from './calendar.service';
+import { Observable, map } from 'rxjs';
+import { User, TimeBlock, Reward, Category } from './calendar.service';
 
 export interface PlanHour {
   start_time: string;
@@ -90,28 +90,26 @@ export interface UpdateUserProfileResult {
   blocks_changed: boolean;
 }
 
-export interface SystemConfigUpdateResult {
-  status: string;
-  location_resolved: boolean;
-  location_error: string | null;
-}
-
-export interface SystemConfigLocationResult {
-  location_resolved: boolean;
-  location_error: string | null;
-}
-
 export interface WeatherLocation {
   id: number;
-  name: string;
   weather_city: string;
   weather_plz: string;
   weather_latitude: number | null;
   weather_longitude: number | null;
-  weather_service: 'open_meteo' | 'weather_api';
-  api_key?: string;
-  is_active: boolean;
   location_error?: string | null;
+}
+
+export interface ProfileWeatherData {
+  locations: WeatherLocation[];
+  selected_location_id: number | null;
+  weather_city: string;
+  weather_plz: string;
+  weather_latitude: number | null;
+  weather_longitude: number | null;
+  live_temp: string;
+  live_rain: string;
+  high_temp: string;
+  low_temp: string;
 }
 
 export interface Holiday {
@@ -202,6 +200,12 @@ export class ApiService {
     ? `${window.location.protocol}//${window.location.hostname}:8000/api`
     : '/api';
   constructor(private http: HttpClient) {}
+
+  getFamilyDataRevision(): Observable<number> {
+    return this.http.get<{ revision: number }>(`${this.apiBase}/sync/version`).pipe(
+      map((response) => response.revision),
+    );
+  }
 
   getUsers(): Observable<User[]> { return this.http.get<User[]>(this.apiBase + '/users'); }
   getPlatformStatistics(): Observable<PlatformStatistics> {
@@ -330,10 +334,6 @@ export class ApiService {
   deleteReward(id: number): Observable<any> { return this.http.delete(this.apiBase + '/rewards/' + id); }
   claimReward(uid: number, rid: number): Observable<{ remaining_points: number }> { return this.http.post<{ remaining_points: number }>(this.apiBase + '/rewards/claim', { user_id: uid, reward_id: rid }); }
 
-  getSystemConfig(): Observable<SystemConfig> { return this.http.get<SystemConfig>(this.apiBase + '/config'); }
-  getSystemConfigSettings(): Observable<SystemConfig> {
-    return this.http.get<SystemConfig>(`${this.apiBase}/config/settings`);
-  }
   getHeaderPreferences(): Observable<HeaderPreferences> {
     return this.http.get<HeaderPreferences>(`${this.apiBase}/config/header-preferences`);
   }
@@ -343,25 +343,20 @@ export class ApiService {
   getWeatherLocations(): Observable<WeatherLocation[]> {
     return this.http.get<WeatherLocation[]>(`${this.apiBase}/config/locations`);
   }
-  getWeatherLocation(locationId: number): Observable<WeatherLocation> {
-    return this.http.get<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}`);
-  }
-  createWeatherLocation(location: Pick<WeatherLocation, 'name' | 'weather_plz' | 'weather_service' | 'api_key'>): Observable<WeatherLocation> {
+  createWeatherLocation(location: Pick<WeatherLocation, 'weather_plz'>): Observable<WeatherLocation> {
     return this.http.post<WeatherLocation>(`${this.apiBase}/config/locations`, location);
   }
-  updateWeatherLocation(locationId: number, location: Pick<WeatherLocation, 'name' | 'weather_plz' | 'weather_service' | 'api_key'>): Observable<WeatherLocation> {
-    return this.http.put<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}`, location);
+  deleteWeatherLocation(locationId: number): Observable<{ status: string; message: string }> {
+    return this.http.delete<{ status: string; message: string }>(
+      `${this.apiBase}/config/locations/${locationId}`,
+    );
   }
-  activateWeatherLocation(locationId: number): Observable<WeatherLocation> {
-    return this.http.put<WeatherLocation>(`${this.apiBase}/config/locations/${locationId}/active`, {});
+  getProfileWeather(): Observable<ProfileWeatherData> {
+    return this.http.get<ProfileWeatherData>(`${this.apiBase}/config/profile-weather`);
   }
-  deleteWeatherLocation(locationId: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiBase}/config/locations/${locationId}`);
-  }
-  resolveWeatherLocation(): Observable<SystemConfigLocationResult> {
-    return this.http.post<SystemConfigLocationResult>(this.apiBase + '/config/location', {});
-  }
-  updateSystemConfig(cfg: SystemConfig): Observable<SystemConfigUpdateResult> {
-    return this.http.put<SystemConfigUpdateResult>(this.apiBase + '/config', cfg);
+  updateProfileWeatherLocation(locationId: number): Observable<ProfileWeatherData> {
+    return this.http.put<ProfileWeatherData>(`${this.apiBase}/config/profile-weather`, {
+      location_id: locationId,
+    });
   }
 }

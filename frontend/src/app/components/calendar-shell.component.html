@@ -5,7 +5,7 @@
         @defer (on immediate) {
           <app-calendar-header
             class="dashboard-frame-capsule"
-            [showHeaderBack]="false"
+            [showHeaderBack]="showAdminPage || calendarGrid.showRewardPage"
             [isCapturingScreenshot]="isCapturingScreenshot"
             [activeUsers]="calendarGrid.activeUsersSignal()"
             [currentViewMode]="calendarGrid.currentViewMode"
@@ -22,19 +22,24 @@
             (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
           </app-calendar-header>
 
-          <div class="main-content dashboard-frame-capsule">
+          <app-calendar-body
+            class="main-content dashboard-frame-capsule"
+            [showErrorReport]="showErrorReport"
+            [screenshotDataUrl]="screenshotDataUrl"
+            [screenshotError]="screenshotError"
+            (errorReportClosed)="showErrorReport = false">
             <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
               <app-calendar-grid #calendarGrid></app-calendar-grid>
             </div>
 
             @if (showAdminPage) {
               @defer (on immediate) {
-                <app-admin-dashboard
+                <app-config
                   [activeUsers]="calendarGrid.activeUsersSignal()"
                   [activeRewards]="calendarGrid.activeRewardsSignal()"
                   [selectedUser]="calendarGrid.selectedUser"
                   (closeAdmin)="showAdminPage = false">
-                </app-admin-dashboard>
+                </app-config>
               } @loading {
                 <div role="status">Einstellungen werden geladen …</div>
               } @error {
@@ -54,15 +59,25 @@
                 <div role="alert">Die Belohnungen konnten nicht geladen werden.</div>
               }
             }
-          </div>
+          </app-calendar-body>
         } @loading {
-          <div class="main-content dashboard-frame-capsule">
+          <app-calendar-body
+            class="main-content dashboard-frame-capsule"
+            [showErrorReport]="showErrorReport"
+            [screenshotDataUrl]="screenshotDataUrl"
+            [screenshotError]="screenshotError"
+            (errorReportClosed)="showErrorReport = false">
             <main class="auth-loading" role="status">Kalender wird geladen …</main>
-          </div>
+          </app-calendar-body>
         } @error {
-          <div class="main-content dashboard-frame-capsule">
+          <app-calendar-body
+            class="main-content dashboard-frame-capsule"
+            [showErrorReport]="showErrorReport"
+            [screenshotDataUrl]="screenshotDataUrl"
+            [screenshotError]="screenshotError"
+            (errorReportClosed)="showErrorReport = false">
             <main class="auth-loading" role="alert">Der Kalender konnte nicht geladen werden.</main>
-          </div>
+          </app-calendar-body>
         }
       } @else {
         <app-calendar-header
@@ -75,7 +90,12 @@
           [showControls]="false">
         </app-calendar-header>
 
-        <div class="main-content dashboard-frame-capsule">
+        <app-calendar-body
+          class="main-content dashboard-frame-capsule"
+          [showErrorReport]="showErrorReport"
+          [screenshotDataUrl]="screenshotDataUrl"
+          [screenshotError]="screenshotError"
+          (errorReportClosed)="showErrorReport = false">
           @if (authState.status === 'loading') {
             <main class="auth-loading" role="status">Anmeldestatus wird geprüft …</main>
           } @else if (authState.status === 'error') {
@@ -86,7 +106,7 @@
           } @else {
             <app-auth (headerStateChange)="setAuthHeader($event)"></app-auth>
           }
-        </div>
+        </app-calendar-body>
       }
     }
   </div>
@@ -97,20 +117,6 @@
     <span class="screenshot-spinner" aria-hidden="true"></span>
     <span>Screenshot wird erstellt …</span>
   </div>
-}
-
-@if (showErrorReport) {
-  @defer (on immediate) {
-    <app-error-report-dialog
-      [screenshotDataUrl]="screenshotDataUrl"
-      [screenshotError]="screenshotError"
-      (closed)="showErrorReport = false">
-    </app-error-report-dialog>
-  } @loading {
-    <div role="status">Fehlerbericht wird geöffnet …</div>
-  } @error {
-    <div role="alert">Der Fehlerbericht konnte nicht geöffnet werden.</div>
-  }
 }
 
 <app-global-toast></app-global-toast>

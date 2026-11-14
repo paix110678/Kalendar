@@ -1,0 +1,218 @@
+app-config {
+  --config-background: #fff;
+
+  display: flex;
+
+  flex: 1;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  background: var(--config-background);
+
+  color: #343a40;
+
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.config-shell {
+  display: flex;
+
+  flex: 1;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.config-workspace {
+  display: flex;
+
+  flex: 1;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  gap: 10px;
+
+  overflow: hidden;
+}
+
+.config-tree-column {
+  position: relative;
+
+  display: flex;
+
+  flex: 0 0 clamp(180px, 20vw, 280px);
+
+  min-width: 0;
+
+  min-height: 0;
+}
+
+.config-tree-column::after {
+  position: absolute;
+
+  top: 12px;
+
+  right: -5px;
+
+  bottom: 12px;
+
+  width: 1px;
+
+  background: #000;
+
+  content: '';
+
+  pointer-events: none;
+}
+
+.config-tree-column app-admin-navigation-tree {
+  display: flex;
+
+  flex: 1 1 auto;
+
+  min-height: 0;
+}
+
+.config-main-column {
+  display: flex;
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.config-main-column app-config-main {
+  display: flex;
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  min-height: 0;
+}
+
+app-config .admin-section {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+
+  padding: 25px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 8px;
+}
+
+app-config .error-message {
+  color: #c92a2a;
+
+  font-size: 13px;
+}
+
+app-config .admin-section h3,
+app-config .admin-section > p {
+  margin: 0;
+}
+
+app-config .field {
+  display: grid;
+
+  gap: 0.4rem;
+
+  font-size: 0.9rem;
+
+  font-weight: 600;
+}
+
+app-config .form-error {
+  color: #a61b1b;
+}
+
+app-config .empty-state {
+  margin: 0;
+
+  padding: 1rem;
+
+  border: 1px dashed #cbd5e1;
+
+  border-radius: 0.55rem;
+
+  color: #68778a;
+}
+
+app-config .plans-page .form-message {
+  margin: 16px 0 0;
+
+  font-size: 13px;
+}
+
+app-config .plans-page .form-error {
+  color: #c92a2a;
+}
+
+@media (max-width: 760px) {
+  .config-shell,
+  .config-workspace,
+  .config-main-column {
+    gap: 8px;
+  }
+
+  .config-tree-column {
+    flex-basis: clamp(130px, 32vw, 220px);
+  }
+}
+
+@media (max-width: 640px) {
+  app-config .admin-section {
+    padding: 14px;
+  }
+}
+
+app-config .task-item {
+  width: calc(100% - 14px);
+
+  margin-left: 14px;
+}
+
+app-config .account-actions button {
+  min-height: 38px;
+
+  padding: 7px 12px;
+
+  border: 0;
+
+  border-radius: 6px;
+
+  color: #fff;
+
+  font: inherit;
+
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+app-config .account-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+}

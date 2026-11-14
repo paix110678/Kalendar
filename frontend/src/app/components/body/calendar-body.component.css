@@ -1,0 +1,16 @@
+:host {
+  --body-surface-color: #fff;
+  --body-border-color: #dee2e6;
+  --body-text-color: #343a40;
+  --body-accent-color: #1971c2;
+  --body-content-padding: 16px;
+  --body-card-radius: 10px;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  color: var(--body-text-color);
+}

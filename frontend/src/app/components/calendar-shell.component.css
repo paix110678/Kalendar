@@ -70,7 +70,7 @@ app-calendar-header.dashboard-frame-capsule {
   display: none !important;
 }
 
-app-admin-dashboard,
+app-config,
 app-reward-dashboard {
   display: flex;
   flex: 1;

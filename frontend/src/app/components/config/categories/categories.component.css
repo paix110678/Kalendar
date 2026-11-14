@@ -1,3 +1,0 @@
-.admin-section { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-.inline-edit-form { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; align-items: center; }
-.inline-edit-form input { padding: 6px 12px; border: 1px solid #228be6; border-radius: 4px; font-size: 13px; }

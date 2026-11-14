@@ -1,0 +1,53 @@
+<section class="admin-section weather-location-settings">
+  <h3>🌤️ Wetterstandorte</h3>
+
+  @if (loading) {
+    <p role="status">Wetterstandorte werden geladen …</p>
+  }
+
+  @if (!loading && creatingLocation) {
+    <div class="weather-location-form">
+      <h4>Wetterstandort hinzufügen</h4>
+      <label class="field-item" for="weather-location-plz">
+        <span>Postleitzahl (PLZ)</span>
+        <input
+          id="weather-location-plz"
+          type="text"
+          inputmode="numeric"
+          autocomplete="postal-code"
+          pattern="[0-9]{5}"
+          maxlength="5"
+          required
+          [(ngModel)]="locationForm.weather_plz"
+          (ngModelChange)="publishEditorActions()">
+      </label>
+    </div>
+  } @else if (!loading && editingLocationId !== null) {
+    <div class="weather-location-form">
+      <h4>{{ locationForm.weather_city || 'Standort' }}</h4>
+      <label class="field-item">
+        <span>Postleitzahl (PLZ)</span>
+        <input type="text" [value]="locationForm.weather_plz" readonly>
+      </label>
+      <label class="field-item">
+        <span>Erkannter Ort</span>
+        <input type="text" [value]="locationForm.weather_city || 'Noch nicht ermittelt'" readonly>
+      </label>
+      <label class="field-item">
+        <span>Koordinaten</span>
+        <input
+          type="text"
+          [value]="locationForm.weather_latitude !== null && locationForm.weather_longitude !== null
+            ? locationForm.weather_latitude + ', ' + locationForm.weather_longitude
+            : 'Noch nicht ermittelt'"
+          readonly>
+      </label>
+    </div>
+  }
+
+  @if (configMessage) {
+    <p [class.error-message]="configError" role="status">{{ configMessage }}</p>
+  }
+
+
+</section>

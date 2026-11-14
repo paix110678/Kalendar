@@ -1,15 +1,17 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../services/auth.service';
 import { CalendarService } from '../../../services/calendar.service';
+import { ApiService, WeatherLocation } from '../../../services/api.service';
 import { KALENDAR_VERSION } from '../../../version';
 
 @Component({
   selector: 'app-header-account-actions',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './header-account-actions.component.html',
   styleUrls: [
     './header-account-actions.component.css',
@@ -28,6 +30,51 @@ export class HeaderAccountActionsComponent {
   readonly version = KALENDAR_VERSION;
   public showAccountDetails = false;
   public logoutError = '';
+  public weatherLocations: WeatherLocation[] = [];
+  public selectedWeatherLocationId: number | null = null;
+  public weatherLocationLoading = false;
+  public weatherLocationError = '';
+
+  toggleAccountDetails(): void {
+    this.showAccountDetails = !this.showAccountDetails;
+    if (this.showAccountDetails) this.loadWeatherProfile();
+  }
+
+  private loadWeatherProfile(): void {
+    this.weatherLocationLoading = true;
+    this.weatherLocationError = '';
+    this.calendarService.refreshProfileWeather().subscribe({
+      next: (profileWeather) => {
+        this.weatherLocations = profileWeather.locations;
+        this.selectedWeatherLocationId = profileWeather.selected_location_id;
+        this.weatherLocationLoading = false;
+      },
+      error: () => {
+        this.weatherLocationLoading = false;
+        this.weatherLocationError = 'Wetterstandorte konnten nicht geladen werden.';
+      },
+    });
+  }
+
+  onWeatherLocationChange(locationId: number | string): void {
+    const parsedId = Number(locationId);
+    if (!Number.isInteger(parsedId) || parsedId < 1) return;
+    this.weatherLocationLoading = true;
+    this.weatherLocationError = '';
+    this.calendarService.updateProfileWeatherLocation(parsedId).subscribe({
+      next: (profileWeather) => {
+        this.weatherLocations = profileWeather.locations;
+        this.selectedWeatherLocationId = profileWeather.selected_location_id;
+        this.weatherLocationLoading = false;
+      },
+      error: (error: unknown) => {
+        this.weatherLocationLoading = false;
+        this.weatherLocationError = error instanceof HttpErrorResponse
+          ? error.error?.detail ?? 'Wetterstandort konnte nicht gespeichert werden.'
+          : 'Wetterstandort konnte nicht gespeichert werden.';
+      },
+    });
+  }
 
   get canOpenAdmin(): boolean {
     const account = this.authService.currentAccount;

@@ -1,0 +1,85 @@
+<div class="config-content-scroll">
+  @if (activeTab === 'users') {
+    <app-users
+      [activeUsers]="activeUsers"
+      [selectedUserId]="selectedMemberId"
+      (editorActionsChange)="editorActionsChange.emit($event)"
+      (memberClosed)="memberClosed.emit()">
+    </app-users>
+  }
+  @if (activeTab === 'accounts' && isAdmin) {
+    <app-account-management [familyProfiles]="activeUsers"></app-account-management>
+  }
+  @defer (on immediate) {
+    @if (activeTab === 'plans') {
+      <app-plans
+        [initialPlans]="savedPlans"
+        [selectedPlanId]="selectedPlanId"
+        (editorActionsChange)="editorActionsChange.emit($event)"
+        (plansChanged)="plansChanged.emit($event)">
+      </app-plans>
+    }
+    @if (activeTab === 'holidays') {
+      <app-holidays
+        [selectedStateCode]="selectedHolidayState"
+        [savedStateCodes]="savedHolidayStates"
+        [savedHolidays]="savedHolidays"
+        [loadingSavedHolidays]="holidaysLoading"
+        [savedHolidaysError]="holidaysLoadError"
+        (editorActionsChange)="editorActionsChange.emit($event)"
+        (stateAdded)="stateAdded.emit($event)"
+        (dataChanged)="savedHolidayDataChanged.emit($event)"
+        (selectedStateChange)="selectedHolidayStateChange.emit($event)">
+      </app-holidays>
+    }
+  } @placeholder {
+    @if (activeTab === 'plans') {
+      <p role="status">Pläne werden geladen …</p>
+    } @else if (activeTab === 'holidays') {
+      <p role="status">Ferien und Feiertage werden geladen …</p>
+    }
+  }
+  @if (activeTab === 'categories') {
+    <app-categories
+      [selectedCategoryId]="selectedCategoryId"
+      (editorActionsChange)="editorActionsChange.emit($event)"
+      (selectedCategoryChange)="selectedCategoryChange.emit($event)">
+    </app-categories>
+  }
+  @if (activeTab === 'system') {
+    <app-system
+      [selectedLocationId]="selectedWeatherLocationId"
+      (editorActionsChange)="editorActionsChange.emit($event)"
+      (locationsChanged)="locationsChanged.emit($event)"
+      (selectedLocationChanged)="selectedLocationChanged.emit($event)">
+    </app-system>
+  }
+  @if (activeTab === 'tasks') {
+    <app-tasks
+      [activeUsers]="activeUsers"
+      [categories]="calendarCategories"
+      [tasks]="tasks"
+      [selectedTaskId]="selectedTaskId"
+      [defaultCategoryId]="selectedTaskCategoryId"
+      (tasksChanged)="tasksChanged.emit($event)"
+      (selectedTaskIdChange)="selectedTaskIdChange.emit($event)"
+      (editorActionsChange)="editorActionsChange.emit($event)">
+    </app-tasks>
+  }
+  @if (activeTab === 'database') {
+    <app-database
+      [dbTables]="dbTables"
+      [selectedBackupId]="selectedDatabaseBackupId"
+      (editorActionsChange)="editorActionsChange.emit($event)"
+      (selectedBackupIdChange)="selectedBackupIdChange.emit($event)"
+      (backupsChanged)="backupsChanged.emit($event)">
+    </app-database>
+  }
+  @if (activeTab === 'header') {
+    <app-header-settings (editorActionsChange)="editorActionsChange.emit($event)">
+    </app-header-settings>
+  }
+  @if (activeTab === 'statistics' && isPlatformAdmin) {
+    <app-platform-statistics></app-platform-statistics>
+  }
+</div>

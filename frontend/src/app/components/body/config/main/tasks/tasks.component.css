@@ -1,0 +1,194 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: block;
+}
+
+.config-content-scroll > app-tasks .task-form {
+  background: transparent;
+}
+
+.form-message {
+  margin: 0;
+
+  padding: 0.7rem 0.85rem;
+
+  border-radius: 0.45rem;
+}
+
+.tasks-page [hidden] {
+  display: none !important;
+}
+
+.tasks-page .field input,
+.tasks-page .field select {
+  width: 100%;
+
+  min-height: 40px;
+
+  padding: 8px 10px;
+
+  border: 1px solid #ced4da;
+
+  border-radius: 6px;
+
+  color: #212529;
+
+  font: inherit;
+
+  box-sizing: border-box;
+}
+
+.tasks-page .form-error {
+  color: #c92a2a;
+}
+
+.tasks-page {
+  max-width: 760px;
+
+  margin: 0 auto;
+
+  color: #212529;
+}
+
+.tasks-header {
+  margin-bottom: 22px;
+}
+
+.tasks-header h3 {
+  margin: 0;
+
+  font-size: 22px;
+}
+
+.task-form {
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+
+  gap: 16px;
+
+  padding: 22px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 10px;
+
+  box-shadow: 0 4px 12px rgb(0 0 0 / 3%);
+}
+
+.tasks-page .field {
+  display: grid;
+
+  min-width: 0;
+
+  gap: 6px;
+}
+
+.tasks-page .field span,
+.participants legend {
+  color: #495057;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.tasks-page .field input[type='color'] {
+  padding: 3px;
+}
+
+.participants {
+  display: flex;
+
+  grid-column: 1 / -1;
+
+  flex-wrap: wrap;
+
+  gap: 8px 16px;
+
+  margin: 0;
+
+  padding: 14px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 8px;
+}
+
+.participants legend {
+  padding: 0 6px;
+}
+
+.participant-option {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  min-height: 30px;
+
+  color: #495057;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.participant-option input {
+  margin: 0;
+}
+
+.member-color {
+  width: 10px;
+
+  height: 10px;
+
+  border: 1px solid rgb(0 0 0 / 15%);
+
+  border-radius: 50%;
+}
+
+.tasks-page .form-message,
+.tasks-page .empty-state {
+  grid-column: 1 / -1;
+
+  margin: 0;
+
+  font-size: 13px;
+}
+
+.tasks-page .empty-state {
+  color: #868e96;
+}
+
+@media (max-width: 700px) {
+  .task-form {
+    grid-template-columns: minmax(0, 1fr) 100px;
+
+    padding: 16px;
+  }
+
+  .tasks-page .field:nth-child(3),
+  .participants {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 420px) {
+  .task-form {
+    grid-template-columns: 1fr;
+  }
+
+  .tasks-page .field:nth-child(3),
+  .participants {
+    grid-column: auto;
+  }
+}

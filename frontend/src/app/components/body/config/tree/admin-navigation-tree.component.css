@@ -1,0 +1,209 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: flex;
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  min-height: 0;
+}
+
+.navigation-tree-frame {
+  display: flex;
+
+  flex: 1;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border: 0;
+
+  background: var(--config-background);
+}
+
+.navigation-tree {
+  display: grid;
+
+  align-content: start;
+
+  gap: 3px;
+
+  min-height: 0;
+
+  padding: 8px 6px;
+
+  overflow: auto;
+}
+
+.tree-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height: 34px;
+
+  padding: 7px 8px;
+
+  border: 0;
+
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #495057;
+
+  font: inherit;
+
+  font-size: 12px;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.tree-item:hover {
+  background: #e9ecef;
+}
+
+.tree-item-active {
+  background: #e7f5ff;
+
+  color: #1971c2;
+
+  font-weight: 700;
+}
+
+.item-color,
+.item-marker {
+  flex: 0 0 9px;
+
+  width: 9px;
+}
+
+.item-color {
+  height: 9px;
+
+  border: 1px solid rgb(0 0 0 / 15%);
+
+  border-radius: 50%;
+}
+
+.item-marker {
+  color: #868e96;
+
+  text-align: center;
+}
+
+.item-name {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.member-status {
+  display: grid;
+
+  width: 20px;
+
+  height: 20px;
+
+  flex: 0 0 20px;
+
+  margin-left: auto;
+
+  place-items: center;
+
+  color: #2b8a3e;
+}
+
+.member-status svg {
+  width: 18px;
+
+  height: 18px;
+
+  fill: none;
+
+  stroke: currentColor;
+
+  stroke-linecap: round;
+
+  stroke-linejoin: round;
+
+  stroke-width: 2;
+}
+
+.member-inactive,
+.tree-error {
+  color: #c92a2a;
+}
+
+.category-group {
+  display: grid;
+
+  gap: 2px;
+}
+
+.task-add {
+  color: #1971c2;
+}
+
+.tree-message {
+  margin: 0;
+
+  padding: 5px 8px;
+
+  color: #868e96;
+
+  font-size: 11px;
+
+  line-height: 1.4;
+
+  overflow-wrap: anywhere;
+}
+
+.retry-button {
+  width: fit-content;
+
+  margin-left: 8px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #1971c2;
+
+  font: inherit;
+
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .navigation-tree {
+    padding: 5px 3px;
+  }
+}

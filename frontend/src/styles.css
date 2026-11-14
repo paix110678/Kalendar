@@ -42,7 +42,7 @@ app-calendar-shell {
   place-content: center;
   gap: 12px;
   padding: 24px;
-  color: #343a40;
+  color: var(--body-text-color, #343a40);
   text-align: center;
 }
 
@@ -51,14 +51,13 @@ app-calendar-shell {
   padding: 8px 14px;
   border: 0;
   border-radius: 6px;
-  background: #1971c2;
+  background: var(--body-accent-color, #1971c2);
   color: #fff;
   font: inherit;
   cursor: pointer;
 }
 
 @media (max-width: 760px) {
-  .admin-page-body,
   .reward-page-body {
     padding: 12px !important;
     gap: 12px !important;
@@ -136,39 +135,6 @@ app-calendar-shell {
   .admin-page-body { gap: 8px; padding: 8px !important; }
 }
 
-.admin-top-navigation {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  background: #fff;
-}
-
-.top-navigation-button {
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #495057;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.top-navigation-button:hover { background: #e9ecef; }
-.top-navigation-button.top-navigation-active { background: #e7f5ff; color: #1971c2; }
-
-@media (max-width: 760px) {
-  .admin-top-navigation { gap: 4px; padding: 6px; }
-  .top-navigation-button { min-height: 40px; padding: 7px 9px; font-size: 12px; }
-}
-
 .admin-content-scroll .settings-grid,
 .admin-content-scroll .form-grid,
 .admin-content-scroll .form-grid-config,
@@ -221,7 +187,7 @@ app-calendar-shell {
 .admin-content-scroll .plan-form,
 .admin-content-scroll .task-form,
 .admin-content-scroll .holidays-form {
-  padding: 16px;
+  padding: var(--body-content-padding, 16px);
 }
 
 .admin-content-scroll .admin-section,
@@ -249,10 +215,10 @@ app-calendar-shell {
   width: 100%;
   max-width: none;
   min-height: 100%;
-  padding: 16px;
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  background: #fff;
+  padding: var(--body-content-padding, 16px);
+  border: 1px solid var(--body-border-color, #dee2e6);
+  border-radius: var(--body-card-radius, 10px);
+  background: var(--body-surface-color, #fff);
   box-sizing: border-box;
 }
 

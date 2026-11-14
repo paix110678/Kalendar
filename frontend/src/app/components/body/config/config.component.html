@@ -1,0 +1,91 @@
+<div class="config-shell">
+  <app-admin-navigation
+    [activeTab]="activeTab"
+    [isAdmin]="isAdmin"
+    [isPlatformAdmin]="isPlatformAdmin"
+    (action)="onNavigationAction($event)">
+  </app-admin-navigation>
+
+  <div class="config-workspace">
+    <div class="config-tree-column">
+      <app-admin-navigation-tree
+        [activeUsers]="activeUsers"
+        [activeTab]="activeTab"
+        [selectedMemberId]="selectedMemberId"
+        [expandedSections]="expandedSections"
+        [savedPlans]="savedPlans"
+        [selectedPlanId]="selectedPlanId"
+        [plansLoading]="plansLoading"
+        [plansLoadError]="plansLoadError"
+        [savedHolidayStates]="savedHolidayStates"
+        [selectedHolidayState]="selectedHolidayState"
+        [holidaysLoading]="holidaysLoading"
+        [holidaysLoadError]="holidaysLoadError"
+        [calendarCategories]="calendarCategories"
+        [selectedCategoryId]="selectedCategoryId"
+        [tasks]="tasks"
+        [tasksLoading]="tasksLoading"
+        [tasksLoadError]="tasksLoadError"
+        [selectedTaskId]="selectedTaskId"
+        [selectedTaskCategoryId]="selectedTaskCategoryId"
+        [weatherLocations]="weatherLocations"
+        [weatherLocationsLoading]="weatherLocationsLoading"
+        [weatherLocationsError]="weatherLocationsError"
+        [selectedWeatherLocationId]="selectedWeatherLocationId"
+        [databaseBackups]="databaseBackups"
+        [databaseBackupErrors]="databaseBackupErrors"
+        [databaseBackupsLoading]="databaseBackupsLoading"
+        [databaseBackupsError]="databaseBackupsError"
+        [selectedDatabaseBackupId]="selectedDatabaseBackupId"
+        (action)="onNavigationAction($event)">
+      </app-admin-navigation-tree>
+    </div>
+
+    <div class="config-main-column">
+      <app-config-main
+        [activeTab]="activeTab"
+        [isAdmin]="isAdmin"
+        [isPlatformAdmin]="isPlatformAdmin"
+        [activeUsers]="activeUsers"
+        [selectedMemberId]="selectedMemberId"
+        [savedPlans]="savedPlans"
+        [selectedPlanId]="selectedPlanId"
+        [plansLoading]="plansLoading"
+        [plansLoadError]="plansLoadError"
+        [savedHolidayStates]="savedHolidayStates"
+        [savedHolidays]="savedHolidays"
+        [selectedHolidayState]="selectedHolidayState"
+        [holidaysLoading]="holidaysLoading"
+        [holidaysLoadError]="holidaysLoadError"
+        [dbTables]="dbTables"
+        [selectedDatabaseBackupId]="selectedDatabaseBackupId"
+        [selectedWeatherLocationId]="selectedWeatherLocationId"
+        [calendarCategories]="calendarCategories"
+        [selectedCategoryId]="selectedCategoryId"
+        [tasks]="tasks"
+        [selectedTaskId]="selectedTaskId"
+        [selectedTaskCategoryId]="selectedTaskCategoryId"
+        (editorActionsChange)="onEditorActionsChanged($event)"
+        (memberClosed)="selectedMemberId = null"
+        (plansChanged)="onPlansChanged($event)"
+        (stateAdded)="onHolidayStateAdded($event)"
+        (savedHolidayDataChanged)="onSavedHolidayDataChanged($event)"
+        (selectedHolidayStateChange)="selectedHolidayState = $event"
+        (selectedCategoryChange)="selectedCategoryId = $event"
+        (locationsChanged)="onWeatherLocationsChanged($event)"
+        (selectedLocationChanged)="onWeatherLocationSelected($event)"
+        (tasksChanged)="onTasksChanged($event)"
+        (selectedTaskIdChange)="selectedTaskId = $event"
+        (selectedBackupIdChange)="selectedDatabaseBackupId = $event"
+        (backupsChanged)="onDatabaseBackupsChanged($event)">
+      </app-config-main>
+
+      <app-action-footer
+        [actions]="editorActions"
+        (save)="saveEditorChanges()"
+        (cancel)="cancelEditorChanges()"
+        (delete)="deleteEditorItem()">
+      </app-action-footer>
+    </div>
+  </div>
+</div>

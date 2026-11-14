@@ -1,0 +1,46 @@
+<footer class="action-footer" aria-label="Editor-Aktionen">
+  @if (!actions?.hideSave) {
+    <button
+      type="button"
+      class="footer-button footer-save"
+      [class.footer-save-labeled]="actions?.showSaveLabel"
+      [disabled]="actions?.busy || (!actions?.dirty && !actions?.showSave)"
+      [attr.aria-label]="actions?.saveLabel ?? 'Speichern'"
+      [title]="actions?.saveLabel ?? 'Speichern'"
+      (click)="save.emit()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 3h12l4 4v14H3V3h2Z" />
+        <path d="M7 3v6h10V3M7 21v-8h10v8" />
+      </svg>
+      @if (actions?.showSaveLabel) {
+        <span>{{ actions?.saveLabel ?? 'Speichern' }}</span>
+      }
+    </button>
+  }
+  @if (actions?.canDelete) {
+    <button
+      type="button"
+      class="footer-button footer-delete"
+      [disabled]="actions?.busy"
+      aria-label="Löschen"
+      title="Löschen"
+      (click)="delete.emit()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3" />
+      </svg>
+    </button>
+  }
+  @if (!actions?.hideCancel) {
+    <button
+      type="button"
+      class="footer-button footer-cancel"
+      [disabled]="actions?.busy || !actions?.dirty"
+      [attr.aria-label]="actions?.cancelLabel ?? 'Abbrechen'"
+      [title]="actions?.cancelLabel ?? 'Abbrechen'"
+      (click)="cancel.emit()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </svg>
+    </button>
+  }
+</footer>

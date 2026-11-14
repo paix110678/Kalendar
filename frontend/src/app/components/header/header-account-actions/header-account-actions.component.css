@@ -152,6 +152,40 @@
   text-align: right;
 }
 
+.account-weather-settings {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.account-weather-settings label {
+  color: #495057;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-weather-settings select {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  color: #212529;
+  font: inherit;
+  font-size: 12px;
+}
+
+.account-weather-settings p {
+  display: block !important;
+  margin: 0 !important;
+  color: #868e96;
+  font-size: 12px;
+}
+
+.account-weather-settings .weather-location-error {
+  color: #c92a2a;
+}
+
 .account-details-close {
   position: absolute;
   top: 8px;

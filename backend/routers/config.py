@@ -3,8 +3,9 @@ import time
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+import auth_database
 import database
-from security import require_roles
+from security import AccountContext, require_authenticated, require_roles
 import requests
 from datetime import datetime
 
@@ -12,20 +13,17 @@ router = APIRouter(prefix="/api/config", tags=["SystemConfig"])
 
 WEATHER_CACHE_TTL_SECONDS = 60 * 60
 _weather_cache_lock = threading.Lock()
-_weather_cache: dict | None = None
-_weather_cache_key: tuple | None = None
-_weather_cache_time = 0.0
+_weather_cache: dict[tuple, tuple[dict, float]] = {}
 _location_lookup_lock = threading.Lock()
+_nominatim_lookup_lock = threading.Lock()
+_nominatim_last_request_at = 0.0
 _attempted_location_lookups: set[tuple[str, str]] = set()
 logger = logging.getLogger(__name__)
 
 
 def _invalidate_weather_cache():
-    global _weather_cache, _weather_cache_key, _weather_cache_time
     with _weather_cache_lock:
-        _weather_cache = None
-        _weather_cache_key = None
-        _weather_cache_time = 0.0
+        _weather_cache.clear()
 
 
 def _active_db_key() -> str:
@@ -33,12 +31,7 @@ def _active_db_key() -> str:
 
 
 class ConfigUpdate(BaseModel):
-    weather_city: str
     weather_plz: str
-    weather_service: str
-    api_key: str
-    weather_latitude: float | None = None
-    weather_longitude: float | None = None
 
 
 class HeaderPreferencesUpdate(BaseModel):
@@ -48,34 +41,25 @@ class HeaderPreferencesUpdate(BaseModel):
 
 
 class WeatherLocationCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    weather_plz: str = Field(..., min_length=1, max_length=20)
-    weather_service: str = Field(default="open_meteo", pattern="^(open_meteo|weather_api)$")
-    api_key: str = ""
+    weather_plz: str = Field(..., min_length=5, max_length=5, pattern=r"^\d{5}$")
 
 
-class WeatherLocationUpdate(WeatherLocationCreate):
-    pass
+class ProfileWeatherSelection(BaseModel):
+    location_id: int = Field(..., ge=1)
 
 
 class LocationLookupError(Exception):
     pass
 
 
-def _serialize_weather_location(row, include_api_key=True):
-    location = {
+def _serialize_weather_location(row):
+    return {
         "id": row["id"],
-        "name": row["name"],
         "weather_city": row["weather_city"] or "",
         "weather_plz": row["weather_plz"] or "",
-        "weather_service": row["weather_service"] or "open_meteo",
         "weather_latitude": row["weather_latitude"],
         "weather_longitude": row["weather_longitude"],
-        "is_active": bool(row["is_active"]),
     }
-    if include_api_key:
-        location["api_key"] = row["api_key"] or ""
-    return location
 
 
 def _sync_active_weather_location(conn):
@@ -92,15 +76,12 @@ def _sync_active_weather_location(conn):
     conn.execute(
         """
         UPDATE weather_locations
-        SET weather_city = ?, weather_plz = ?, weather_service = ?, api_key = ?,
-            weather_latitude = ?, weather_longitude = ?
+        SET weather_city = ?, weather_plz = ?, weather_latitude = ?, weather_longitude = ?
         WHERE id = ?
         """,
         (
             config["weather_city"] or "",
             config["weather_plz"] or "",
-            config["weather_service"] or "open_meteo",
-            config["api_key"] or "",
             config["weather_latitude"],
             config["weather_longitude"],
             active["id"],
@@ -120,18 +101,76 @@ def _lookup_weather_location(postal_code: str) -> tuple[str, float, float]:
         if not isinstance(places, list) or not places:
             raise ValueError("Keine Orte für diese Postleitzahl gefunden.")
         place = places[0]
-        city_name = place.get("place name")
-        latitude = float(place["latitude"])
-        longitude = float(place["longitude"])
-        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-            raise ValueError("Die Koordinaten der Postleitzahl sind ungültig.")
-        if not isinstance(city_name, str) or not city_name.strip():
+        if not isinstance(place, dict):
             raise ValueError("Die Ortsangabe der Postleitzahl ist ungültig.")
-        return city_name.strip(), latitude, longitude
-    except (requests.RequestException, ValueError, KeyError, TypeError) as error:
-        raise LocationLookupError(
-            f"Ort und Koordinaten konnten für PLZ {postal_code} nicht ermittelt werden."
-        ) from error
+        city_name = place.get("place name")
+        return _validated_location(
+            city_name,
+            place["latitude"],
+            place["longitude"],
+        )
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        try:
+            results = _lookup_nominatim(postal_code)
+            if not isinstance(results, list) or not results:
+                raise ValueError("Keine passenden Ortsdaten gefunden.")
+            result = results[0]
+            if not isinstance(result, dict):
+                raise ValueError("Die Ortsdaten haben ein ungültiges Format.")
+            address = result.get("address")
+            if not isinstance(address, dict):
+                raise ValueError("Die Ortsangabe der Postleitzahl ist ungültig.")
+            resolved_postal_code = str(address.get("postcode", "")).replace(" ", "")
+            if resolved_postal_code != postal_code:
+                raise ValueError("Die zurückgegebene Postleitzahl stimmt nicht überein.")
+            if str(address.get("country_code", "de")).lower() != "de":
+                raise ValueError("Die zurückgegebenen Ortsdaten gehören nicht zu Deutschland.")
+            city_name = next(
+                (
+                    address[key]
+                    for key in ("city", "town", "village", "municipality", "suburb")
+                    if isinstance(address.get(key), str) and address[key].strip()
+                ),
+                None,
+            )
+            return _validated_location(city_name, result["lat"], result["lon"])
+        except (requests.RequestException, ValueError, KeyError, TypeError) as fallback_error:
+            raise LocationLookupError(
+                f"Ort und Koordinaten konnten für PLZ {postal_code} nicht ermittelt werden."
+            ) from fallback_error
+
+
+def _lookup_nominatim(postal_code: str):
+    global _nominatim_last_request_at
+    with _nominatim_lookup_lock:
+        elapsed = time.monotonic() - _nominatim_last_request_at
+        if elapsed < 1:
+            time.sleep(1 - elapsed)
+        _nominatim_last_request_at = time.monotonic()
+        response = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "postalcode": postal_code,
+                "country": "Germany",
+                "format": "jsonv2",
+                "addressdetails": 1,
+                "limit": 1,
+            },
+            headers={"User-Agent": "Kalendar weather location lookup"},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+def _validated_location(city_name, latitude, longitude) -> tuple[str, float, float]:
+    latitude = float(latitude)
+    longitude = float(longitude)
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        raise ValueError("Die Koordinaten der Postleitzahl sind ungültig.")
+    if not isinstance(city_name, str) or not city_name.strip():
+        raise ValueError("Die Ortsangabe der Postleitzahl ist ungültig.")
+    return city_name.strip(), latitude, longitude
 
 
 def ensure_weather_location() -> bool:
@@ -155,28 +194,11 @@ def ensure_weather_location() -> bool:
             return False
         _attempted_location_lookups.add(lookup_key)
 
-        url_zippopotam = "".join(["https://", "api.", "zippopotam", ".us/de/"])
         try:
-            response = requests.get(
-                f"{url_zippopotam}{str(cfg['weather_plz']).strip()}",
-                timeout=5,
+            city_name, latitude, longitude = _lookup_weather_location(
+                str(cfg["weather_plz"]).strip()
             )
-            response.raise_for_status()
-            location_data = response.json()
-            if not isinstance(location_data, dict):
-                raise ValueError("Die Antwort für diese Postleitzahl ist ungültig.")
-            places = location_data.get("places")
-            if not isinstance(places, list) or not places:
-                raise ValueError("Keine Orte für diese Postleitzahl gefunden.")
-            place = places[0]
-            city_name = place.get("place name")
-            latitude = float(place["latitude"])
-            longitude = float(place["longitude"])
-            if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-                raise ValueError("Die Koordinaten der Postleitzahl sind ungültig.")
-            if not isinstance(city_name, str) or not city_name.strip():
-                raise ValueError("Die Ortsangabe der Postleitzahl ist ungültig.")
-        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+        except LocationLookupError as error:
             raise LocationLookupError(
                 f"Ort und Koordinaten konnten für PLZ {cfg['weather_plz']} nicht ermittelt werden."
             ) from error
@@ -207,159 +229,108 @@ def ensure_weather_location() -> bool:
         _invalidate_weather_cache()
         return True
 
-def _refresh_live_weather():
-    print("\n--- 🔍 START DETAIL-DIAGNOSE WETTER-API ---")
-    conn = database.get_db_connection()
-    cfg = conn.execute("SELECT * FROM system_config ORDER BY id ASC LIMIT 1").fetchone()
-    if not cfg:
-        print("❌ DIAGNOSE: Keine system_config in der Datenbank gefunden!")
-        conn.close()
-        print("--- 🔍 ENDE DETAIL-DIAGNOSE WETTER-API ---\n")
-        return {"weather_city": "Lade...", "live_temp": "--", "live_rain": "--"}
-
-    # BEHOBEN: Absolut keine feste Postleitzahl ("28790") mehr als Fallback im Code!
-    plz = cfg["weather_plz"]
-    service = cfg["weather_service"] or "open_meteo"
-    api_key = cfg["api_key"] or ""
-    lat = cfg["weather_latitude"]
-    lon = cfg["weather_longitude"]
-    city_name = cfg["weather_city"] or ""
-
-    url_open_meteo = "".join(["https://", "api.", "open-meteo", ".com/v1/", "fore", "cast"])
-    url_weather_api = "".join(["http://", "api.", "weatherapi", ".com/v1/", "fore", "cast", ".json"])
-
-    print(f"📋 Konfiguration geladen: Ausgelesene PLZ aus DB = '{plz}' | Dienst = {service}")
-
-    temp = "--"
-    rain = "--"
-    high_temp = "--"
-    low_temp = "--"
-    try:
-        # Weather requests use the persisted location; ZIP lookups happen only on save or startup.
-        if lat is not None and lon is not None:
-            
-            # --- Open-Meteo Modus ---
-            if service == "open_meteo":
-                w_params = {
-                    "latitude": float(lat),
-                    "longitude": float(lon),
-                    "hourly": "precipitation_probability",
-                    "current": "temperature_2m",
-                    "current_weather": "true",
-                    "timezone": "Europe/Berlin",
-                    "daily": "temperature_2m_max,temperature_2m_min"
-                }
-                print(f"🌐 Sende HTTP-Anfrage an Endpunkt: {url_open_meteo}")
-                response = requests.get(url_open_meteo, params=w_params, timeout=5)
-                print(f"📡 API-Antwort erhalten. HTTP-Statuscode: {response.status_code}")
-                
-                if response.status_code == 200:
-                    w_res = response.json()
-                    if "current" in w_res and "temperature_2m" in w_res["current"]:
-                        temp = str(round(float(w_res["current"]["temperature_2m"])))
-                    elif "current_weather" in w_res and "temperature" in w_res["current_weather"]:
-                        temp = str(round(float(w_res["current_weather"]["temperature"])))
-                    
-                    if "hourly" in w_res and "precipitation_probability" in w_res["hourly"]:
-                        current_hour = datetime.now().hour
-                        rain_probabilities = w_res["hourly"]["precipitation_probability"]
-                        if len(rain_probabilities) > current_hour:
-                            rain = f"{rain_probabilities[current_hour]}%"
-                    
-                    # Daily high/low temperatures
-                    if "daily" in w_res and "temperature_2m_max" in w_res["daily"] and "temperature_2m_min" in w_res["daily"]:
-                        max_temp = w_res["daily"]["temperature_2m_max"]
-                        min_temp = w_res["daily"]["temperature_2m_min"]
-                        # Take the first day's value (today)
-                        if len(max_temp) > 0:
-                            high_temp = str(round(float(max_temp[0])))
-                        else:
-                            high_temp = "--"
-                        if len(min_temp) > 0:
-                            low_temp = str(round(float(min_temp[0])))
-                        else:
-                            low_temp = "--"
-                    else:
-                        high_temp = "--"
-                        low_temp = "--"
-
-            # --- WeatherAPI Modus ---
-            elif service == "weather_api" and api_key:
-                print(f"🌐 Sende HTTP-Anfrage an Endpunkt: {url_weather_api}")
-                w_params = {"key": api_key, "q": f"{lat},{lon}", "days": "1"}
-                response = requests.get(url_weather_api, params=w_params, timeout=5)
-                if response.status_code == 200:
-                    w_res = response.json()
-                    if "current" in w_res:
-                        temp = str(round(float(w_res["current"]["temp_c"])))
-                        rain = f"{w_res['forecast']['forecastday']['day']['daily_chance_of_rain']}%"
-        else:
-            logger.info("Wetterabruf übersprungen; für PLZ %s sind keine Koordinaten gespeichert.", plz)
-            
-    except Exception as e:
-        print(f"❌ WEATHER-ENGINE ERROR: {e}")
-        logger.exception("Wetterdaten konnten nicht abgerufen werden.")
-    finally:
-        conn.close()
-        print("--- 🔍 ENDE DETAIL-DIAGNOSE WETTER-API ---\n")
-    
-    return {
-        "weather_city": city_name,
-        "weather_plz": plz or "",
-        "weather_latitude": lat,
-        "weather_longitude": lon,
-        "weather_service": service,
-        "api_key": api_key,
-        "live_temp": temp,
-        "live_rain": rain,
-        "high_temp": high_temp,
-        "low_temp": low_temp
+def _refresh_live_weather(location):
+    city = location["weather_city"] or ""
+    postal_code = location["weather_plz"] or ""
+    latitude = location["weather_latitude"]
+    longitude = location["weather_longitude"]
+    result = {
+        "weather_city": city,
+        "weather_plz": postal_code,
+        "weather_latitude": latitude,
+        "weather_longitude": longitude,
+        "live_temp": "--",
+        "live_rain": "--",
+        "high_temp": "--",
+        "low_temp": "--",
     }
+    if latitude is None or longitude is None:
+        logger.info("Wetterabruf übersprungen; für PLZ %s fehlen Koordinaten.", postal_code)
+        return result
+
+    url = "".join(["https://", "api.", "open-meteo", ".com/v1/", "fore", "cast"])
+    params = {
+        "latitude": float(latitude),
+        "longitude": float(longitude),
+        "hourly": "precipitation_probability",
+        "current": "temperature_2m",
+        "timezone": "Europe/Berlin",
+        "daily": "temperature_2m_max,temperature_2m_min",
+    }
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        weather = response.json()
+        if not isinstance(weather, dict):
+            raise ValueError("Die Wetterdaten haben ein ungültiges Format.")
+        current = weather.get("current", {})
+        hourly = weather.get("hourly", {})
+        daily = weather.get("daily", {})
+        if not all(isinstance(section, dict) for section in (current, hourly, daily)):
+            raise ValueError("Die Wetterdaten haben ein ungültiges Format.")
+        if "temperature_2m" in current:
+            result["live_temp"] = str(round(float(current["temperature_2m"])))
+        probabilities = hourly.get("precipitation_probability", [])
+        times = hourly.get("time", [])
+        now = datetime.now().strftime("%Y-%m-%dT%H:00")
+        current_hour = times.index(now) if now in times else datetime.now().hour
+        if len(probabilities) > current_hour:
+            result["live_rain"] = f"{probabilities[current_hour]}%"
+        highs = daily.get("temperature_2m_max", [])
+        lows = daily.get("temperature_2m_min", [])
+        if highs:
+            result["high_temp"] = str(round(float(highs[0])))
+        if lows:
+            result["low_temp"] = str(round(float(lows[0])))
+    except (requests.RequestException, ValueError, TypeError, KeyError) as error:
+        logger.warning("Wetterdaten für PLZ %s konnten nicht abgerufen werden: %s", postal_code, error)
+    return result
 
 
-def fetch_live_weather_pure_ram():
-    global _weather_cache, _weather_cache_key, _weather_cache_time
-
+def fetch_live_weather_pure_ram(location=None):
     with _weather_cache_lock:
         conn = database.get_db_connection()
         try:
-            cfg = conn.execute(
-                "SELECT weather_plz, weather_service, api_key, weather_latitude, weather_longitude "
-                "FROM system_config ORDER BY id ASC LIMIT 1"
-            ).fetchone()
-            if cfg is None:
-                cache_key = (_active_db_key(), None)
-            else:
-                cache_key = (
-                    _active_db_key(),
-                    cfg["weather_plz"],
-                    cfg["weather_service"],
-                    cfg["api_key"],
-                    cfg["weather_latitude"],
-                    cfg["weather_longitude"],
-                )
+            if location is None:
+                location = conn.execute(
+                    """
+                    SELECT weather_city, weather_plz, weather_latitude, weather_longitude
+                    FROM system_config ORDER BY id ASC LIMIT 1
+                    """
+                ).fetchone()
         finally:
             conn.close()
 
-        now = time.monotonic()
-        if (
-            _weather_cache is not None
-            and _weather_cache_key == cache_key
-            and now - _weather_cache_time < WEATHER_CACHE_TTL_SECONDS
-        ):
-            return dict(_weather_cache)
+        if location is None:
+            return _refresh_live_weather(
+                {
+                    "weather_city": "",
+                    "weather_plz": "",
+                    "weather_latitude": None,
+                    "weather_longitude": None,
+                }
+            )
 
-        result = _refresh_live_weather()
-        _weather_cache = dict(result)
-        _weather_cache_key = cache_key
-        _weather_cache_time = time.monotonic()
+        cache_key = (
+            _active_db_key(),
+            location["weather_plz"],
+            location["weather_city"],
+            location["weather_latitude"],
+            location["weather_longitude"],
+        )
+        now = time.monotonic()
+        cached = _weather_cache.get(cache_key)
+        if cached is not None and now - cached[1] < WEATHER_CACHE_TTL_SECONDS:
+            return dict(cached[0])
+
+        result = _refresh_live_weather(location)
+        _weather_cache[cache_key] = (dict(result), time.monotonic())
         return dict(result)
 
 
 @router.get("")
 def get_config():
-    result = fetch_live_weather_pure_ram()
-    return {key: value for key, value in result.items() if key != "api_key"}
+    return fetch_live_weather_pure_ram()
 
 
 @router.get("/locations", dependencies=[Depends(require_roles("admin"))])
@@ -367,11 +338,100 @@ def get_weather_locations():
     conn = database.get_db_connection()
     try:
         rows = conn.execute(
-            "SELECT * FROM weather_locations ORDER BY is_active DESC, name COLLATE NOCASE, id"
+            "SELECT * FROM weather_locations ORDER BY is_active DESC, id"
         ).fetchall()
-        return [_serialize_weather_location(row, include_api_key=False) for row in rows]
+        return [_serialize_weather_location(row) for row in rows]
     finally:
         conn.close()
+
+
+def _profile_weather_response(actor: AccountContext):
+    auth_conn = auth_database.get_auth_connection()
+    try:
+        account = auth_conn.execute(
+            "SELECT weather_location_id FROM accounts WHERE id = ? AND family_id = ?",
+            (actor.id, actor.family_id),
+        ).fetchone()
+    finally:
+        auth_conn.close()
+    if account is None:
+        raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
+
+    conn = database.get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM weather_locations ORDER BY is_active DESC, id"
+        ).fetchall()
+        selected = next(
+            (row for row in rows if row["id"] == account["weather_location_id"]),
+            None,
+        )
+        if selected is None and rows:
+            selected = next((row for row in rows if row["is_active"]), rows[0])
+    finally:
+        conn.close()
+
+    if selected is None:
+        weather = {
+            "weather_city": "",
+            "weather_plz": "",
+            "weather_latitude": None,
+            "weather_longitude": None,
+            "live_temp": "--",
+            "live_rain": "--",
+            "high_temp": "--",
+            "low_temp": "--",
+        }
+        selected_id = None
+    else:
+        weather = fetch_live_weather_pure_ram(selected)
+        selected_id = selected["id"]
+
+    return {
+        "locations": [_serialize_weather_location(row) for row in rows],
+        "selected_location_id": selected_id,
+        **weather,
+    }
+
+
+@router.get("/profile-weather")
+def get_profile_weather(actor: AccountContext = Depends(require_authenticated)):
+    return _profile_weather_response(actor)
+
+
+@router.put("/profile-weather")
+def update_profile_weather(
+    payload: ProfileWeatherSelection,
+    actor: AccountContext = Depends(require_authenticated),
+):
+    conn = database.get_db_connection()
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM weather_locations WHERE id = ?", (payload.location_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Wetterstandort nicht gefunden.")
+
+    auth_conn = auth_database.get_auth_connection()
+    try:
+        cursor = auth_conn.execute(
+            """
+            UPDATE accounts SET weather_location_id = ?
+            WHERE id = ? AND family_id = ?
+            """,
+            (payload.location_id, actor.id, actor.family_id),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
+        auth_conn.commit()
+    except Exception:
+        auth_conn.rollback()
+        raise
+    finally:
+        auth_conn.close()
+    return _profile_weather_response(actor)
 
 
 @router.get("/locations/{location_id}", dependencies=[Depends(require_roles("admin"))])
@@ -390,10 +450,7 @@ def get_weather_location(location_id: int):
 
 @router.post("/locations", dependencies=[Depends(require_roles("admin"))])
 def create_weather_location(payload: WeatherLocationCreate):
-    name = payload.name.strip()
     postal_code = payload.weather_plz.strip()
-    if not name or not postal_code:
-        raise HTTPException(status_code=422, detail="Name und PLZ dürfen nicht leer sein.")
 
     city = ""
     latitude = None
@@ -402,8 +459,8 @@ def create_weather_location(payload: WeatherLocationCreate):
     try:
         city, latitude, longitude = _lookup_weather_location(postal_code)
     except LocationLookupError as error:
-        location_error = str(error)
-        logger.warning("%s", location_error)
+        logger.warning("%s", error)
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
     conn = database.get_db_connection()
     try:
@@ -414,17 +471,13 @@ def create_weather_location(payload: WeatherLocationCreate):
         cursor = conn.execute(
             """
             INSERT INTO weather_locations (
-                name, weather_city, weather_plz, weather_service, api_key,
-                weather_latitude, weather_longitude, is_active
+                weather_city, weather_plz, weather_latitude, weather_longitude, is_active
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
-                name,
                 city,
                 postal_code,
-                payload.weather_service,
-                payload.api_key,
                 latitude,
                 longitude,
                 0 if active_exists else 1,
@@ -438,72 +491,12 @@ def create_weather_location(payload: WeatherLocationCreate):
         ).fetchone()
         result = _serialize_weather_location(row)
         result["location_error"] = location_error
-        if result["is_active"]:
+        if row["is_active"]:
             _invalidate_weather_cache()
         return result
     except Exception:
         conn.rollback()
         raise
-    finally:
-        conn.close()
-
-
-@router.put("/locations/{location_id}", dependencies=[Depends(require_roles("admin"))])
-def update_weather_location(location_id: int, payload: WeatherLocationUpdate):
-    name = payload.name.strip()
-    postal_code = payload.weather_plz.strip()
-    if not name or not postal_code:
-        raise HTTPException(status_code=422, detail="Name und PLZ dürfen nicht leer sein.")
-
-    conn = database.get_db_connection()
-    try:
-        current = conn.execute(
-            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
-        ).fetchone()
-        if current is None:
-            raise HTTPException(status_code=404, detail="Standort nicht gefunden.")
-
-        location_changed = postal_code != str(current["weather_plz"] or "").strip()
-        city = "" if location_changed else current["weather_city"] or ""
-        latitude = None if location_changed else current["weather_latitude"]
-        longitude = None if location_changed else current["weather_longitude"]
-        location_error = None
-        if location_changed:
-            try:
-                city, latitude, longitude = _lookup_weather_location(postal_code)
-            except LocationLookupError as error:
-                location_error = str(error)
-                logger.warning("%s", location_error)
-
-        conn.execute(
-            """
-            UPDATE weather_locations
-            SET name = ?, weather_city = ?, weather_plz = ?, weather_service = ?,
-                api_key = ?, weather_latitude = ?, weather_longitude = ?
-            WHERE id = ?
-            """,
-            (
-                name,
-                city,
-                postal_code,
-                payload.weather_service,
-                payload.api_key,
-                latitude,
-                longitude,
-                location_id,
-            ),
-        )
-        if current["is_active"]:
-            _activate_weather_location(conn, location_id)
-        conn.commit()
-        row = conn.execute(
-            "SELECT * FROM weather_locations WHERE id = ?", (location_id,)
-        ).fetchone()
-        result = _serialize_weather_location(row)
-        result["location_error"] = location_error
-        if result["is_active"]:
-            _invalidate_weather_cache()
-        return result
     finally:
         conn.close()
 
@@ -522,8 +515,6 @@ def _activate_weather_location(conn, location_id: int):
     values = (
         location["weather_city"],
         location["weather_plz"],
-        location["weather_service"],
-        location["api_key"],
         location["weather_latitude"],
         location["weather_longitude"],
     )
@@ -531,10 +522,9 @@ def _activate_weather_location(conn, location_id: int):
         conn.execute(
             """
             INSERT INTO system_config (
-                weather_city, weather_plz, weather_service, api_key,
-                weather_latitude, weather_longitude
+                weather_city, weather_plz, weather_service, weather_latitude, weather_longitude
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, 'open_meteo', ?, ?)
             """,
             values,
         )
@@ -542,7 +532,7 @@ def _activate_weather_location(conn, location_id: int):
         conn.execute(
             """
             UPDATE system_config
-            SET weather_city = ?, weather_plz = ?, weather_service = ?, api_key = ?,
+            SET weather_city = ?, weather_plz = ?, weather_service = 'open_meteo',
                 weather_latitude = ?, weather_longitude = ?
             WHERE id = ?
             """,
@@ -598,56 +588,14 @@ def delete_weather_location(location_id: int):
     finally:
         conn.close()
     _invalidate_weather_cache()
-    return {"status": "success"}
+    return {"status": "success", "message": "Wetterstandort wurde gelöscht."}
 
 
 @router.get("/settings", dependencies=[Depends(require_roles("admin"))])
 def get_config_settings():
-    conn = database.get_db_connection()
-    try:
-        cfg = conn.execute(
-            """
-            SELECT weather_city, weather_plz, weather_service, api_key,
-                   weather_latitude, weather_longitude, live_temp, live_rain
-            FROM system_config ORDER BY id ASC LIMIT 1
-            """
-        ).fetchone()
-    finally:
-        conn.close()
-
-    if cfg is None:
+    result = fetch_live_weather_pure_ram()
+    if not result["weather_plz"]:
         raise HTTPException(status_code=404, detail="Systemkonfiguration nicht gefunden.")
-
-    result = {
-        "weather_city": cfg["weather_city"] or "",
-        "weather_plz": cfg["weather_plz"] or "",
-        "weather_latitude": cfg["weather_latitude"],
-        "weather_longitude": cfg["weather_longitude"],
-        "weather_service": cfg["weather_service"] or "open_meteo",
-        "api_key": cfg["api_key"] or "",
-        "live_temp": cfg["live_temp"] or "--",
-        "live_rain": cfg["live_rain"] or "--",
-        "high_temp": "--",
-        "low_temp": "--",
-    }
-
-    if _weather_cache_lock.acquire(blocking=False):
-        try:
-            cache_key = (
-                _active_db_key(),
-                cfg["weather_plz"],
-                cfg["weather_service"],
-                cfg["api_key"],
-                cfg["weather_latitude"],
-                cfg["weather_longitude"],
-            )
-            if _weather_cache is not None and _weather_cache_key == cache_key:
-                result.update({
-                    key: _weather_cache[key]
-                    for key in ("live_temp", "live_rain", "high_temp", "low_temp")
-                })
-        finally:
-            _weather_cache_lock.release()
     return result
 
 
@@ -724,7 +672,6 @@ def update_config(payload: ConfigUpdate):
             "SELECT id, weather_plz, weather_city, weather_latitude, weather_longitude "
             "FROM system_config ORDER BY id ASC LIMIT 1"
         ).fetchone()
-        final_service = "open_meteo" if payload.weather_service == "manual" else payload.weather_service
         new_plz = payload.weather_plz.strip()
         location_changed = current is None or new_plz != str(current["weather_plz"] or "").strip()
         if location_changed and new_plz:
@@ -739,10 +686,10 @@ def update_config(payload: ConfigUpdate):
             longitude = current["weather_longitude"]
         conn.execute("""
             UPDATE system_config
-            SET weather_city = ?, weather_plz = ?, weather_service = ?, api_key = ?,
+            SET weather_city = ?, weather_plz = ?, weather_service = 'open_meteo',
                 weather_latitude = ?, weather_longitude = ?
             WHERE id = (SELECT id FROM system_config ORDER BY id ASC LIMIT 1)
-        """, (city, new_plz, final_service, payload.api_key, latitude, longitude))
+        """, (city, new_plz, latitude, longitude))
         conn.commit()
         _sync_active_weather_location(conn)
         conn.commit()

@@ -1,0 +1,102 @@
+:host {
+  background: var(--config-background);
+
+  color: inherit;
+
+  font-family: inherit;
+}
+
+:host {
+  display: block;
+}
+
+.header-settings {
+  display: grid;
+
+  max-width: 720px;
+
+  gap: 12px;
+
+  padding: 22px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 10px;
+
+  box-shadow: 0 4px 10px rgb(0 0 0 / 2%);
+}
+
+.header-settings h3,
+.header-settings .settings-description {
+  margin: 0;
+}
+
+.settings-description {
+  color: #68717b;
+
+  font-size: 13px;
+}
+
+.header-settings fieldset {
+  display: grid;
+
+  min-width: 0;
+
+  gap: 8px;
+
+  margin: 4px 0 0;
+
+  padding: 14px;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 8px;
+}
+
+.header-settings legend {
+  padding: 0 5px;
+
+  color: #495057;
+
+  font-weight: 700;
+}
+
+.preference-row {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 11px;
+
+  padding: 10px;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+}
+
+.preference-row:hover {
+  background: #f8f9fa;
+}
+
+.preference-row input {
+  width: 18px;
+
+  height: 18px;
+
+  margin: 1px 0 0;
+
+  accent-color: #228be6;
+}
+
+.preference-row span {
+  display: grid;
+
+  gap: 4px;
+}
+
+.preference-row small {
+  color: #68717b;
+
+  font-size: 12px;
+}

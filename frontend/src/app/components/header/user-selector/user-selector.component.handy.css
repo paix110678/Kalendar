@@ -8,7 +8,6 @@
   }
 
   .user-name-label-white {
-    display: block;
     min-width: 0;
     font-size: 12px;
   }
@@ -53,5 +52,6 @@
 
   .piggy-trigger-btn-transparent-style {
     min-height: 44px;
+    transition: none;
   }
 }

@@ -1,0 +1,31 @@
+<section class="header-settings">
+  <h3>🧭 Kopfzeile</h3>
+  <p class="settings-description">Lege fest, welche Bedienelemente in der Kalender-Kopfzeile angezeigt werden.</p>
+
+  <p *ngIf="loading" role="status">Einstellungen werden geladen …</p>
+  <fieldset [disabled]="loading || saving">
+    <legend>Elemente der Kopfzeile</legend>
+    <label class="preference-row">
+      <input type="checkbox" [(ngModel)]="preferences.show_users" (ngModelChange)="publishEditorActions()">
+      <span>
+        <strong>Familienmitglieder</strong>
+        <small>Personenleiste und Schnellzugriff auf Belohnungen anzeigen.</small>
+      </span>
+    </label>
+    <label class="preference-row">
+      <input type="checkbox" [(ngModel)]="preferences.show_view_mode" (ngModelChange)="publishEditorActions()">
+      <span>
+        <strong>Ansichtsauswahl</strong>
+        <small>Zwischen Tag, 3 Tage und Woche wechseln können.</small>
+      </span>
+    </label>
+    <label class="preference-row">
+      <input type="checkbox" [(ngModel)]="preferences.show_weather" (ngModelChange)="publishEditorActions()">
+      <span>
+        <strong>Wetteranzeige</strong>
+        <small>Aktuelles Wetter und den aktiven Standort anzeigen.</small>
+      </span>
+    </label>
+  </fieldset>
+
+</section>
