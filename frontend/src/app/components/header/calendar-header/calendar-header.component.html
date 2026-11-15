@@ -1,8 +1,10 @@
 <div class="top-bar-grid-container">
   <app-header-brand
     [isCapturingScreenshot]="isCapturingScreenshot"
+    [accountProfileOpen]="accountProfileOpen"
     (adminPageOpened)="adminPageOpened.emit()"
-    (errorReportRequested)="errorReportRequested.emit()">
+    (errorReportRequested)="errorReportRequested.emit()"
+    (accountProfileToggled)="accountProfileToggled.emit()">
   </app-header-brand>
 
   <div class="header-bottom-row">

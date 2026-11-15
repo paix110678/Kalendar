@@ -29,12 +29,14 @@ export class CalendarHeaderComponent implements OnInit, OnDestroy {
   @Input() showHeaderBack = true;
   @Input() showControls = true;
   @Input() isCapturingScreenshot = false;
+  @Input() accountProfileOpen = false;
   
   @Output() viewModeChanged = new EventEmitter<'day' | '3days' | 'week'>();
   @Output() userVisibilityToggled = new EventEmitter<{userId: number, event: MouseEvent}>();
   @Output() rewardDashboardOpened = new EventEmitter<User>();
   @Output() adminPageOpened = new EventEmitter<void>();
   @Output() errorReportRequested = new EventEmitter<void>();
+  @Output() accountProfileToggled = new EventEmitter<void>();
   @Output() headerBack = new EventEmitter<void>();
 
   public sysConfig: SystemConfig | null = null;

@@ -16,19 +16,34 @@
   gap: 8px;
 }
 
-.account-profile {
-  position: relative;
-  display: grid;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  place-items: center;
-}
-
+.account-profile-trigger,
 .account-avatar,
 .icon-action {
   display: grid;
   place-items: center;
+}
+
+.account-profile-trigger {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.account-avatar {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+  cursor: pointer;
+}
+
+.icon-action {
   padding: 0;
   border: 1px solid rgb(255 255 255 / 55%);
   border-radius: 50%;
@@ -36,18 +51,7 @@
   cursor: pointer;
 }
 
-.account-avatar {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
-}
-
 .icon-action {
-  width: 40px;
   height: 40px;
   flex: 0 0 40px;
   border: 0;
@@ -81,25 +85,6 @@
   cursor: wait;
 }
 
-.account-logout {
-  width: 100%;
-  min-height: 38px;
-  margin-top: 16px;
-  padding: 8px 12px;
-  border: 1px solid #e03131;
-  border-radius: 6px;
-  background: #fff5f5;
-  color: #c92a2a;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.account-logout:hover {
-  background: #ffe3e3;
-}
-
 .app-version {
   padding: 2px 6px;
   border: 1px solid rgb(255 255 255 / 35%);
@@ -109,102 +94,4 @@
   font-size: 9px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-.account-details {
-  position: absolute;
-  z-index: 3100;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(300px, calc(100vw - 24px));
-  padding: 18px;
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  background: #fff;
-  color: #212529;
-  box-shadow: 0 8px 28px rgb(0 0 0 / 20%);
-}
-
-.account-details h2 {
-  margin: 0 28px 4px 0;
-  font-size: 16px;
-}
-
-.account-details .account-email {
-  margin: 0 0 14px;
-  color: #495057;
-  overflow-wrap: anywhere;
-}
-
-.account-details p:not(.account-email) {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 8px 0 0;
-  font-size: 12px;
-}
-
-.account-details p span {
-  color: #868e96;
-}
-
-.account-details p strong {
-  text-align: right;
-}
-
-.account-weather-settings {
-  display: grid;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.account-weather-settings label {
-  color: #495057;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.account-weather-settings select {
-  width: 100%;
-  min-height: 36px;
-  padding: 6px 8px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  color: #212529;
-  font: inherit;
-  font-size: 12px;
-}
-
-.account-weather-settings p {
-  display: block !important;
-  margin: 0 !important;
-  color: #868e96;
-  font-size: 12px;
-}
-
-.account-weather-settings .weather-location-error {
-  color: #c92a2a;
-}
-
-.account-details-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: #495057;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.logout-error {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin: 4px 0;
-  color: #ffe3e3;
-  font-size: 12px;
 }

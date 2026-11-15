@@ -2,7 +2,9 @@
   <app-logo></app-logo>
   <app-header-account-actions
     [isCapturingScreenshot]="isCapturingScreenshot"
+    [accountProfileOpen]="accountProfileOpen"
     (adminPageOpened)="adminPageOpened.emit()"
-    (errorReportRequested)="errorReportRequested.emit()">
+    (errorReportRequested)="errorReportRequested.emit()"
+    (accountProfileToggled)="accountProfileToggled.emit()">
   </app-header-account-actions>
 </div>

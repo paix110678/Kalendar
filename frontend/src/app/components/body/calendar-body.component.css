@@ -14,3 +14,15 @@
   position: relative;
   color: var(--body-text-color);
 }
+
+.body-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.body-content-hidden {
+  display: none;
+}

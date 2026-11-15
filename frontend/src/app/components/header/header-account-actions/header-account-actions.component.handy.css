@@ -3,15 +3,18 @@
     gap: 3px;
   }
 
-  .account-avatar,
-  .icon-action {
+  .account-profile-trigger {
     width: 34px;
     height: 34px;
     flex-basis: 34px;
   }
 
-  .account-profile {
+  .account-avatar {
     width: 34px;
+    height: 34px;
+  }
+
+  .icon-action {
     height: 34px;
     flex-basis: 34px;
   }
@@ -22,27 +25,24 @@
 }
 
 @media (max-width: 360px) {
-  .account-avatar,
-  .icon-action {
+  .account-profile-trigger {
     width: 30px;
     height: 30px;
     flex-basis: 30px;
   }
 
-  .account-profile {
-    width: 30px;
+  .account-avatar {
+    width: 26px;
+    height: 26px;
+  }
+
+  .icon-action {
     height: 30px;
     flex-basis: 30px;
   }
 
   .icon-action {
     font-size: 21px;
-  }
-
-  .account-avatar {
-    width: 26px;
-    height: 26px;
-    flex-basis: 26px;
   }
 
   .icon-action svg {

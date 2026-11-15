@@ -1,68 +1,18 @@
 <div class="account-actions">
   <div class="action-row">
     @if (authService.currentAccount; as account) {
-      <div class="account-profile">
+      <div class="account-profile-trigger">
         <button
           type="button"
           class="account-avatar"
           [style.background-color]="accountColor"
-          [attr.aria-expanded]="showAccountDetails"
+          [attr.aria-expanded]="accountProfileOpen"
           aria-haspopup="dialog"
+          aria-controls="account-profile-view"
           aria-label="Kontodetails für {{ account.display_name }}"
-          (click)="toggleAccountDetails()">
+          (click)="accountProfileToggled.emit()">
           {{ accountInitials }}
         </button>
-
-        @if (showAccountDetails) {
-          <section class="account-details" role="dialog" aria-label="Kontodetails">
-            <button
-              type="button"
-              class="account-details-close"
-              aria-label="Kontodetails schließen"
-              (click)="showAccountDetails = false">
-              ×
-            </button>
-            <h2>{{ account.display_name }}</h2>
-            <p class="account-email">{{ account.email }}</p>
-            @if (account.profile_name) {
-              <p><span>Profil</span><strong>{{ account.profile_name }}</strong></p>
-            }
-            <div class="account-weather-settings">
-              <label for="profile-weather-location">Standort der Wetteranzeige</label>
-              @if (weatherLocationLoading && weatherLocations.length === 0) {
-                <p role="status">Wetterstandorte werden geladen …</p>
-              } @else if (weatherLocations.length > 0) {
-                <select
-                  id="profile-weather-location"
-                  [ngModel]="selectedWeatherLocationId"
-                  [disabled]="weatherLocationLoading"
-                  (ngModelChange)="onWeatherLocationChange($event)">
-                  @for (location of weatherLocations; track location.id) {
-                    <option [ngValue]="location.id">
-                      {{ location.weather_city || 'Ort noch nicht ermittelt' }} ({{ location.weather_plz }})
-                    </option>
-                  }
-                </select>
-              } @else if (!weatherLocationLoading && !weatherLocationError) {
-                <p>Es sind noch keine Wetterstandorte eingerichtet.</p>
-              }
-              @if (weatherLocationError) {
-                <p class="weather-location-error" role="alert">{{ weatherLocationError }}</p>
-              }
-            </div>
-            <p><span>Rolle</span><strong>{{ accountRoleLabel }}</strong></p>
-            <p>
-              <span>E-Mail</span>
-              <strong>{{ account.email_verified ? 'Bestätigt' : 'Nicht bestätigt' }}</strong>
-            </p>
-            @if (account.created_at) {
-              <p><span>Konto seit</span><strong>{{ account.created_at | date: 'dd.MM.yyyy' }}</strong></p>
-            }
-            <button type="button" class="account-logout" (click)="logout()">
-              Abmelden
-            </button>
-          </section>
-        }
       </div>
     }
 
@@ -93,7 +43,3 @@
 
   <span class="app-version" [title]="'Version ' + version">v{{ version }}</span>
 </div>
-
-@if (logoutError) {
-  <p class="logout-error" role="alert">{{ logoutError }}</p>
-}

@@ -15,6 +15,8 @@ import { HeaderAccountActionsComponent } from '../header-account-actions/header-
 })
 export class HeaderBrandComponent {
   @Input() isCapturingScreenshot = false;
+  @Input() accountProfileOpen = false;
   @Output() adminPageOpened = new EventEmitter<void>();
   @Output() errorReportRequested = new EventEmitter<void>();
+  @Output() accountProfileToggled = new EventEmitter<void>();
 }

@@ -36,13 +36,20 @@ export class CalendarShellComponent {
   public authHeaderShowBack = false;
   @ViewChild(AuthComponent) public authComponent?: AuthComponent;
   public showAdminPage = false;
+  public showAccountProfile = false;
   public showErrorReport = false;
   public isCapturingScreenshot = false;
   public screenshotDataUrl: string | null = null;
   public screenshotError = '';
 
   public openAdminPage(): void {
+    this.showAccountProfile = false;
     this.showAdminPage = true;
+  }
+
+  public toggleAccountProfile(): void {
+    if (this.showErrorReport) return;
+    this.showAccountProfile = !this.showAccountProfile;
   }
 
   public setAuthHeader(state: { title: string; showBack: boolean }): void {
@@ -54,9 +61,19 @@ export class CalendarShellComponent {
     this.authComponent?.setMode('login');
   }
 
+  public onHeaderBack(calendarGrid: CalendarGridComponent): void {
+    if (this.showAccountProfile) {
+      this.showAccountProfile = false;
+      return;
+    }
+    this.showAdminPage = false;
+    calendarGrid.showRewardPage = false;
+  }
+
   public async openErrorReport(): Promise<void> {
     if (this.isCapturingScreenshot || this.showErrorReport) return;
 
+    this.showAccountProfile = false;
     this.isCapturingScreenshot = true;
     this.screenshotDataUrl = null;
     this.screenshotError = '';

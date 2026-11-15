@@ -5,29 +5,35 @@
         @defer (on immediate) {
           <app-calendar-header
             class="dashboard-frame-capsule"
-            [showHeaderBack]="showAdminPage || calendarGrid.showRewardPage"
+            [showHeaderBack]="showAdminPage || calendarGrid.showRewardPage || showAccountProfile"
             [isCapturingScreenshot]="isCapturingScreenshot"
+            [accountProfileOpen]="showAccountProfile"
             [activeUsers]="calendarGrid.activeUsersSignal()"
             [currentViewMode]="calendarGrid.currentViewMode"
-            [headerTitle]="showAdminPage
-              ? 'Einstellungen'
-              : calendarGrid.showRewardPage && calendarGrid.selectedUser
-                ? 'Belohnungen für ' + calendarGrid.selectedUser.name
-                : null"
+            [headerTitle]="showAccountProfile
+              ? 'Kontodetails'
+              : showAdminPage
+                ? 'Einstellungen'
+                : calendarGrid.showRewardPage && calendarGrid.selectedUser
+                  ? 'Belohnungen für ' + calendarGrid.selectedUser.name
+                  : null"
             (viewModeChanged)="calendarGrid.changeViewMode($event)"
             (userVisibilityToggled)="calendarGrid.toggleUserVisibility($event.userId, $event.event)"
-            (rewardDashboardOpened)="calendarGrid.openRewardDashboardForUser($event)"
+            (rewardDashboardOpened)="showAccountProfile = false; calendarGrid.openRewardDashboardForUser($event)"
             (adminPageOpened)="calendarGrid.showRewardPage = false; openAdminPage()"
             (errorReportRequested)="openErrorReport()"
-            (headerBack)="showAdminPage = false; calendarGrid.showRewardPage = false">
+            (accountProfileToggled)="toggleAccountProfile()"
+            (headerBack)="onHeaderBack(calendarGrid)">
           </app-calendar-header>
 
           <app-calendar-body
             class="main-content dashboard-frame-capsule"
             [showErrorReport]="showErrorReport"
+            [showAccountProfile]="showAccountProfile"
             [screenshotDataUrl]="screenshotDataUrl"
             [screenshotError]="screenshotError"
-            (errorReportClosed)="showErrorReport = false">
+            (errorReportClosed)="showErrorReport = false"
+            (accountProfileClosed)="showAccountProfile = false">
             <div class="calendar-body" [class.calendar-body-hidden]="showAdminPage || calendarGrid.showRewardPage">
               <app-calendar-grid #calendarGrid></app-calendar-grid>
             </div>
