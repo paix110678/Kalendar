@@ -72,7 +72,6 @@
 .settings-grid input,
 .settings-grid select,
 .plan-select select,
-.schedule-table select,
 .assignment-title input,
 .conflict-row input,
 .conflict-row select {
@@ -146,107 +145,18 @@
   gap: 5px;
 }
 
+.plan-learn-wrapper {
+  min-width: 0;
+
+  --plan-max-height: 420px;
+}
+
 .assignment-title span {
   color: #495057;
 
   font-size: 12px;
 
   font-weight: 700;
-}
-
-.schedule-table-wrapper {
-  max-height: 420px;
-
-  overflow: auto;
-
-  border: 1px solid #dee2e6;
-
-  border-radius: 6px;
-}
-
-.schedule-table {
-  width: 100%;
-
-  border-collapse: collapse;
-}
-
-.schedule-table th,
-.schedule-table td {
-  padding: 7px 9px;
-
-  border-bottom: 1px solid #e9ecef;
-
-  font-size: 12px;
-
-  text-align: left;
-}
-
-.schedule-table th {
-  position: sticky;
-
-  top: 0;
-
-  font-weight: 700;
-}
-
-.school-timetable {
-  min-width: 760px;
-
-  table-layout: fixed;
-}
-
-.school-timetable th:first-child {
-  width: 62px;
-}
-
-.school-timetable th:nth-child(2) {
-  width: 112px;
-}
-
-.school-timetable th:nth-child(n + 3) {
-  text-align: center;
-}
-
-.schedule-time {
-  color: #68717b;
-
-  white-space: nowrap;
-}
-
-.event-type-cell {
-  min-width: 145px;
-}
-
-.event-type-selection {
-  display: flex;
-
-  align-items: center;
-
-  gap: 4px;
-}
-
-.event-type-selection select {
-  flex: 1 1 auto;
-
-  width: 100%;
-
-  padding: 5px;
-}
-
-.visibility-toggle {
-  min-width: 36px;
-
-  min-height: 36px;
-
-  border: 1px solid #ced4da;
-
-  border-radius: 5px;
-
-  cursor: pointer;
-}
-
-.visibility-hidden {
-  filter: grayscale(1);
 }
 
 .conflict-backdrop {
@@ -359,17 +269,6 @@
   .settings-grid,
   .conflict-row {
     grid-template-columns: 1fr;
-  }
-
-  .schedule-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .schedule-table th,
-  .schedule-table td {
-    padding: 6px 5px;
-
-    font-size: 11px;
   }
 
   .conflict-dialog-actions {

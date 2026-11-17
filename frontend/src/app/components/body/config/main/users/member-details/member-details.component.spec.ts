@@ -65,15 +65,33 @@ describe('MemberDetailsComponent', () => {
     await fixture.whenStable();
   });
 
-  it('keeps schedule choices while omitting the personal event type management section', () => {
+  it('renders the plan grid and maps its choices and visibility back to the assignment', () => {
     const component = fixture.componentInstance;
     component.selectPlan(plan.id);
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    const eventTypeSelect = element.querySelector('.event-type-cell select');
 
     expect(element.textContent).not.toContain('Persönliche Fächer und Eventarten');
-    expect(eventTypeSelect?.textContent).toContain('Mathematik');
+    expect(element.querySelector('lib-plan-learn')).not.toBeNull();
+    expect(component.planLearnTimeSlots).toEqual([
+      { id: '1', start: '08:00', end: '08:45', label: '1.' },
+    ]);
+
+    component.onPlanEntryChange({ dayId: 'Montag', timeSlotId: '1', subjectId: '12' });
+    component.onPlanHideRequested({
+      dayId: 'Montag',
+      timeSlotId: '1',
+      subjectId: '12',
+      hidden: true,
+    });
+
+    expect(component.scheduleEntries[0]).toMatchObject({
+      event_type_id: eventType.id,
+      visible: false,
+    });
+    expect(component.planLearnEntries).toEqual([
+      { dayId: 'Montag', timeSlotId: '1', subjectId: '12', hidden: true },
+    ]);
   });
 });

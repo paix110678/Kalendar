@@ -94,65 +94,21 @@
         <span>Titel der Kalendertermine</span>
         <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
-      <div class="schedule-table-wrapper">
-        <table class="schedule-table school-timetable">
-          <thead>
-            <tr>
-              <th scope="col">Stunde</th>
-              <th scope="col">Zeit</th>
-              @for (day of scheduleDays; track day) {
-                <th scope="col">{{ day }}</th>
-              }
-            </tr>
-          </thead>
-          <tbody>
-            @for (period of schedulePeriods; track period) {
-              @let timeEntry = getScheduleEntry(scheduleDays[0], period);
-              <tr>
-                <th scope="row">{{ period }}.</th>
-                <td class="schedule-time">
-                  @if (timeEntry) {
-                    {{ timeEntry.start_time }}–{{ timeEntry.end_time }}
-                  }
-                </td>
-                @for (day of scheduleDays; track day) {
-                  @let entry = getScheduleEntry(day, period);
-                  <td class="event-type-cell">
-                    @if (entry) {
-                      <div class="event-type-selection">
-                        <select
-                          [name]="'event-type-' + day + '-' + period"
-                          [(ngModel)]="entry.event_type_id"
-                          (ngModelChange)="publishEditorActions()"
-                          [attr.aria-label]="day + ', ' + period + '. Stunde: Fach oder Eventart'"
-                          [disabled]="eventTypesLoading || personEventTypes.length === 0"
-                          [style.background-color]="getEventTypeColor(entry.event_type_id)"
-                          [style.color]="getEventTypeTextColor(entry.event_type_id)"
-                          required>
-                          <option [ngValue]="null">Bitte auswählen</option>
-                          @for (eventType of personEventTypes; track eventType.id) {
-                            <option [ngValue]="eventType.id">{{ eventType.name }}</option>
-                          }
-                        </select>
-                        <button
-                          type="button"
-                          class="visibility-toggle"
-                          [class.visibility-hidden]="!entry.visible"
-                          [disabled]="entry.visibilitySaving"
-                          [attr.aria-label]="entry.visible ? day + ', ' + period + '. Stunde im Kalender ausblenden' : day + ', ' + period + '. Stunde im Kalender einblenden'"
-                          [attr.aria-pressed]="entry.visible"
-                          (click)="toggleScheduleEventVisibility(entry)">
-                          {{ entry.visible ? '👁️' : '🙈' }}
-                        </button>
-                      </div>
-                    }
-                  </td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      @if (personEventTypes.length > 0) {
+        <div class="plan-learn-wrapper">
+          <lib-plan-learn
+            [planName]="assignmentTitle"
+            [days]="planLearnDays"
+            [timeSlots]="planLearnTimeSlots"
+            [categories]="planLearnCategories"
+            [subjects]="planLearnSubjects"
+            [entries]="planLearnEntries"
+            [showPeriods]="true"
+            (entryChange)="onPlanEntryChange($event)"
+            (hideRequested)="onPlanHideRequested($event)">
+          </lib-plan-learn>
+        </div>
+      }
     }
 
       <div class="conflict-backdrop" [hidden]="!conflictDialogOpen">

@@ -18,6 +18,15 @@ import { CalendarService, User } from '../../../../../../services/calendar.servi
 import { ToastService } from '../../../../../../services/toast.service';
 import { AdminEditorActions } from '../../../action-footer/action-footer.component';
 import { ColorPickerComponent } from '../../color-picker/color-picker.component';
+import {
+  PlanLearn,
+  type PlanCategory,
+  type PlanDay,
+  type PlanEntry,
+  type PlanEntryChange,
+  type PlanSubject as PlanLearnSubject,
+  type PlanTimeSlot,
+} from 'plan-learn';
 
 type ConflictAction = '' | 'delete' | 'move';
 
@@ -39,7 +48,7 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 @Component({
   selector: 'app-member-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent],
+  imports: [CommonModule, FormsModule, ColorPickerComponent, PlanLearn],
   templateUrl: './member-details.component.html',
   styleUrl: './member-details.component.css',
 })
@@ -163,12 +172,76 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
       : [];
   }
 
-  get schedulePeriods(): number[] {
-    return this.selectedPlan?.hours.map((_, index) => index + 1) ?? [];
-  }
-
   getScheduleEntry(day: string, period: number): ScheduleEntry | undefined {
     return this.scheduleEntries.find((entry) => entry.day_of_week === day && entry.period === period);
+  }
+
+  get planLearnDays(): readonly PlanDay[] {
+    return this.scheduleDays.map((day) => ({ id: day, name: day }));
+  }
+
+  get planLearnTimeSlots(): readonly PlanTimeSlot[] {
+    return (this.selectedPlan?.hours ?? []).map((hour, index) => ({
+      id: String(index + 1),
+      start: hour.start_time,
+      end: hour.end_time,
+      label: `${index + 1}.`,
+    }));
+  }
+
+  get planLearnCategories(): readonly PlanCategory[] {
+    return [{ id: 'event-types', name: 'Fächer und Eventarten' }];
+  }
+
+  get planLearnSubjects(): readonly PlanLearnSubject[] {
+    return this.personEventTypes.map((eventType) => ({
+      id: String(eventType.id),
+      categoryId: 'event-types',
+      name: eventType.name,
+      color: eventType.color,
+    }));
+  }
+
+  get planLearnEntries(): readonly PlanEntry[] {
+    return this.scheduleEntries
+      .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
+      .map((entry) => ({
+        dayId: entry.day_of_week,
+        timeSlotId: String(entry.period),
+        subjectId: String(entry.event_type_id),
+        hidden: !entry.visible,
+      }));
+  }
+
+  onPlanEntryChange(change: PlanEntryChange): void {
+    const period = Number(change.timeSlotId);
+    const entry = this.getScheduleEntry(change.dayId, period);
+    if (!entry) {
+      console.error('Der Stundenplan hat eine unbekannte Zelle gemeldet:', change);
+      return;
+    }
+
+    if (change.subjectId === null) {
+      entry.event_type_id = null;
+    } else {
+      const eventTypeId = Number(change.subjectId);
+      if (!Number.isInteger(eventTypeId) || !this.personEventTypes.some((item) => item.id === eventTypeId)) {
+        console.error('Der Stundenplan hat ein unbekanntes Fach oder eine unbekannte Eventart gemeldet:', change);
+        return;
+      }
+      entry.event_type_id = eventTypeId;
+    }
+    this.publishEditorActions();
+  }
+
+  onPlanHideRequested(change: PlanEntry): void {
+    const entry = this.getScheduleEntry(change.dayId, Number(change.timeSlotId));
+    if (!entry || !this.personEventTypes.some((item) => String(item.id) === change.subjectId)) {
+      console.error('Der Stundenplan hat eine unbekannte Sichtbarkeitsänderung gemeldet:', change);
+      return;
+    }
+    entry.visible = !change.hidden;
+    this.publishEditorActions();
   }
 
   loadPlans(): void {
@@ -302,11 +375,6 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
         });
       });
     }
-    this.publishEditorActions();
-  }
-
-  toggleScheduleEventVisibility(entry: ScheduleEntry): void {
-    entry.visible = !entry.visible;
     this.publishEditorActions();
   }
 
@@ -508,19 +576,6 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
         this.publishEditorActions();
       },
     });
-  }
-
-  getEventTypeColor(eventTypeId: number | null): string {
-    return this.personEventTypes.find((eventType) => eventType.id === eventTypeId)?.color ?? 'transparent';
-  }
-
-  getEventTypeTextColor(eventTypeId: number | null): string {
-    const color = this.getEventTypeColor(eventTypeId);
-    if (color === 'transparent') return '#212529';
-    const red = parseInt(color.slice(1, 3), 16);
-    const green = parseInt(color.slice(3, 5), 16);
-    const blue = parseInt(color.slice(5, 7), 16);
-    return (red * 299 + green * 587 + blue * 114) / 1000 >= 145 ? '#212529' : '#fff';
   }
 
   private handlePlanError(error: HttpErrorResponse): void {
