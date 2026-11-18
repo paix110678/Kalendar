@@ -6,7 +6,7 @@
   </app-view-mode-buttons>
 
   <app-user-selector
-    *ngIf="preferences.show_users"
+    *ngIf="hasActiveProfiles"
     [activeUsers]="activeUsers"
     (userVisibilityToggled)="userVisibilityToggled.emit($event)"
     (rewardDashboardOpened)="rewardDashboardOpened.emit($event)">

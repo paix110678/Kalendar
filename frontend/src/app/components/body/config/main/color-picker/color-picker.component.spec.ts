@@ -31,6 +31,20 @@ describe('ColorPickerComponent', () => {
     expect(fixture.nativeElement.querySelector('.custom-panel')).toBeNull();
   });
 
+  it('opens the color palette from the compact color circle', () => {
+    fixture.componentRef.setInput('compact', true);
+    fixture.componentRef.setInput('accessibleLabel', 'Farbe für Alex auswählen');
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
+    const summary = fixture.nativeElement.querySelector('summary') as HTMLElement;
+    summary.click();
+
+    expect(details.classList).toContain('color-picker-compact');
+    expect(summary.getAttribute('aria-label')).toBe('Farbe für Alex auswählen, aktuell #e03131');
+    expect(details.open).toBe(true);
+  });
+
   it('closes the palette with the close button and centers the color grid', () => {
     const details = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
     details.open = true;

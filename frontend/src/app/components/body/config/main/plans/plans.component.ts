@@ -13,7 +13,7 @@ import { ToastService } from '../../../../../services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './plans.component.html',
-  styleUrl: './plans.component.css',
+  styleUrls: ['./plans.component.css', './plans-weekdays.css'],
 })
 export class PlansComponent implements OnChanges {
   private readonly apiService = inject(ApiService);
@@ -36,13 +36,24 @@ export class PlansComponent implements OnChanges {
     'Samstag',
     'Sonntag',
   ];
+  readonly dayAbbreviations: Record<string, string> = {
+    Montag: 'Mo',
+    Dienstag: 'Di',
+    Mittwoch: 'Mi',
+    Donnerstag: 'Do',
+    Freitag: 'Fr',
+    Samstag: 'Sa',
+    Sonntag: 'So',
+  };
 
   plans: PlanDefinition[] = [];
   planName = '';
-  startDay = 'Montag';
-  endDay = 'Freitag';
+  selectedDays = this.daysOfWeek.slice(0, 5);
   hoursCount = 6;
   hours: PlanHour[] = this.createDefaultHours(this.hoursCount);
+  uniformTime = true;
+  uniformCount = true;
+  dayHours: Record<string, PlanHour[]> = {};
   excludeSchoolHolidays = false;
   excludePublicHolidays = false;
   editingPlanId: number | null = null;
@@ -103,12 +114,102 @@ export class PlansComponent implements OnChanges {
 
   onHoursCountChange(value: number): void {
     const count = Math.max(1, Math.min(24, Math.trunc(Number(value) || 1)));
-    const defaultHours = this.createDefaultHours(count);
     this.hoursCount = count;
-    this.hours = Array.from({ length: count }, (_, index) =>
-      this.hours[index] ?? defaultHours[index],
-    );
+    this.hours = this.resizeHours(this.hours, count);
+    for (const day of this.selectedDays) {
+      const dayCount = this.uniformCount ? count : this.getDayHours(day).length;
+      this.dayHours[day] = this.uniformTime
+        ? this.hours.slice(0, dayCount).map((hour) => ({ ...hour }))
+        : this.resizeHours(this.dayHours[day] ?? this.hours, dayCount);
+    }
     this.publishEditorActions();
+  }
+
+  onUniformTimeChange(uniform: boolean): void {
+    if (uniform === this.uniformTime) return;
+    if (uniform) {
+      const firstDayHours = this.selectedDays.length > 0
+        ? this.getDayHours(this.selectedDays[0])
+        : this.hours;
+      this.hours = this.resizeHours(firstDayHours, this.hoursCount);
+      for (const day of this.selectedDays) {
+        this.dayHours[day] = this.hours.slice(0, this.getDayHours(day).length)
+          .map((hour) => ({ ...hour }));
+      }
+    } else {
+      for (const day of this.selectedDays) {
+        this.dayHours[day] = this.resizeHours(this.getDayHours(day), this.getDayHours(day).length);
+      }
+    }
+    this.uniformTime = uniform;
+    this.publishEditorActions();
+  }
+
+  onUniformCountChange(uniform: boolean): void {
+    if (uniform === this.uniformCount) return;
+    if (uniform) {
+      this.hoursCount = Math.max(
+        1,
+        ...this.selectedDays.map((day) => this.getDayHours(day).length),
+      );
+      this.hours = this.resizeHours(this.hours, this.hoursCount);
+      for (const day of this.selectedDays) {
+        this.dayHours[day] = this.uniformTime
+          ? this.hours.map((hour) => ({ ...hour }))
+          : this.resizeHours(this.dayHours[day] ?? this.hours, this.hoursCount);
+      }
+    } else {
+      this.hoursCount = 1;
+      this.hours = this.resizeHours(this.hours, 1);
+      for (const day of this.selectedDays) {
+        this.dayHours[day] = this.resizeHours(this.getDayHours(day), 1);
+      }
+    }
+    this.uniformCount = uniform;
+    this.publishEditorActions();
+  }
+
+  getDayHours(day: string): PlanHour[] {
+    return this.dayHours[day] ?? this.hours.slice(0, this.hoursCount);
+  }
+
+  onDayCountChange(day: string, value: number): void {
+    if (!Number.isFinite(value)) return;
+    const count = Math.max(0, Math.min(24, Math.trunc(Number(value) || 0)));
+    if (count === 0) {
+      this.selectedDays = this.selectedDays.filter((selectedDay) => selectedDay !== day);
+      this.hoursCount = Math.max(
+        1,
+        ...this.selectedDays.map((selectedDay) => this.getDayHours(selectedDay).length),
+      );
+      this.hours = this.resizeHours(this.hours, this.hoursCount);
+      this.publishEditorActions();
+      return;
+    }
+
+    if (!this.selectedDays.includes(day)) {
+      this.selectedDays = this.daysOfWeek.filter((item) => item === day || this.selectedDays.includes(item));
+    }
+    this.dayHours[day] = this.resizeHours(this.dayHours[day] ?? this.hours, count);
+    this.hoursCount = Math.max(
+      1,
+      ...this.selectedDays.map((selectedDay) => this.getDayHours(selectedDay).length),
+    );
+    this.hours = this.resizeHours(this.hours, this.hoursCount);
+    if (this.uniformTime) {
+      for (const selectedDay of this.selectedDays) {
+        this.dayHours[selectedDay] = this.hours
+          .slice(0, this.getDayHours(selectedDay).length)
+          .map((hour) => ({ ...hour }));
+      }
+    }
+    this.publishEditorActions();
+  }
+
+  onDayCountInput(day: string, event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.onDayCountChange(day, event.target.valueAsNumber);
+    }
   }
 
   savePlan(): void {
@@ -119,21 +220,37 @@ export class PlansComponent implements OnChanges {
       this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
       return;
     }
-    if (this.daysOfWeek.indexOf(this.startDay) > this.daysOfWeek.indexOf(this.endDay)) {
-      this.toastService.show(false, 'Der erste Tag muss vor oder gleich dem letzten Tag liegen.');
+    if (this.selectedDays.length === 0) {
+      this.toastService.show(false, 'Bitte mindestens einen Wochentag auswählen.');
       return;
     }
-    if (this.hours.some((hour) => !hour.start_time || !hour.end_time || hour.end_time <= hour.start_time)) {
+    const hoursByDay = this.selectedDays.map((day) => this.getDayHours(day));
+    if (hoursByDay.some((hours) =>
+      hours.some((hour) => !hour.start_time || !hour.end_time || hour.end_time <= hour.start_time),
+    )) {
       this.toastService.show(false, 'Für jede Stunde muss die Endzeit nach der Startzeit liegen.');
       return;
     }
+    if (hoursByDay.some((hours) => hours.some((hour, index) =>
+      hours.slice(index + 1).some((other) =>
+        hour.start_time < other.end_time && hour.end_time > other.start_time,
+      ),
+    ))) {
+      this.toastService.show(false, 'Die Stundenzeiten dürfen sich innerhalb eines Wochentags nicht überschneiden.');
+      return;
+    }
 
+    const days = this.daysOfWeek.filter((day) => this.selectedDays.includes(day));
     const payload = {
       name: this.planName.trim(),
-      start_day: this.startDay,
-      end_day: this.endDay,
+      days,
       hours_count: this.hoursCount,
       hours: this.hours,
+      uniform_time: this.uniformTime,
+      uniform_count: this.uniformCount,
+      day_hours: this.uniformTime && this.uniformCount
+        ? {}
+        : Object.fromEntries(days.map((day) => [day, this.getDayHours(day)])),
       exclude_school_holidays: this.excludeSchoolHolidays,
       exclude_public_holidays: this.excludePublicHolidays,
     };
@@ -194,10 +311,16 @@ export class PlansComponent implements OnChanges {
   editPlan(plan: PlanDefinition): void {
     this.editingPlanId = plan.id;
     this.planName = plan.name;
-    this.startDay = plan.start_day;
-    this.endDay = plan.end_day;
+    this.selectedDays = this.daysOfWeek.filter((day) => plan.days.includes(day));
     this.hoursCount = plan.hours_count;
     this.hours = plan.hours.map((hour) => ({ ...hour }));
+    this.uniformTime = plan.uniform_time ?? true;
+    this.uniformCount = plan.uniform_count ?? true;
+    this.dayHours = Object.fromEntries(this.selectedDays.map((day) => {
+      const fallbackCount = this.uniformCount ? this.hoursCount : 1;
+      const savedHours = plan.day_hours?.[day] ?? this.hours.slice(0, fallbackCount);
+      return [day, savedHours.map((hour) => ({ ...hour }))];
+    }));
     this.excludeSchoolHolidays = plan.exclude_school_holidays;
     this.excludePublicHolidays = plan.exclude_public_holidays;
     this.successMessage = '';
@@ -269,10 +392,12 @@ export class PlansComponent implements OnChanges {
     this.pendingPlanId = null;
     this.editingPlanId = null;
     this.planName = '';
-    this.startDay = 'Montag';
-    this.endDay = 'Freitag';
+    this.selectedDays = this.daysOfWeek.slice(0, 5);
     this.hoursCount = 6;
     this.hours = this.createDefaultHours(this.hoursCount);
+    this.uniformTime = true;
+    this.uniformCount = true;
+    this.dayHours = {};
     this.excludeSchoolHolidays = false;
     this.excludePublicHolidays = false;
     this.savedFormSnapshot = this.formSnapshot();
@@ -304,13 +429,40 @@ export class PlansComponent implements OnChanges {
   private formSnapshot(): string {
     return JSON.stringify({
       planName: this.planName,
-      startDay: this.startDay,
-      endDay: this.endDay,
+      selectedDays: this.selectedDays,
       hoursCount: this.hoursCount,
       hours: this.hours,
+      uniformTime: this.uniformTime,
+      uniformCount: this.uniformCount,
+      dayHours: this.dayHours,
       excludeSchoolHolidays: this.excludeSchoolHolidays,
       excludePublicHolidays: this.excludePublicHolidays,
     });
+  }
+
+  onDayToggle(day: string, event: Event): void {
+    const selected = event.target instanceof HTMLInputElement && event.target.checked;
+    this.selectedDays = this.daysOfWeek.filter((item) =>
+      item === day ? selected : this.selectedDays.includes(item),
+    );
+    if (selected) {
+      const count = this.uniformCount ? this.hoursCount : 1;
+      this.dayHours[day] = this.resizeHours(
+        this.dayHours[day] ?? this.hours,
+        count,
+      );
+    }
+    if (this.uniformCount && this.uniformTime) {
+      this.dayHours[day] = this.hours.map((hour) => ({ ...hour }));
+    }
+    this.publishEditorActions();
+  }
+
+  formatDays(days: string[]): string {
+    return this.daysOfWeek
+      .filter((day) => days.includes(day))
+      .map((day) => this.dayAbbreviations[day])
+      .join(', ');
   }
 
   publishEditorActions(): void {
@@ -338,6 +490,13 @@ export class PlansComponent implements OnChanges {
         end_time: this.formatMinutes(endMinutes),
       };
     });
+  }
+
+  private resizeHours(hours: PlanHour[], count: number): PlanHour[] {
+    const defaults = this.createDefaultHours(count);
+    return Array.from({ length: count }, (_, index) => ({
+      ...(hours[index] ?? defaults[index]),
+    }));
   }
 
   private formatMinutes(totalMinutes: number): string {

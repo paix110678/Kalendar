@@ -20,7 +20,6 @@ import { DatabaseComponent } from './database/database.component';
 import { PlansComponent } from './plans/plans.component';
 import { HolidaysComponent } from './holidays/holidays.component';
 import { TasksComponent } from './tasks/tasks.component';
-import { DisplaySettingsComponent } from './display-settings/display-settings.component';
 import { PlatformStatisticsComponent } from './platform-statistics/platform-statistics.component';
 
 @Component({
@@ -36,7 +35,6 @@ import { PlatformStatisticsComponent } from './platform-statistics/platform-stat
     PlansComponent,
     HolidaysComponent,
     TasksComponent,
-    DisplaySettingsComponent,
     PlatformStatisticsComponent,
   ],
   templateUrl: './config-main.component.html',

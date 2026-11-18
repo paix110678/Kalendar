@@ -443,20 +443,40 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
             raise HTTPException(status_code=404, detail="Plan nicht gefunden")
 
         days = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
-        if plan["start_day"] not in days or plan["end_day"] not in days:
-            raise HTTPException(status_code=422, detail="Der Plan enthält einen ungültigen Wochentagsbereich.")
-        first_day = days.index(plan["start_day"])
-        last_day = days.index(plan["end_day"])
-        if first_day > last_day:
-            raise HTTPException(status_code=422, detail="Der Plan enthält einen ungültigen Wochentagsbereich.")
+        try:
+            selected_days = json.loads(plan["days_json"])
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=422, detail="Der Plan enthält keine gültige Wochentagsliste.") from error
+        if (
+            not isinstance(selected_days, list)
+            or not selected_days
+            or any(day not in days for day in selected_days)
+            or len(set(selected_days)) != len(selected_days)
+        ):
+            raise HTTPException(status_code=422, detail="Der Plan enthält keine gültige Wochentagsliste.")
+        scheduled_days = [day for day in days if day in selected_days]
 
         try:
             hours = json.loads(plan["hours_json"])
-        except (TypeError, json.JSONDecodeError) as error:
+            hours_by_day = database.get_plan_hours_by_day(plan, scheduled_days)
+        except (TypeError, ValueError) as error:
             raise HTTPException(status_code=422, detail="Der Plan enthält keine gültigen Stunden.") from error
         if not isinstance(hours, list) or not hours or len(hours) != plan["hours_count"]:
             raise HTTPException(status_code=422, detail="Der Plan enthält keine vollständige Stundenliste.")
-        scheduled_days = days[first_day:last_day + 1]
+        if any(
+            not isinstance(day_hours, list)
+            or not day_hours
+            or len(day_hours) > 24
+            or any(
+                not isinstance(hour, dict)
+                or not isinstance(hour.get("start_time"), str)
+                or not isinstance(hour.get("end_time"), str)
+                or hour["end_time"] <= hour["start_time"]
+                for hour in day_hours
+            )
+            for day_hours in hours_by_day.values()
+        ):
+            raise HTTPException(status_code=422, detail="Der Plan enthält ungültige Stundenzeiten.")
         subjects_by_slot = {}
         for subject in payload.subjects:
             key = (subject.day_of_week, subject.period)
@@ -478,13 +498,17 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
                 "visible": subject.visible,
             }
 
-        expected_slots = {(day, period) for day in scheduled_days for period in range(1, len(hours) + 1)}
+        expected_slots = {
+            (day, period)
+            for day, day_hours in hours_by_day.items()
+            for period in range(1, len(day_hours) + 1)
+        }
         if set(subjects_by_slot) != expected_slots:
             raise HTTPException(status_code=422, detail="Bitte für jede Stunde des Plans ein Fach angeben.")
 
         planned_blocks = []
         for day in scheduled_days:
-            for period, hour in enumerate(hours, start=1):
+            for period, hour in enumerate(hours_by_day[day], start=1):
                 start_time = hour["start_time"]
                 end_time = hour["end_time"]
                 if end_time <= start_time:

@@ -3,7 +3,7 @@
     <div>
       <h3>{{ editingPlanId === null ? '📅 Plan hinzufügen' : '📅 Plan bearbeiten' }}</h3>
       @if (editingPlanId === null) {
-        <p>Lege Tage und individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
+        <p>Wähle die Wochentage aus und lege individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
       }
     </div>
   </header>
@@ -22,35 +22,71 @@
           required>
       </label>
 
-      <label class="field">
-        <span>Erster Tag</span>
-        <select name="startDay" [(ngModel)]="startDay" (ngModelChange)="publishEditorActions()">
+      <fieldset class="day-selection">
+        <legend>Wochentage</legend>
+        <div class="weekday-checkboxes">
           @for (day of daysOfWeek; track day) {
-            <option [value]="day">{{ day }}</option>
+            <label class="weekday-choice">
+              <span>{{ dayAbbreviations[day] }}</span>
+              @if (!uniformCount && selectedDays.includes(day)) {
+                <input
+                  type="number"
+                  [name]="'weekday-count-' + day"
+                  [value]="getDayHours(day).length"
+                  min="0"
+                  max="24"
+                  [attr.aria-label]="'Stunden am ' + day + ' (0 deaktiviert den Wochentag)'"
+                  title="0 deaktiviert den Wochentag"
+                  (change)="onDayCountInput(day, $event)">
+              } @else {
+                <input
+                  type="checkbox"
+                  [name]="'weekday-' + day"
+                  [checked]="selectedDays.includes(day)"
+                  [attr.aria-label]="day"
+                  (change)="onDayToggle(day, $event)">
+              }
+            </label>
           }
-        </select>
-      </label>
+        </div>
+      </fieldset>
 
-      <label class="field">
-        <span>Letzter Tag</span>
-        <select name="endDay" [(ngModel)]="endDay" (ngModelChange)="publishEditorActions()">
-          @for (day of daysOfWeek; track day) {
-            <option [value]="day">{{ day }}</option>
-          }
-        </select>
-      </label>
-
-      <label class="field field-count">
-        <span>Anzahl der Stunden</span>
-        <input
-          type="number"
-          name="hoursCount"
-          min="1"
-          max="24"
-          [ngModel]="hoursCount"
-          (ngModelChange)="onHoursCountChange($event)">
-      </label>
+      <div class="field field-count">
+        <span id="hours-count-label">Anzahl der Stunden</span>
+        @if (uniformCount) {
+          <input
+            type="number"
+            name="hoursCount"
+            min="1"
+            max="24"
+            aria-labelledby="hours-count-label"
+            [ngModel]="hoursCount"
+            (ngModelChange)="onHoursCountChange($event)">
+        } @else {
+          <small>Stundenanzahl je ausgewähltem Wochentag</small>
+        }
+      </div>
     </div>
+
+    <fieldset class="holiday-options plan-mode-options">
+      <legend>Stunden für die ausgewählten Wochentage</legend>
+      <label>
+        <input
+          type="checkbox"
+          name="uniformTime"
+          [ngModel]="uniformTime"
+          (ngModelChange)="onUniformTimeChange($event)">
+        <span>Einheitliche Zeiten</span>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          name="uniformCount"
+          [ngModel]="uniformCount"
+          (ngModelChange)="onUniformCountChange($event)">
+        <span>Einheitliche Stundenanzahl</span>
+      </label>
+    </fieldset>
 
     <fieldset class="holiday-options">
       <legend>Kalendertage aus dem Plan ausklammern</legend>
@@ -76,36 +112,71 @@
     <div class="hours-heading">
       <div>
         <h4>Stundenzeiten</h4>
-        <p>Die vorgeschlagenen Zeiten kannst du für jede Stunde anpassen.</p>
+        <p>{{ uniformTime ? 'Die vorgeschlagenen Zeiten kannst du für jede Stunde anpassen.' : 'Lege die Zeiten für jeden ausgewählten Wochentag einzeln fest.' }}</p>
       </div>
-      <span>{{ hoursCount }} Stunden</span>
+      <span>{{ uniformCount ? hoursCount + ' Stunden' : 'Individuelle Anzahl je Tag' }}</span>
     </div>
 
-    <div class="hours-grid">
-      @for (hour of hours; track $index; let index = $index) {
-        <div class="hour-row">
-          <strong>{{ index + 1 }}. Stunde</strong>
-          <label class="field">
-            <span>Beginn</span>
-            <input
-              type="time"
-              [name]="'hourStart' + index"
-              [(ngModel)]="hour.start_time"
-              (ngModelChange)="publishEditorActions()"
-              required>
-          </label>
-          <label class="field">
-            <span>Ende</span>
-            <input
-              type="time"
-              [name]="'hourEnd' + index"
-              [(ngModel)]="hour.end_time"
-              (ngModelChange)="publishEditorActions()"
-              required>
-          </label>
-        </div>
-      }
-    </div>
+    @if (uniformTime) {
+      <div class="hours-grid">
+        @for (hour of hours; track $index; let index = $index) {
+          <div class="hour-row">
+            <strong>{{ index + 1 }}. Stunde</strong>
+            <label class="field">
+              <span>Beginn</span>
+              <input
+                type="time"
+                [name]="'hourStart' + index"
+                [(ngModel)]="hour.start_time"
+                (ngModelChange)="publishEditorActions()"
+                required>
+            </label>
+            <label class="field">
+              <span>Ende</span>
+              <input
+                type="time"
+                [name]="'hourEnd' + index"
+                [(ngModel)]="hour.end_time"
+                (ngModelChange)="publishEditorActions()"
+                required>
+            </label>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="day-hours-grid">
+        @for (day of selectedDays; track day) {
+          <fieldset class="day-hours-section">
+            <legend>{{ day }}</legend>
+            <div class="hours-grid">
+              @for (hour of getDayHours(day); track $index; let index = $index) {
+                <div class="hour-row">
+                  <strong>{{ index + 1 }}. Stunde</strong>
+                  <label class="field">
+                    <span>Beginn</span>
+                    <input
+                      type="time"
+                      [name]="'hourStart' + day + index"
+                      [(ngModel)]="dayHours[day][index].start_time"
+                      (ngModelChange)="publishEditorActions()"
+                      required>
+                  </label>
+                  <label class="field">
+                    <span>Ende</span>
+                    <input
+                      type="time"
+                      [name]="'hourEnd' + day + index"
+                      [(ngModel)]="dayHours[day][index].end_time"
+                      (ngModelChange)="publishEditorActions()"
+                      required>
+                  </label>
+                </div>
+              }
+            </div>
+          </fieldset>
+        }
+      </div>
+    }
 
   </form>
 

@@ -34,10 +34,12 @@ class PlanHour(BaseModel):
 
 class PlanPayload(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    start_day: str
-    end_day: str
+    days: list[str] = Field(min_length=1, max_length=7)
     hours_count: int = Field(ge=1, le=24)
     hours: list[PlanHour]
+    uniform_time: bool = True
+    uniform_count: bool = True
+    day_hours: dict[str, list[PlanHour]] = Field(default_factory=dict)
     exclude_school_holidays: bool = False
     exclude_public_holidays: bool = False
 
@@ -47,10 +49,10 @@ class PlanPayload(BaseModel):
             raise ValueError("Der Planname darf nicht mit Leerzeichen beginnen oder enden.")
         if not self.name:
             raise ValueError("Der Planname darf nicht leer sein.")
-        if self.start_day not in DAYS_OF_WEEK or self.end_day not in DAYS_OF_WEEK:
+        if any(day not in DAYS_OF_WEEK for day in self.days):
             raise ValueError("Bitte gültige Wochentage auswählen.")
-        if DAYS_OF_WEEK.index(self.start_day) > DAYS_OF_WEEK.index(self.end_day):
-            raise ValueError("Der erste Tag muss vor oder gleich dem letzten Tag liegen.")
+        if len(set(self.days)) != len(self.days):
+            raise ValueError("Ein Wochentag darf nur einmal ausgewählt werden.")
         if len(self.hours) != self.hours_count:
             raise ValueError("Die Anzahl der Zeitstunden stimmt nicht mit der Stundenliste überein.")
         for index, hour in enumerate(self.hours):
@@ -59,17 +61,75 @@ class PlanPayload(BaseModel):
                 for other in self.hours[index + 1:]
             ):
                 raise ValueError("Die Stundenzeiten eines Plans dürfen sich nicht überschneiden.")
+        if self.uniform_time and self.uniform_count and self.day_hours:
+            raise ValueError("Einheitliche Stunden dürfen keine einzelnen Tageszeiten enthalten.")
+        if not (self.uniform_time and self.uniform_count):
+            if set(self.day_hours) != set(self.days):
+                raise ValueError("Für jeden ausgewählten Wochentag müssen Stundenzeiten angegeben werden.")
+            if any(not hours or len(hours) > 24 for hours in self.day_hours.values()):
+                raise ValueError("Pro Wochentag muss mindestens eine und höchstens 24 Stunden angegeben werden.")
+            if max(len(hours) for hours in self.day_hours.values()) != self.hours_count:
+                raise ValueError("Die maximale Stundenanzahl stimmt nicht mit der Stundenliste überein.")
+            if self.uniform_count and any(
+                len(hours) != self.hours_count for hours in self.day_hours.values()
+            ):
+                raise ValueError("Die einheitliche Stundenanzahl muss für alle Wochentage gleich sein.")
+            if self.uniform_time and any(
+                hours != self.hours[:len(hours)] for hours in self.day_hours.values()
+            ):
+                raise ValueError("Die einheitlichen Stundenzeiten müssen für alle Wochentage gleich sein.")
+            for hours in self.day_hours.values():
+                for index, hour in enumerate(hours):
+                    if any(
+                        hour.start_time < other.end_time and hour.end_time > other.start_time
+                        for other in hours[index + 1:]
+                    ):
+                        raise ValueError("Die Stundenzeiten eines Wochentags dürfen sich nicht überschneiden.")
         return self
 
 
+def ordered_days(days: list[str]) -> list[str]:
+    return [day for day in DAYS_OF_WEEK if day in days]
+
+
+def plan_days_from_row(row) -> list[str]:
+    stored_days = json.loads(row["days_json"])
+    if not isinstance(stored_days, list):
+        raise ValueError("Der Plan enthält keine gültige Wochentagsliste.")
+    if stored_days:
+        if (
+            any(day not in DAYS_OF_WEEK for day in stored_days)
+            or len(set(stored_days)) != len(stored_days)
+        ):
+            raise ValueError("Der Plan enthält ungültige Wochentage.")
+        return ordered_days(stored_days)
+
+    start_day = row["start_day"]
+    end_day = row["end_day"]
+    if start_day in DAYS_OF_WEEK and end_day in DAYS_OF_WEEK:
+        first_day = DAYS_OF_WEEK.index(start_day)
+        last_day = DAYS_OF_WEEK.index(end_day)
+        if first_day <= last_day:
+            return list(DAYS_OF_WEEK[first_day:last_day + 1])
+    return []
+
+
 def serialize_plan(row):
+    days = plan_days_from_row(row)
+    day_hours = json.loads(row["day_hours_json"])
+    if not isinstance(day_hours, dict):
+        raise ValueError("Der Plan enthält keine gültigen Tageszeiten.")
     return {
         "id": row["id"],
         "name": row["name"],
-        "start_day": row["start_day"],
-        "end_day": row["end_day"],
+        "days": days,
+        "start_day": days[0] if days else row["start_day"],
+        "end_day": days[-1] if days else row["end_day"],
         "hours_count": row["hours_count"],
         "hours": json.loads(row["hours_json"]),
+        "uniform_time": bool(row["uniform_time"]),
+        "uniform_count": bool(row["uniform_count"]),
+        "day_hours": day_hours,
         "exclude_school_holidays": bool(row["exclude_school_holidays"]),
         "exclude_public_holidays": bool(row["exclude_public_holidays"]),
     }
@@ -96,20 +156,31 @@ def get_plans():
 def create_plan(payload: PlanPayload):
     conn = database.get_db_connection()
     try:
+        scheduled_days = ordered_days(payload.days)
         cursor = conn.execute(
             """
             INSERT INTO plans (
-                name, start_day, end_day, hours_count, hours_json,
+                name, start_day, end_day, days_json, hours_count, hours_json,
+                uniform_time, uniform_count, day_hours_json,
                 exclude_school_holidays, exclude_public_holidays
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.name.strip(),
-                payload.start_day,
-                payload.end_day,
+                scheduled_days[0],
+                scheduled_days[-1],
+                json.dumps(scheduled_days),
                 payload.hours_count,
                 json.dumps([hour.model_dump() for hour in payload.hours]),
+                payload.uniform_time,
+                payload.uniform_count,
+                json.dumps(
+                    {
+                        day: [hour.model_dump() for hour in hours]
+                        for day, hours in payload.day_hours.items()
+                    } if not (payload.uniform_time and payload.uniform_count) else {}
+                ),
                 payload.exclude_school_holidays,
                 payload.exclude_public_holidays,
             ),
@@ -124,13 +195,11 @@ def create_plan(payload: PlanPayload):
 def update_plan(plan_id: int, payload: PlanPayload):
     conn = database.get_db_connection()
     try:
+        scheduled_days = ordered_days(payload.days)
         current_plan = conn.execute("SELECT id FROM plans WHERE id = ?", (plan_id,)).fetchone()
         if current_plan is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan nicht gefunden.")
 
-        first_day = DAYS_OF_WEEK.index(payload.start_day)
-        last_day = DAYS_OF_WEEK.index(payload.end_day)
-        scheduled_days = DAYS_OF_WEEK[first_day:last_day + 1]
         scheduled_slots = [
             {
                 "day_of_week": day,
@@ -139,7 +208,12 @@ def update_plan(plan_id: int, payload: PlanPayload):
                 "end_time": hour.end_time,
             }
             for day in scheduled_days
-            for period, hour in enumerate(payload.hours, start=1)
+            for period, hour in enumerate(
+                payload.hours
+                if payload.uniform_time and payload.uniform_count
+                else payload.day_hours[day],
+                start=1,
+            )
         ]
 
         assignments = conn.execute(
@@ -204,16 +278,27 @@ def update_plan(plan_id: int, payload: PlanPayload):
         cursor = conn.execute(
             """
             UPDATE plans
-            SET name = ?, start_day = ?, end_day = ?, hours_count = ?, hours_json = ?,
+            SET name = ?, start_day = ?, end_day = ?, days_json = ?,
+                hours_count = ?, hours_json = ?, uniform_time = ?, uniform_count = ?,
+                day_hours_json = ?,
                 exclude_school_holidays = ?, exclude_public_holidays = ?
             WHERE id = ?
             """,
             (
                 payload.name.strip(),
-                payload.start_day,
-                payload.end_day,
+                scheduled_days[0],
+                scheduled_days[-1],
+                json.dumps(scheduled_days),
                 payload.hours_count,
                 json.dumps([hour.model_dump() for hour in payload.hours]),
+                payload.uniform_time,
+                payload.uniform_count,
+                json.dumps(
+                    {
+                        day: [hour.model_dump() for hour in hours]
+                        for day, hours in payload.day_hours.items()
+                    } if not (payload.uniform_time and payload.uniform_count) else {}
+                ),
                 payload.exclude_school_holidays,
                 payload.exclude_public_holidays,
                 plan_id,

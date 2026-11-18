@@ -1,12 +1,6 @@
 @if (authService.currentAccount; as account) {
   <section id="account-profile-view" class="account-details" role="dialog" aria-label="Kontodetails">
-    <button
-      type="button"
-      class="account-details-close"
-      aria-label="Kontodetails schließen"
-      (click)="closed.emit()">
-      ×
-    </button>
+
     <h2>{{ account.display_name }}</h2>
     <p class="account-email">{{ account.email }}</p>
     @if (account.profile_name) {
@@ -35,6 +29,92 @@
         <p class="weather-location-error" role="alert">{{ weatherLocationError }}</p>
       }
     </div>
+    @if (canManageProfileSettings) {
+      <section class="account-profile-settings" aria-labelledby="family-profile-settings-title">
+
+        @if (profileSettingsLoading) {
+          <p role="status">Profileinstellungen werden geladen …</p>
+        } @else {
+          @if (profileSettingsLoadError) {
+            <p class="profile-settings-error" role="alert">{{ profileSettingsLoadError }}</p>
+          }
+          <fieldset [disabled]="profileSettingsSaving">
+            <legend>Familienprofile</legend>
+            @if (profileDrafts.length === 0) {
+              <p class="profile-settings-description">Es sind noch keine Familienmitglieder vorhanden.</p>
+            }
+            @for (profile of profileDrafts; track profile.id) {
+              <div class="profile-setting-row">
+                <div class="profile-name">
+                  <app-color-picker
+                    [value]="profile.color_code"
+                    [compact]="true"
+                    [accessibleLabel]="'Farbe für ' + profile.name + ' auswählen'"
+                    (valueChange)="profile.color_code = $event; profileSettingsMessage = ''">
+                  </app-color-picker>
+                  <strong>{{ profile.name }}</strong>
+                </div>
+                <label class="profile-active-field">
+                  <input
+                    type="checkbox"
+                    [name]="'profileActive' + profile.id"
+                    [(ngModel)]="profile.is_active"
+                    (ngModelChange)="profileSettingsMessage = ''">
+                  <span>Aktiv</span>
+                </label>
+              </div>
+            }
+          </fieldset>
+          @if (hasLoadedDisplayPreferences) {
+            <fieldset [disabled]="profileSettingsSaving">
+              <legend>Weitere Anzeigeoptionen</legend>
+              <label class="preference-row">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="displayPreferences.show_view_mode"
+                  (ngModelChange)="profileSettingsMessage = ''">
+                <span>
+                  <strong>Ansichtsauswahl</strong>
+                  <small>Zwischen Tag, 3 Tage und Woche wechseln können.</small>
+                </span>
+              </label>
+              <label class="preference-row">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="displayPreferences.show_weather"
+                  (ngModelChange)="profileSettingsMessage = ''">
+                <span>
+                  <strong>Wetteranzeige</strong>
+                  <small>Aktuelles Wetter und den aktiven Standort anzeigen.</small>
+                </span>
+              </label>
+            </fieldset>
+          }
+          @if (profileSettingsError) {
+            <p class="profile-settings-error" role="alert">{{ profileSettingsError }}</p>
+          }
+          @if (profileSettingsMessage) {
+            <p role="status">{{ profileSettingsMessage }}</p>
+          }
+          <div class="profile-settings-actions">
+            <button
+              type="button"
+              class="profile-settings-cancel"
+              [disabled]="!profileSettingsDirty || profileSettingsSaving"
+              (click)="cancelProfileSettings()">
+              Änderungen verwerfen
+            </button>
+            <button
+              type="button"
+              class="profile-settings-save"
+              [disabled]="!profileSettingsDirty || profileSettingsSaving"
+              (click)="saveProfileSettings()">
+              {{ profileSettingsSaving ? 'Wird gespeichert …' : 'Einstellungen speichern' }}
+            </button>
+          </div>
+        }
+      </section>
+    }
     <p class="account-row"><span>Rolle</span><strong>{{ accountRoleLabel }}</strong></p>
     <p class="account-row">
       <span>E-Mail</span>

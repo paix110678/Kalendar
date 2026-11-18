@@ -1,0 +1,14 @@
+.plan-learn-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+
+.plan-learn-day {
+  min-width: 0;
+}
+
+.plan-learn-day h6 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}

@@ -44,10 +44,6 @@ app-config {
   overflow: hidden;
 }
 
-.config-workspace-full-width .config-tree-column {
-  display: none;
-}
-
 .config-tree-column {
   position: relative;
 

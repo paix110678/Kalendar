@@ -52,7 +52,7 @@
 .form-grid {
   display: grid;
 
-  grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(140px, 1fr)) minmax(130px, 0.8fr);
+  grid-template-columns: minmax(180px, 2fr) minmax(260px, 1.8fr) minmax(130px, 0.8fr);
 
   gap: 14px;
 }

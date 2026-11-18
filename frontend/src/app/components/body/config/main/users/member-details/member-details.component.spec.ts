@@ -27,10 +27,22 @@ describe('MemberDetailsComponent', () => {
   const plan: PlanDefinition = {
     id: 7,
     name: 'Schulplan',
-    start_day: 'Montag',
-    end_day: 'Montag',
-    hours_count: 1,
-    hours: [{ start_time: '08:00', end_time: '08:45' }],
+    days: ['Montag', 'Mittwoch', 'Freitag'],
+    hours_count: 2,
+    hours: [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '08:50', end_time: '09:35' },
+    ],
+    uniform_time: false,
+    uniform_count: false,
+    day_hours: {
+      Montag: [{ start_time: '08:00', end_time: '08:45' }],
+      Mittwoch: [
+        { start_time: '09:00', end_time: '09:45' },
+        { start_time: '10:00', end_time: '10:45' },
+      ],
+      Freitag: [{ start_time: '08:30', end_time: '09:15' }],
+    },
     exclude_school_holidays: false,
     exclude_public_holidays: false,
   };
@@ -39,16 +51,20 @@ describe('MemberDetailsComponent', () => {
     id: 3,
     name: 'Alex',
     role: 'child_10',
-    current_points: 0,
-    status_school: 'GREEN',
-    status_sport: 'BASE',
+    current_points: 23,
+    status_school: 'RED',
+    status_sport: 'SILBER',
     color_code: '#228be6',
     state_code: null,
     assigned_plan_id: null,
     is_active: true,
   };
+  const updateUserProfile = vi.fn((_userId: number, profile: Partial<User>) =>
+    of({ user: { ...user, ...profile }, blocks_changed: false }),
+  );
 
   beforeEach(async () => {
+    updateUserProfile.mockClear();
     await TestBed.configureTestingModule({
       imports: [MemberDetailsComponent],
       providers: [
@@ -63,6 +79,7 @@ describe('MemberDetailsComponent', () => {
           provide: CalendarService,
           useValue: {
             reloadUsers: vi.fn(() => of([user])),
+            updateUserProfile,
             categories$: of([
               { id: 8, label: 'Schule' },
               { id: 9, label: 'Freizeit' },
@@ -88,7 +105,19 @@ describe('MemberDetailsComponent', () => {
 
     expect(element.textContent).not.toContain('Persönliche Fächer und Eventarten');
     expect(element.querySelector('lib-plan-learn')).not.toBeNull();
-    expect(component.planLearnTimeSlots).toEqual([
+    expect(element.querySelectorAll('lib-plan-learn')).toHaveLength(3);
+    expect(component.scheduleDays).toEqual(['Montag', 'Mittwoch', 'Freitag']);
+    expect(component.planLearnTimeSlotsForDay('Mittwoch')).toEqual([
+      { id: '1', start: '09:00', end: '09:45', label: '1.' },
+      { id: '2', start: '10:00', end: '10:45', label: '2.' },
+    ]);
+    expect(component.scheduleEntries.map(({ day_of_week, period }) => ({ day_of_week, period }))).toEqual([
+      { day_of_week: 'Montag', period: 1 },
+      { day_of_week: 'Mittwoch', period: 1 },
+      { day_of_week: 'Mittwoch', period: 2 },
+      { day_of_week: 'Freitag', period: 1 },
+    ]);
+    expect(component.planLearnTimeSlotsForDay('Montag')).toEqual([
       { id: '1', start: '08:00', end: '08:45', label: '1.' },
     ]);
     expect(component.planLearnCategories).toEqual([
@@ -113,8 +142,32 @@ describe('MemberDetailsComponent', () => {
       event_type_id: eventType.id,
       visible: false,
     });
-    expect(component.planLearnEntries).toEqual([
+    expect(component.planLearnEntriesForDay('Montag')).toEqual([
       { dayId: 'Montag', timeSlotId: '1', subjectId: '12', hidden: true },
     ]);
+  });
+
+  it('keeps managed fields out of member details and preserves stored values on profile updates', async () => {
+    const settingsForm = (fixture.nativeElement as HTMLElement).querySelector('.settings-form');
+    const component = fixture.componentInstance;
+
+    expect(settingsForm?.textContent).not.toContain('Farbe');
+    expect(settingsForm?.textContent).not.toContain('Aktiv');
+    expect(settingsForm?.textContent).not.toContain('Schulstatus');
+    expect(settingsForm?.textContent).not.toContain('Sportstatus');
+    expect(settingsForm?.textContent).not.toContain('Sterne');
+    expect(settingsForm?.querySelector('input[type="checkbox"]')).toBeNull();
+
+    component.name = 'Alex Neu';
+    await component.saveChanges();
+
+    expect(updateUserProfile).toHaveBeenCalledWith(
+      user.id,
+      expect.objectContaining({
+        current_points: user.current_points,
+        status_school: user.status_school,
+        status_sport: user.status_sport,
+      }),
+    );
   });
 });

@@ -1,5 +1,5 @@
-<details class="color-picker">
-  <summary [attr.aria-label]="'Farbe auswählen, aktuell ' + value">
+<details class="color-picker" [class.color-picker-compact]="compact">
+  <summary [attr.aria-label]="accessibleLabel + ', aktuell ' + value">
     <span class="current-color" [style.background-color]="value" aria-hidden="true"></span>
     <span>{{ value }}</span>
   </summary>

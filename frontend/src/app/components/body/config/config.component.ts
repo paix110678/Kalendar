@@ -256,9 +256,6 @@ export class ConfigComponent implements OnInit, OnDestroy {
       case 'backup':
         if (typeof action.id === 'string') this.openDatabase(action.id);
         break;
-      case 'display':
-        this.openDisplaySettings();
-        break;
       case 'statistics':
         this.openStatistics();
         break;
@@ -343,11 +340,6 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedTaskId = taskId;
     this.selectedTaskCategoryId = categoryId;
     this.expandedSections.categories = true;
-  }
-
-  openDisplaySettings(): void {
-    this.editorActions = null;
-    this.activeTab = 'display';
   }
 
   public selectedTaskCategoryId: number | null = null;

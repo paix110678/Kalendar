@@ -11,10 +11,12 @@ export interface PlanHour {
 export interface PlanDefinition {
   id: number;
   name: string;
-  start_day: string;
-  end_day: string;
+  days: string[];
   hours_count: number;
   hours: PlanHour[];
+  uniform_time: boolean;
+  uniform_count: boolean;
+  day_hours: Record<string, PlanHour[]>;
   exclude_school_holidays: boolean;
   exclude_public_holidays: boolean;
 }

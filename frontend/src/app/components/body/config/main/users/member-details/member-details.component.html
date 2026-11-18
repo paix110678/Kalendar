@@ -3,13 +3,6 @@
     <h5>Mitgliedseinstellungen</h5>
     <div class="settings-grid">
       <label>
-        <span>Aktiv</span>
-        <select name="memberActive" [(ngModel)]="isActive" (ngModelChange)="publishEditorActions()">
-          <option [ngValue]="true">Ja</option>
-          <option [ngValue]="false">Nein</option>
-        </select>
-      </label>
-      <label>
         <span>Name</span>
         <input type="text" name="memberName" [(ngModel)]="name" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
@@ -22,28 +15,6 @@
         </select>
       </label>
       <label>
-        <span>Farbe</span>
-        <app-color-picker [value]="colorCode" (valueChange)="colorCode = $event; publishEditorActions()"></app-color-picker>
-      </label>
-      <label>
-        <span>Sterne</span>
-        <input type="number" name="memberPoints" min="0" step="1" [(ngModel)]="currentPoints" (ngModelChange)="publishEditorActions()" required>
-      </label>
-      <label>
-        <span>Schulstatus</span>
-        <select name="schoolStatus" [(ngModel)]="schoolStatus" (ngModelChange)="publishEditorActions()">
-          <option value="GREEN">Grün</option>
-          <option value="RED">Rot</option>
-        </select>
-      </label>
-      <label>
-        <span>Sportstatus</span>
-        <select name="sportStatus" [(ngModel)]="sportStatus" (ngModelChange)="publishEditorActions()">
-          <option value="BASE">Basis</option>
-          <option value="SILBER">Silber</option>
-        </select>
-      </label>
-      <label>
         <span>Bundesland für Ferien und Feiertage</span>
         <select name="memberState" [(ngModel)]="stateCode" (ngModelChange)="publishEditorActions()">
           <option [ngValue]="null">Nicht ausgewählt</option>
@@ -51,23 +22,21 @@
             <option [ngValue]="bundesland.code">{{ bundesland.name }}</option>
           }
         </select>
-        <small class="muted-message">Ferien und Feiertage werden angezeigt, wenn das Bundesland in der Ferienverwaltung gespeichert ist.</small>
       </label>
     </div>
   </form>
 
   <section class="plan-section">
-    <h5>Stundenplan für dieses Mitglied</h5>
+    <h5>Aktive Pläne</h5>
     <label class="plan-select">
-      <span>Stundenplan</span>
       <select
         name="selectedPlan"
         [value]="selectedPlanId ?? ''"
         (change)="onPlanSelection($event)"
         [disabled]="plansLoading">
-        <option value="">Keinen Stundenplan zuweisen</option>
+        <option value="">Kein Plan zugewiesen</option>
         @for (plan of plans; track plan.id) {
-          <option [value]="plan.id">{{ plan.name }} ({{ plan.start_day }} bis {{ plan.end_day }})</option>
+          <option [value]="plan.id">{{ plan.name }} ({{ formatPlanDays(plan.days) }})</option>
         }
       </select>
     </label>
@@ -95,19 +64,40 @@
         <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
       @if (planLearnCategories.length > 0) {
-        <div class="plan-learn-wrapper">
-          <lib-plan-learn
-            [planName]="assignmentTitle"
-            [days]="planLearnDays"
-            [timeSlots]="planLearnTimeSlots"
-            [categories]="planLearnCategories"
-            [subjects]="planLearnSubjects"
-            [entries]="planLearnEntries"
-            [showPeriods]="true"
-            (entryChange)="onPlanEntryChange($event)"
-            (hideRequested)="onPlanHideRequested($event)">
-          </lib-plan-learn>
-        </div>
+        @if (selectedPlan.uniform_time && selectedPlan.uniform_count) {
+          <div class="plan-learn-wrapper">
+            <lib-plan-learn
+              [planName]="assignmentTitle"
+              [days]="planLearnDays"
+              [timeSlots]="planLearnTimeSlots"
+              [categories]="planLearnCategories"
+              [subjects]="planLearnSubjects"
+              [entries]="planLearnEntries"
+              [showPeriods]="true"
+              (entryChange)="onPlanEntryChange($event)"
+              (hideRequested)="onPlanHideRequested($event)">
+            </lib-plan-learn>
+          </div>
+        } @else {
+          <div class="plan-learn-wrapper plan-learn-days">
+            @for (day of scheduleDays; track day) {
+              <section class="plan-learn-day">
+                <h6>{{ day }}</h6>
+                <lib-plan-learn
+                  [planName]="assignmentTitle"
+                  [days]="planLearnDaysForDay(day)"
+                  [timeSlots]="planLearnTimeSlotsForDay(day)"
+                  [categories]="planLearnCategories"
+                  [subjects]="planLearnSubjects"
+                  [entries]="planLearnEntriesForDay(day)"
+                  [showPeriods]="true"
+                  (entryChange)="onPlanEntryChange($event)"
+                  (hideRequested)="onPlanHideRequested($event)">
+                </lib-plan-learn>
+              </section>
+            }
+          </div>
+        }
       }
     }
 

@@ -81,10 +81,6 @@
       (backupsChanged)="backupsChanged.emit($event)">
     </app-database>
   }
-  @if (activeTab === 'display') {
-    <app-display-settings (editorActionsChange)="editorActionsChange.emit($event)">
-    </app-display-settings>
-  }
   @if (activeTab === 'statistics' && isPlatformAdmin) {
     <app-platform-statistics></app-platform-statistics>
   }

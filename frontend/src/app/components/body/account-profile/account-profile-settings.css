@@ -1,0 +1,144 @@
+.account-profile-settings {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #dee2e6;
+}
+
+.account-profile-settings h3,
+.profile-settings-description,
+.profile-settings-error {
+  margin: 0;
+}
+
+.account-profile-settings h3 {
+  font-size: 1.05rem;
+}
+
+.account-profile-settings fieldset {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.account-profile-settings legend {
+  padding: 0 5px;
+  color: #495057;
+  font-weight: 700;
+}
+
+.profile-settings-description {
+  color: #68717b;
+  font-size: 13px;
+}
+
+.profile-setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.profile-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-name strong {
+  overflow-wrap: anywhere;
+}
+
+.profile-active-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-active-field {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.profile-active-field input,
+.preference-row input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: #228be6;
+}
+
+.preference-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.preference-row input {
+  margin-top: 1px;
+}
+
+.preference-row span {
+  display: grid;
+  gap: 4px;
+}
+
+.preference-row small {
+  color: #68717b;
+  font-size: 12px;
+}
+
+.profile-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-settings-actions button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.profile-settings-save {
+  background: #1971c2;
+  color: #fff;
+}
+
+.profile-settings-cancel {
+  background: #e9ecef;
+  color: #343a40;
+}
+
+.profile-settings-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-settings-error {
+  color: #c92a2a;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .profile-setting-row {
+    gap: 8px 12px;
+  }
+}

@@ -17,7 +17,6 @@ import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictR
 import { CalendarService, Category, User } from '../../../../../../services/calendar.service';
 import { ToastService } from '../../../../../../services/toast.service';
 import { AdminEditorActions } from '../../../action-footer/action-footer.component';
-import { ColorPickerComponent } from '../../color-picker/color-picker.component';
 import {
   PlanLearn,
   type PlanCategory,
@@ -48,9 +47,9 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 @Component({
   selector: 'app-member-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent, PlanLearn],
+  imports: [CommonModule, FormsModule, PlanLearn],
   templateUrl: './member-details.component.html',
-  styleUrl: './member-details.component.css',
+  styleUrls: ['./member-details.component.css', './member-details-plan-days.css'],
 })
 export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
   @Input({ required: true }) user!: User;
@@ -62,6 +61,15 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
 
   readonly daysOfWeek = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+  readonly dayAbbreviations: Record<string, string> = {
+    Montag: 'Mo',
+    Dienstag: 'Di',
+    Mittwoch: 'Mi',
+    Donnerstag: 'Do',
+    Freitag: 'Fr',
+    Samstag: 'Sa',
+    Sonntag: 'So',
+  };
   readonly bundeslaender = GERMAN_STATES;
   readonly roles: Array<{ value: User['role']; label: string }> = [
     { value: 'adult', label: 'Erwachsene' },
@@ -72,12 +80,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
 
   name = '';
   role: User['role'] = 'child_10';
-  colorCode = '#228be6';
-  currentPoints = 0;
-  schoolStatus: User['status_school'] = 'GREEN';
-  sportStatus: User['status_sport'] = 'BASE';
   stateCode: string | null = null;
-  isActive = true;
 
   plans: PlanDefinition[] = [];
   personEventTypes: PersonEventType[] = [];
@@ -136,12 +139,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
       if (this.profileSnapshot() === this.savedProfileSnapshot) {
         this.name = this.user.name;
         this.role = this.user.role;
-        this.colorCode = this.user.color_code;
-        this.currentPoints = this.user.current_points;
-        this.schoolStatus = this.user.status_school;
-        this.sportStatus = this.user.status_sport;
         this.stateCode = this.user.state_code;
-        this.isActive = this.user.is_active;
         this.savedProfileSnapshot = this.profileSnapshot();
       }
       return;
@@ -149,12 +147,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
 
     this.name = this.user.name;
     this.role = this.user.role;
-    this.colorCode = this.user.color_code;
-    this.currentPoints = this.user.current_points;
-    this.schoolStatus = this.user.status_school;
-    this.sportStatus = this.user.status_sport;
     this.stateCode = this.user.state_code;
-    this.isActive = this.user.is_active;
     this.savedProfileSnapshot = this.profileSnapshot();
     this.savedAssignmentSnapshot = this.assignmentSnapshot();
     this.loadedUserId = this.user.id;
@@ -176,24 +169,43 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
 
   get scheduleDays(): string[] {
     const plan = this.selectedPlan;
-    if (!plan) return [];
-    const firstDay = this.daysOfWeek.indexOf(plan.start_day);
-    const lastDay = this.daysOfWeek.indexOf(plan.end_day);
-    return firstDay >= 0 && lastDay >= firstDay
-      ? this.daysOfWeek.slice(firstDay, lastDay + 1)
+    return plan
+      ? this.daysOfWeek.filter((day) => plan.days.includes(day))
       : [];
   }
 
-  getScheduleEntry(day: string, period: number): ScheduleEntry | undefined {
-    return this.scheduleEntries.find((entry) => entry.day_of_week === day && entry.period === period);
+  formatPlanDays(days: string[]): string {
+    return this.daysOfWeek
+      .filter((day) => days.includes(day))
+      .map((day) => this.dayAbbreviations[day])
+      .join(', ');
   }
 
   get planLearnDays(): readonly PlanDay[] {
     return this.scheduleDays.map((day) => ({ id: day, name: day }));
   }
 
+  getScheduleEntry(day: string, period: number): ScheduleEntry | undefined {
+    return this.scheduleEntries.find((entry) => entry.day_of_week === day && entry.period === period);
+  }
+
   get planLearnTimeSlots(): readonly PlanTimeSlot[] {
     return (this.selectedPlan?.hours ?? []).map((hour, index) => ({
+      id: String(index + 1),
+      start: hour.start_time,
+      end: hour.end_time,
+      label: `${index + 1}.`,
+    }));
+  }
+
+  planLearnDaysForDay(day: string): readonly PlanDay[] {
+    return [{ id: day, name: day }];
+  }
+
+  planLearnTimeSlotsForDay(day: string): readonly PlanTimeSlot[] {
+    const plan = this.selectedPlan;
+    const hours = plan?.day_hours?.[day] ?? plan?.hours ?? [];
+    return hours.map((hour, index) => ({
       id: String(index + 1),
       start: hour.start_time,
       end: hour.end_time,
@@ -223,6 +235,18 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
       name: eventType.name,
       color: eventType.color,
     }));
+  }
+
+  planLearnEntriesForDay(day: string): readonly PlanEntry[] {
+    return this.scheduleEntries
+      .filter((entry) => entry.day_of_week === day)
+      .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
+      .map((entry) => ({
+        dayId: entry.day_of_week,
+        timeSlotId: String(entry.period),
+        subjectId: String(entry.event_type_id),
+        hidden: !entry.visible,
+      }));
   }
 
   get planLearnEntries(): readonly PlanEntry[] {
@@ -379,15 +403,15 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     if (!plan) return;
     this.assignmentTitle = plan.name;
 
-    const firstDay = this.daysOfWeek.indexOf(plan.start_day);
-    const lastDay = this.daysOfWeek.indexOf(plan.end_day);
-    if (firstDay < 0 || lastDay < firstDay) {
-      this.planError = 'Der Plan enthält einen ungültigen Wochentagsbereich.';
+    const scheduledDays = this.daysOfWeek.filter((day) => plan.days.includes(day));
+    if (scheduledDays.length === 0) {
+      this.planError = 'Der Plan enthält keine gültigen Wochentage.';
       return;
     }
 
-    for (const day of this.daysOfWeek.slice(firstDay, lastDay + 1)) {
-      plan.hours.forEach((hour, index) => {
+    for (const day of scheduledDays) {
+      const hours = plan.day_hours?.[day] ?? plan.hours;
+      hours.forEach((hour, index) => {
         this.scheduleEntries.push({
           day_of_week: day,
           period: index + 1,
@@ -422,12 +446,12 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     const profileToSave = {
       name: this.name.trim(),
       role: this.role,
-      color_code: this.colorCode,
-      current_points: this.currentPoints,
-      status_school: this.schoolStatus,
-      status_sport: this.sportStatus,
+      color_code: this.user.color_code,
+      current_points: this.user.current_points,
+      status_school: this.user.status_school,
+      status_sport: this.user.status_sport,
       state_code: this.stateCode,
-      is_active: this.isActive,
+      is_active: this.user.is_active,
     };
     this.profileError = '';
     this.profileMessage = '';
@@ -476,12 +500,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
         this.user = savedUser;
         this.name = savedUser.name;
         this.role = savedUser.role;
-        this.colorCode = savedUser.color_code;
-        this.currentPoints = savedUser.current_points;
-        this.schoolStatus = savedUser.status_school;
-        this.sportStatus = savedUser.status_sport;
         this.stateCode = savedUser.state_code;
-        this.isActive = savedUser.is_active;
         this.savedProfileSnapshot = this.profileSnapshot();
         this.loadPersonEventTypes(savedUser.id);
         this.selectedPlanId = savedUser.assigned_plan_id;
@@ -510,8 +529,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
 
   private profileSnapshot(): string {
     return JSON.stringify([
-      this.name, this.role, this.colorCode, this.currentPoints,
-      this.schoolStatus, this.sportStatus, this.stateCode, this.isActive,
+      this.name, this.role, this.stateCode,
     ]);
   }
 

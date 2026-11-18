@@ -6,9 +6,7 @@
     (action)="onNavigationAction($event)">
   </app-admin-navigation>
 
-  <div
-    class="config-workspace"
-    [class.config-workspace-full-width]="activeTab === 'display'">
+  <div class="config-workspace">
     <div class="config-tree-column">
       <app-admin-navigation-tree
         [activeUsers]="activeUsers"

@@ -34,4 +34,8 @@ export class HeaderControlsComponent {
   @Output() viewModeChanged = new EventEmitter<'day' | '3days' | 'week'>();
   @Output() userVisibilityToggled = new EventEmitter<{ userId: number; event: MouseEvent }>();
   @Output() rewardDashboardOpened = new EventEmitter<User>();
+
+  get hasActiveProfiles(): boolean {
+    return this.activeUsers.some((user) => user.is_active);
+  }
 }

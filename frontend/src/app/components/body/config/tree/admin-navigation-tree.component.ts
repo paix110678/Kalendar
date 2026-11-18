@@ -74,7 +74,6 @@ export class AdminNavigationTreeComponent {
       system: 'Wetterstandorte',
       database: 'Datenbank-Backups',
       accounts: 'Konten',
-      display: 'Anzeige',
       statistics: 'Statistik',
     }[this.activeTab];
   }

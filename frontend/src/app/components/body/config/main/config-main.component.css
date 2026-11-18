@@ -37,7 +37,6 @@
 .config-content-scroll > app-system,
 .config-content-scroll > app-tasks,
 .config-content-scroll > app-database,
-.config-content-scroll > app-display-settings,
 .config-content-scroll > app-account-management,
 .config-content-scroll > app-platform-statistics {
   width: 100%;
@@ -61,7 +60,6 @@
   .config-content-scroll > app-system,
   .config-content-scroll > app-tasks,
   .config-content-scroll > app-database,
-  .config-content-scroll > app-display-settings,
   .config-content-scroll > app-account-management,
   .config-content-scroll > app-platform-statistics {
     padding: 12px;

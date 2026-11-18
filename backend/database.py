@@ -31,6 +31,14 @@ def get_db_connection(db_file=None):
     return conn
 
 
+def get_plan_hours_by_day(plan_row, days):
+    hours = json.loads(plan_row["hours_json"])
+    day_hours = json.loads(plan_row["day_hours_json"])
+    if not isinstance(hours, list) or not isinstance(day_hours, dict):
+        raise ValueError("Der Plan enthält ungültige Stundenzeiten.")
+    return {day: day_hours.get(day, hours) for day in days}
+
+
 def delete_user_profile_data(conn, user_id, schema="main"):
     if schema not in {"main", "calendar"}:
         raise ValueError("Invalid calendar database schema")
@@ -218,8 +226,12 @@ def _init_db_connection(conn):
             name TEXT NOT NULL,
             start_day TEXT NOT NULL,
             end_day TEXT NOT NULL,
+            days_json TEXT NOT NULL DEFAULT '[]',
             hours_count INTEGER NOT NULL,
             hours_json TEXT NOT NULL,
+            uniform_time INTEGER NOT NULL DEFAULT 1,
+            uniform_count INTEGER NOT NULL DEFAULT 1,
+            day_hours_json TEXT NOT NULL DEFAULT '{}',
             exclude_school_holidays INTEGER NOT NULL DEFAULT 0,
             exclude_public_holidays INTEGER NOT NULL DEFAULT 0
         )
@@ -227,6 +239,20 @@ def _init_db_connection(conn):
 
     cursor.execute("PRAGMA table_info(plans)")
     plan_columns = {row["name"] for row in cursor.fetchall()}
+    if "days_json" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN days_json TEXT NOT NULL DEFAULT '[]'")
+        weekdays = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+        for plan in cursor.execute("SELECT id, start_day, end_day FROM plans").fetchall():
+            try:
+                first_day = weekdays.index(plan["start_day"])
+                last_day = weekdays.index(plan["end_day"])
+                days = list(weekdays[first_day:last_day + 1]) if first_day <= last_day else []
+            except ValueError:
+                days = []
+            cursor.execute(
+                "UPDATE plans SET days_json = ? WHERE id = ?",
+                (json.dumps(days), plan["id"]),
+            )
     if "exclude_school_holidays" not in plan_columns:
         cursor.execute(
             "ALTER TABLE plans ADD COLUMN exclude_school_holidays INTEGER NOT NULL DEFAULT 0"
@@ -235,6 +261,12 @@ def _init_db_connection(conn):
         cursor.execute(
             "ALTER TABLE plans ADD COLUMN exclude_public_holidays INTEGER NOT NULL DEFAULT 0"
         )
+    if "uniform_time" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN uniform_time INTEGER NOT NULL DEFAULT 1")
+    if "uniform_count" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN uniform_count INTEGER NOT NULL DEFAULT 1")
+    if "day_hours_json" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN day_hours_json TEXT NOT NULL DEFAULT '{}'")
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS holiday_states (
@@ -377,8 +409,8 @@ def _init_db_connection(conn):
     weekdays = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
     assigned_users = cursor.execute(
         """
-        SELECT users.id AS user_id, users.assigned_plan_id, plans.name, plans.start_day,
-               plans.end_day, plans.hours_json
+        SELECT users.id AS user_id, users.assigned_plan_id, plans.name, plans.days_json,
+               plans.hours_json, plans.day_hours_json
         FROM users
         JOIN plans ON plans.id = users.assigned_plan_id
         LEFT JOIN user_plan_assignments ON user_plan_assignments.user_id = users.id
@@ -391,25 +423,32 @@ def _init_db_connection(conn):
             (assigned_user["user_id"], assigned_user["assigned_plan_id"], assigned_user["name"]),
         )
         try:
-            plan_hours = json.loads(assigned_user["hours_json"])
-            first_day = weekdays.index(assigned_user["start_day"])
-            last_day = weekdays.index(assigned_user["end_day"])
+            plan_days = json.loads(assigned_user["days_json"])
+            plan_hours_by_day = get_plan_hours_by_day(assigned_user, plan_days)
         except (ValueError, TypeError, json.JSONDecodeError):
             continue
         if (
-            not isinstance(plan_hours, list)
-            or first_day > last_day
+            not isinstance(plan_days, list)
+            or not plan_days
+            or any(day not in weekdays for day in plan_days)
             or any(
-                not isinstance(hour, dict)
-                or not isinstance(hour.get("start_time"), str)
-                or not isinstance(hour.get("end_time"), str)
-                for hour in plan_hours
+                not isinstance(day_hours, list)
+                or not day_hours
+                or any(
+                    not isinstance(hour, dict)
+                    or not isinstance(hour.get("start_time"), str)
+                    or not isinstance(hour.get("end_time"), str)
+                    for hour in day_hours
+                )
+                for day_hours in plan_hours_by_day.values()
             )
         ):
             continue
         assignment_id = assignment_cursor.lastrowid
-        for day in weekdays[first_day:last_day + 1]:
-            for period, hour in enumerate(plan_hours, start=1):
+        for day in weekdays:
+            if day not in plan_days:
+                continue
+            for period, hour in enumerate(plan_hours_by_day[day], start=1):
                 cursor.execute(
                     """
                     UPDATE time_blocks

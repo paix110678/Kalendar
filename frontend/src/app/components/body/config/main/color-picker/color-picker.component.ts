@@ -4,12 +4,14 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
   selector: 'app-color-picker',
   standalone: true,
   templateUrl: './color-picker.component.html',
-  styleUrl: './color-picker.component.css',
+  styleUrls: ['./color-picker.component.css', './color-picker-compact.css'],
 })
 export class ColorPickerComponent implements OnInit {
   private readonly customColorsStorageKey = 'calendar-created-colors';
 
   @Input() value = '#228be6';
+  @Input() compact = false;
+  @Input() accessibleLabel = 'Farbe auswählen';
   @Output() valueChange = new EventEmitter<string>();
 
   activeTab: 'standard' | 'created' = 'standard';
