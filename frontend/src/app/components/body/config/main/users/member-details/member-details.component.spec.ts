@@ -13,6 +13,15 @@ describe('MemberDetailsComponent', () => {
     user_id: 3,
     name: 'Mathematik',
     color: '#228be6',
+    category_id: 8,
+  };
+
+  const secondEventType: PersonEventType = {
+    id: 13,
+    user_id: 3,
+    name: 'Lesen',
+    color: '#40c057',
+    category_id: 9,
   };
 
   const plan: PlanDefinition = {
@@ -46,7 +55,7 @@ describe('MemberDetailsComponent', () => {
         {
           provide: ApiService,
           useValue: {
-            getPersonEventTypes: vi.fn(() => of([eventType])),
+            getPersonEventTypes: vi.fn(() => of([eventType, secondEventType])),
             getPlans: vi.fn(() => of([plan])),
           },
         },
@@ -54,6 +63,11 @@ describe('MemberDetailsComponent', () => {
           provide: CalendarService,
           useValue: {
             reloadUsers: vi.fn(() => of([user])),
+            categories$: of([
+              { id: 8, label: 'Schule' },
+              { id: 9, label: 'Freizeit' },
+              { id: 10, label: 'Ohne Tasks' },
+            ]),
           },
         },
       ],
@@ -76,6 +90,15 @@ describe('MemberDetailsComponent', () => {
     expect(element.querySelector('lib-plan-learn')).not.toBeNull();
     expect(component.planLearnTimeSlots).toEqual([
       { id: '1', start: '08:00', end: '08:45', label: '1.' },
+    ]);
+    expect(component.planLearnCategories).toEqual([
+      { id: '8', name: 'Schule' },
+      { id: '9', name: 'Freizeit' },
+      { id: '10', name: 'Ohne Tasks' },
+    ]);
+    expect(component.planLearnSubjects.map(({ id, categoryId }) => ({ id, categoryId }))).toEqual([
+      { id: '12', categoryId: '8' },
+      { id: '13', categoryId: '9' },
     ]);
 
     component.onPlanEntryChange({ dayId: 'Montag', timeSlotId: '1', subjectId: '12' });

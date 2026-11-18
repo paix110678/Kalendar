@@ -31,6 +31,7 @@ export interface PersonEventType {
   user_id: number;
   name: string;
   color: string;
+  category_id?: number | null;
 }
 
 export interface TaskDefinition {

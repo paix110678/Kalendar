@@ -14,7 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { EMPTY, Subscription, TimeoutError, asyncScheduler, catchError, finalize, firstValueFrom, observeOn, switchMap, timeout } from 'rxjs';
 import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../../../services/api.service';
-import { CalendarService, User } from '../../../../../../services/calendar.service';
+import { CalendarService, Category, User } from '../../../../../../services/calendar.service';
 import { ToastService } from '../../../../../../services/toast.service';
 import { AdminEditorActions } from '../../../action-footer/action-footer.component';
 import { ColorPickerComponent } from '../../color-picker/color-picker.component';
@@ -98,20 +98,32 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
   planError = '';
   private savedProfileSnapshot = '';
   private savedAssignmentSnapshot = '';
+  private savedCategories: Category[] = [];
 
   private loadedUserId: number | null = null;
   private readonly familyDataSubscription = new Subscription();
 
   ngOnInit(): void {
     const familyDataChanges = this.calendarService.familyDataChanges$;
-    if (!familyDataChanges) return;
-    this.familyDataSubscription.add(
-      familyDataChanges.subscribe(() => {
-        if (!this.user || this.loadedUserId !== this.user.id) return;
-        this.loadPersonEventTypes(this.user.id);
-        this.loadPlans();
-      }),
-    );
+    if (familyDataChanges) {
+      this.familyDataSubscription.add(
+        familyDataChanges.subscribe(() => {
+          if (!this.user || this.loadedUserId !== this.user.id) return;
+          this.loadPersonEventTypes(this.user.id);
+          this.loadPlans();
+        }),
+      );
+    }
+
+    const categories = this.calendarService.categories$;
+    if (categories) {
+      this.familyDataSubscription.add(
+        categories.subscribe((items) => {
+          this.savedCategories = items;
+          this.changeDetector.markForCheck();
+        }),
+      );
+    }
   }
 
   ngOnDestroy(): void {
@@ -190,13 +202,24 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   get planLearnCategories(): readonly PlanCategory[] {
-    return [{ id: 'event-types', name: 'Fächer und Eventarten' }];
+    const categories = this.savedCategories.map((category) => ({
+      id: String(category.id),
+      name: category.label,
+    }));
+    const categoryIds = new Set(this.savedCategories.map((category) => category.id));
+    if (this.personEventTypes.some((item) => item.category_id == null || !categoryIds.has(item.category_id))) {
+      categories.push({ id: 'event-types', name: 'Fächer und Eventarten' });
+    }
+    return categories;
   }
 
   get planLearnSubjects(): readonly PlanLearnSubject[] {
+    const categoryIds = new Set(this.savedCategories.map((category) => category.id));
     return this.personEventTypes.map((eventType) => ({
       id: String(eventType.id),
-      categoryId: 'event-types',
+      categoryId: eventType.category_id != null && categoryIds.has(eventType.category_id)
+        ? String(eventType.category_id)
+        : 'event-types',
       name: eventType.name,
       color: eventType.color,
     }));

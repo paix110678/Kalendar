@@ -79,7 +79,13 @@ class ApplyPlanPayload(BaseModel):
     resolutions: List[PlanConflictResolution] = Field(default_factory=list)
 
 def serialize_person_event_type(row):
-    return {"id": row["id"], "user_id": row["user_id"], "name": row["name"], "color": row["color"]}
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "name": row["name"],
+        "color": row["color"],
+        "category_id": row["category_id"] if "category_id" in row.keys() else None,
+    }
 
 
 def ensure_linked_account_role(user_id: int, role: str, family_id: str):
@@ -135,7 +141,17 @@ def get_person_event_types(
         if conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone() is None:
             raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
         rows = conn.execute(
-            "SELECT id, user_id, name, color FROM person_event_types WHERE user_id = ? ORDER BY id",
+            """
+            SELECT person_event_types.id, person_event_types.user_id,
+                   person_event_types.name, person_event_types.color,
+                   tasks.category_id
+            FROM person_event_types
+            LEFT JOIN task_event_type_migrations
+                ON task_event_type_migrations.event_type_id = person_event_types.id
+            LEFT JOIN tasks ON tasks.id = task_event_type_migrations.task_id
+            WHERE person_event_types.user_id = ?
+            ORDER BY person_event_types.id
+            """,
             (user_id,),
         ).fetchall()
         return [serialize_person_event_type(row) for row in rows]

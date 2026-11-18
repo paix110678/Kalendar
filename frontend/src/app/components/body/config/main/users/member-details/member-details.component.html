@@ -85,16 +85,16 @@
 
     @if (selectedPlan && scheduleEntries.length > 0 && !assignmentLoading) {
       <p class="plan-intro">
-        Wähle für jede Stunde ein Fach oder eine Eventart aus. Die Einträge erscheinen als Termine im Kalender; ihre Farbe wird automatisch übernommen.
+        Wähle für jede Stunde einen Task aus der passenden Kategorie oder ein persönliches Fach beziehungsweise eine Eventart aus. Die Einträge erscheinen als Termine im Kalender; ihre Farbe wird automatisch übernommen.
       </p>
       @if (personEventTypes.length === 0) {
-        <p class="muted-message">Für dieses Mitglied sind noch keine Fächer oder Eventarten für den Stundenplan hinterlegt.</p>
+        <p class="muted-message">Für dieses Mitglied sind noch keine Tasks, Fächer oder Eventarten für den Stundenplan hinterlegt.</p>
       }
       <label class="assignment-title">
         <span>Titel der Kalendertermine</span>
         <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
       </label>
-      @if (personEventTypes.length > 0) {
+      @if (planLearnCategories.length > 0) {
         <div class="plan-learn-wrapper">
           <lib-plan-learn
             [planName]="assignmentTitle"
