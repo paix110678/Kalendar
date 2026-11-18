@@ -1,5 +1,5 @@
-@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
-  .header-logo-row { gap: 6px; }
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .header-logo-row { gap: 4px; }
 }
 
 @media (max-width: 360px) {

@@ -85,3 +85,9 @@ app-calendar-grid {
   width: 100% !important;
   overflow: hidden !important;
 }
+
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  app-calendar-header.dashboard-frame-capsule {
+    height: 116px !important;
+  }
+}

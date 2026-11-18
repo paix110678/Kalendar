@@ -107,3 +107,26 @@
 .footer-cancel {
   color: #c92a2a;
 }
+
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .action-footer {
+    min-height: 34px;
+
+    gap: 4px;
+
+    padding: 0 8px;
+  }
+
+  .action-footer .footer-button,
+  .action-footer .footer-button:hover,
+  .action-footer .footer-button:active,
+  .action-footer .footer-button:focus,
+  .action-footer .footer-button:focus-visible,
+  .action-footer .footer-button:disabled {
+    width: 34px;
+
+    height: 34px;
+
+    padding: 0;
+  }
+}

@@ -72,18 +72,21 @@
   color: #1971c2;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
   .admin-top-navigation {
-    gap: 4px;
+    column-gap: 3px;
+    row-gap: 0;
 
-    padding: 6px;
+    padding: 4px 6px;
   }
 
   .top-navigation-button {
-    min-height: 40px;
+    min-height: 24px;
 
-    padding: 7px 9px;
+    padding: 2.5px 4px;
 
     font-size: 12px;
+
+    white-space: nowrap;
   }
 }

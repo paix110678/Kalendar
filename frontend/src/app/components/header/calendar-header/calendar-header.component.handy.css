@@ -1,6 +1,10 @@
-@media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
   .top-bar-grid-container {
     padding-right: 8px;
     padding-left: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    justify-content: flex-start;
+    gap: 2px;
   }
 }
