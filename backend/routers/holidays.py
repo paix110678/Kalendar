@@ -257,6 +257,7 @@ def delete_holiday_state(state_code: str):
         ).fetchone()
         if exists is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bundesland nicht gefunden.")
+        conn.execute("UPDATE users SET state_code = NULL WHERE state_code = ?", (state,))
         conn.execute("DELETE FROM holidays WHERE state_code = ?", (state,))
         conn.execute("DELETE FROM holiday_years WHERE state_code = ?", (state,))
         conn.execute("DELETE FROM holiday_states WHERE state_code = ?", (state,))
