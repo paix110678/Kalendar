@@ -341,7 +341,7 @@ export class PlansComponent implements OnChanges {
 
   editPlan(plan: PlanDefinition): void {
     this.setupStep = false;
-    this.setupViewChange.emit(false);
+    this.setupViewChange.emit(true);
     this.editingPlanId = plan.id;
     this.planName = plan.name;
     this.selectedDays = this.daysOfWeek.filter((day) => plan.days.includes(day));

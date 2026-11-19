@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, PersonEventType, PlanDefinition } from '../../../../../../services/api.service';
 import { CalendarService, User } from '../../../../../../services/calendar.service';
@@ -62,9 +63,24 @@ describe('MemberDetailsComponent', () => {
   const updateUserProfile = vi.fn((_userId: number, profile: Partial<User>) =>
     of({ user: { ...user, ...profile }, blocks_changed: false }),
   );
+  const applyPlan = vi.fn(() => of({
+    status: 'ok',
+    created_blocks: 3,
+    assigned_plan_id: plan.id,
+    assignment_id: 12,
+  }));
+  const getUserPlanAssignment = vi.fn(() => of({
+    id: 12,
+    user_id: user.id,
+    plan_id: plan.id,
+    title: plan.name,
+    events: [],
+  }));
 
   beforeEach(async () => {
     updateUserProfile.mockClear();
+    applyPlan.mockClear();
+    getUserPlanAssignment.mockClear();
     await TestBed.configureTestingModule({
       imports: [MemberDetailsComponent],
       providers: [
@@ -73,6 +89,7 @@ describe('MemberDetailsComponent', () => {
           useValue: {
             getPersonEventTypes: vi.fn(() => of([eventType, secondEventType])),
             getPlans: vi.fn(() => of([plan])),
+            getUserPlanAssignment,
           },
         },
         {
@@ -80,6 +97,7 @@ describe('MemberDetailsComponent', () => {
           useValue: {
             reloadUsers: vi.fn(() => of([user])),
             updateUserProfile,
+            applyPlan,
             categories$: of([
               { id: 8, label: 'Schule' },
               { id: 9, label: 'Freizeit' },
@@ -112,6 +130,108 @@ describe('MemberDetailsComponent', () => {
       { day_of_week: 'Mittwoch', period: 2 },
       { day_of_week: 'Freitag', period: 1 },
     ]);
+  });
+
+  it('applies one selected task to every time slot for uniform activities', () => {
+    const component = fixture.componentInstance;
+    component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];
+    component.selectPlan(plan.id);
+
+    component.applyPlan();
+
+    expect(applyPlan).toHaveBeenCalledWith(
+      user.id,
+      plan.id,
+      plan.name,
+      [],
+      [],
+    );
+    expect(component.planError).toBe('');
+  });
+
+  it('keeps remaining conflicts open after saving and closes when the plan is applied', async () => {
+    const component = fixture.componentInstance;
+    component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];
+    component.selectPlan(plan.id);
+    component.conflicts = [
+      {
+        id: 21,
+        title: 'Sport',
+        day_of_week: 'Montag',
+        start_time: '08:15',
+        end_time: '09:00',
+        type: 'sport',
+        action: 'delete',
+        newDay: 'Montag',
+        newStart: '',
+        newEnd: '',
+      },
+      {
+        id: 22,
+        title: 'Musik',
+        day_of_week: 'Mittwoch',
+        start_time: '09:00',
+        end_time: '09:45',
+        type: 'duty',
+        action: 'delete',
+        newDay: 'Mittwoch',
+        newStart: '',
+        newEnd: '',
+      },
+    ];
+    component.conflictDialogOpen = true;
+    applyPlan.mockImplementationOnce(() => throwError(() => new HttpErrorResponse({
+      status: 409,
+      error: {
+        detail: {
+          message: 'Ein Konflikt besteht weiterhin.',
+          conflicts: [{
+            id: 21,
+            title: 'Sport',
+            day_of_week: 'Montag',
+            start_time: '08:15',
+            end_time: '09:00',
+            type: 'sport',
+          }],
+        },
+      },
+    })));
+    applyPlan.mockImplementationOnce(() => of({
+      status: 'ok',
+      created_blocks: 3,
+      assigned_plan_id: plan.id,
+      assignment_id: 12,
+    }));
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const saveButton = element.querySelector<HTMLButtonElement>('.conflict-dialog-actions .footer-save');
+    const cancelButton = element.querySelector<HTMLButtonElement>('.conflict-dialog-actions .footer-cancel');
+    expect(saveButton?.getAttribute('aria-label')).toBe('Speichern');
+    expect(cancelButton?.getAttribute('aria-label')).toBe('Abbrechen');
+    expect(saveButton?.textContent?.trim()).toBe('');
+    expect(cancelButton?.textContent?.trim()).toBe('');
+
+    saveButton?.click();
+    await vi.waitFor(() => expect(component.conflicts).toHaveLength(1));
+    expect(component.conflictDialogOpen).toBe(true);
+
+    saveButton?.click();
+    await vi.waitFor(() => expect(component.conflictDialogOpen).toBe(false));
+    expect(applyPlan).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes the conflict dialog without applying the plan when cancelled', () => {
+    const component = fixture.componentInstance;
+    component.conflictDialogOpen = true;
+    fixture.detectChanges();
+
+    const cancelButton = (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.conflict-dialog-actions .footer-cancel');
+    cancelButton?.click();
+
+    expect(component.conflictDialogOpen).toBe(false);
+    expect(applyPlan).not.toHaveBeenCalled();
   });
 
   it('keeps managed fields out of member details and preserves stored values on profile updates', async () => {

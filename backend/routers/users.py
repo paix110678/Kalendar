@@ -78,6 +78,72 @@ class ApplyPlanPayload(BaseModel):
     subjects: List[PlanSubject]
     resolutions: List[PlanConflictResolution] = Field(default_factory=list)
 
+
+def ensure_task_event_type(conn: sqlite3.Connection, user_id: int, task_id: int):
+    task = conn.execute(
+        "SELECT title, color FROM tasks WHERE id = ?",
+        (task_id,),
+    ).fetchone()
+    if task is None:
+        raise HTTPException(status_code=422, detail="Der ausgewählte Task existiert nicht mehr.")
+
+    event_type = conn.execute(
+        """
+        SELECT person_event_types.id, person_event_types.name, person_event_types.color
+        FROM task_event_type_migrations
+        JOIN person_event_types
+          ON person_event_types.id = task_event_type_migrations.event_type_id
+        WHERE task_event_type_migrations.task_id = ?
+          AND person_event_types.user_id = ?
+        """,
+        (task_id, user_id),
+    ).fetchone()
+    if event_type is None:
+        event_type = conn.execute(
+            """
+            SELECT id, name, color FROM person_event_types
+            WHERE user_id = ? AND name = ? AND color = ?
+            """,
+            (user_id, task["title"], task["color"]),
+        ).fetchone()
+        if event_type is not None:
+            existing_link = conn.execute(
+                "SELECT task_id FROM task_event_type_migrations WHERE event_type_id = ?",
+                (event_type["id"],),
+            ).fetchone()
+            if existing_link is not None and existing_link["task_id"] != task_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"„{task['title']}“ ist für dieses Mitglied bereits als anderer Task verknüpft.",
+                )
+        else:
+            try:
+                cursor = conn.execute(
+                    "INSERT INTO person_event_types (user_id, name, color) VALUES (?, ?, ?)",
+                    (user_id, task["title"], task["color"]),
+                )
+            except sqlite3.IntegrityError as error:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Das Fach konnte für dieses Mitglied nicht angelegt werden.",
+                ) from error
+            event_type = {
+                "id": cursor.lastrowid,
+                "name": task["title"],
+                "color": task["color"],
+            }
+        conn.execute(
+            "INSERT INTO task_event_type_migrations (event_type_id, task_id) VALUES (?, ?)",
+            (event_type["id"], task_id),
+        )
+
+    conn.execute(
+        "INSERT OR IGNORE INTO task_participants (task_id, user_id) VALUES (?, ?)",
+        (task_id, user_id),
+    )
+    return event_type
+
+
 def serialize_person_event_type(row):
     return {
         "id": row["id"],
@@ -497,19 +563,7 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
                         "visible": subject.visible,
                     }
             else:
-                event_type = conn.execute(
-                    """
-                    SELECT person_event_types.id, person_event_types.name, person_event_types.color
-                    FROM task_event_type_migrations
-                    JOIN person_event_types
-                      ON person_event_types.id = task_event_type_migrations.event_type_id
-                    WHERE task_event_type_migrations.task_id = ?
-                      AND person_event_types.user_id = ?
-                    """,
-                    (task_id, user_id),
-                ).fetchone()
-                if event_type is None:
-                    raise HTTPException(status_code=422, detail="Der ausgewählte Task ist für dieses Mitglied nicht verfügbar.")
+                event_type = ensure_task_event_type(conn, user_id, task_id)
                 for day, day_hours in hours_by_day.items():
                     for period in range(1, len(day_hours) + 1):
                         subjects_by_slot[(day, period)] = {

@@ -101,6 +101,16 @@ describe('PlansComponent', () => {
     expect(element.querySelector('app-plan-details lib-plan-learn')).not.toBeNull();
   });
 
+  it('opens an existing plan in the full-width editor view', () => {
+    const component = fixture.componentInstance;
+    const setupViewChange = vi.fn();
+    component.setupViewChange.subscribe(setupViewChange);
+
+    component.editPlan(savedPlan);
+
+    expect(setupViewChange).toHaveBeenCalledWith(true);
+  });
+
   it('shows all tasks without a category filter and limits tasks to the selected category', () => {
     const details = new PlanDetailsComponent();
     details.tasks = [

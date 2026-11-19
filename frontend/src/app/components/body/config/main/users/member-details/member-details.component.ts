@@ -16,7 +16,7 @@ import { EMPTY, Subscription, TimeoutError, asyncScheduler, catchError, finalize
 import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../../../services/api.service';
 import { CalendarService, Category, User } from '../../../../../../services/calendar.service';
 import { ToastService } from '../../../../../../services/toast.service';
-import { AdminEditorActions } from '../../../action-footer/action-footer.component';
+import { ActionFooterComponent, AdminEditorActions } from '../../../action-footer/action-footer.component';
 
 type ConflictAction = '' | 'delete' | 'move';
 
@@ -38,7 +38,7 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 @Component({
   selector: 'app-member-details',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActionFooterComponent],
   templateUrl: './member-details.component.html',
   styleUrls: ['./member-details.component.css', './member-details-plan-days.css'],
 })
@@ -321,6 +321,18 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     );
   }
 
+  get conflictDialogActions(): AdminEditorActions {
+    return {
+      dirty: true,
+      canDelete: false,
+      busy: this.planApplying,
+      saveLabel: 'Speichern',
+      cancelLabel: 'Abbrechen',
+      save: () => this.applyPlan(),
+      cancel: () => this.closeConflictDialog(),
+    };
+  }
+
   async saveChanges(): Promise<void> {
     const userId = this.user.id;
     const profileSnapshotToSave = this.profileSnapshot();
@@ -431,25 +443,36 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     this.planError = '';
     this.planMessage = '';
     const plan = this.selectedPlan;
-    if (!plan || this.scheduleEntries.length === 0) {
+    if (!plan) {
       this.planError = 'Bitte zuerst einen gültigen Plan auswählen.';
       this.toastService.show(false, this.planError);
       return;
     }
 
-    if (this.scheduleEntries.some((entry) => entry.event_type_id === null)) {
-      this.planError = 'Bitte für jede Stunde ein Plan-Fach oder eine Eventart auswählen.';
+    const hasPlanActivities = plan.uniform_activities
+      ? Number.isInteger(plan.uniform_task_id) && (plan.uniform_task_id ?? 0) > 0
+      : plan.days.every((day) => {
+        const hours = plan.day_hours?.[day] ?? plan.hours;
+        const taskIds = plan.activity_subjects?.[day] ?? [];
+        return taskIds.length === hours.length && taskIds.every((taskId) => Number.isInteger(taskId) && taskId > 0);
+      });
+    const hasLegacyActivities = this.scheduleEntries.length > 0
+      && this.scheduleEntries.every((entry) => entry.event_type_id !== null);
+    if (!hasPlanActivities && !hasLegacyActivities) {
+      this.planError = 'Bitte befülle den Plan zuerst unter Einstellungen → Pläne.';
       this.toastService.show(false, this.planError);
       return;
     }
-    const subjects: PlanSubject[] = this.scheduleEntries
-      .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
-      .map((entry) => ({
-        day_of_week: entry.day_of_week,
-        period: entry.period,
-        event_type_id: entry.event_type_id,
-        visible: entry.visible,
-      }));
+    const subjects: PlanSubject[] = hasPlanActivities
+      ? []
+      : this.scheduleEntries
+        .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
+        .map((entry) => ({
+          day_of_week: entry.day_of_week,
+          period: entry.period,
+          event_type_id: entry.event_type_id,
+          visible: entry.visible,
+        }));
     if (!this.assignmentTitle.trim()) {
       this.planError = 'Bitte einen Titel für die Plan-Zuordnung eingeben.';
       this.toastService.show(false, this.planError);

@@ -171,6 +171,8 @@
   place-items: center;
 
   padding: 20px;
+
+  background: rgb(0 0 0 / 48%);
 }
 
 .conflict-backdrop[hidden] {
@@ -193,6 +195,10 @@
   border: 1px solid #ffc078;
 
   border-radius: 10px;
+
+  background: #fff;
+
+  color: #212529;
 
   box-shadow: 0 16px 48px rgb(0 0 0 / 24%);
 }
@@ -274,4 +280,5 @@
   .conflict-dialog-actions {
     flex-direction: column-reverse;
   }
+
 }
