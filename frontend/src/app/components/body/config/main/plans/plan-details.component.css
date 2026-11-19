@@ -1,0 +1,64 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.plan-details-component {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.uniform-activity-selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 12px;
+}
+
+.plan-activity-selection {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.plan-learn-container {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.plan-learn-container > lib-plan-learn {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.plan-learn-container {
+  margin-top: 8px;
+}
+
+.plan-learn-day {
+  margin-top: 12px;
+}
+
+.activity-day {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.5fr) repeat(4, minmax(180px, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.activity-day strong {
+  align-self: center;
+}

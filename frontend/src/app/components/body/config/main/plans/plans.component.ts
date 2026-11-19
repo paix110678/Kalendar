@@ -2,16 +2,18 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ApiService, PlanDefinition, PlanHour } from '../../../../../services/api.service';
+import { ApiService, PlanDefinition, PlanHour, TaskDefinition } from '../../../../../services/api.service';
 import { CalendarService } from '../../../../../services/calendar.service';
 import { catchError, map, of, switchMap, timeout } from 'rxjs';
 import { AdminEditorActions } from '../../action-footer/action-footer.component';
 import { ToastService } from '../../../../../services/toast.service';
+import { Category } from '../../../../../services/calendar.service';
+import { PlanDetailsComponent } from './plan-details.component';
 
 @Component({
   selector: 'app-plans',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PlanDetailsComponent],
   templateUrl: './plans.component.html',
   styleUrls: ['./plans.component.css', './plans-weekdays.css'],
 })
@@ -24,8 +26,11 @@ export class PlansComponent implements OnChanges {
 
   @Output() plansChanged = new EventEmitter<PlanDefinition[]>();
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions>();
+  @Output() setupViewChange = new EventEmitter<boolean>();
   @Input() initialPlans: PlanDefinition[] = [];
   @Input() selectedPlanId: number | null = null;
+  @Input() categories: Category[] = [];
+  @Input() tasks: TaskDefinition[] = [];
 
   readonly daysOfWeek = [
     'Montag',
@@ -53,10 +58,14 @@ export class PlansComponent implements OnChanges {
   hours: PlanHour[] = this.createDefaultHours(this.hoursCount);
   uniformTime = true;
   uniformCount = true;
+  uniformActivities = true;
+  uniformTaskId: number | null = null;
+  activitySubjects: Record<string, number[]> = {};
   dayHours: Record<string, PlanHour[]> = {};
   excludeSchoolHolidays = false;
   excludePublicHolidays = false;
   editingPlanId: number | null = null;
+  setupStep = true;
   loading = false;
   saving = false;
   errorMessage = '';
@@ -169,6 +178,12 @@ export class PlansComponent implements OnChanges {
     this.publishEditorActions();
   }
 
+  onUniformActivitiesChange(uniform: boolean): void {
+    if (uniform === this.uniformActivities) return;
+    this.uniformActivities = uniform;
+    this.publishEditorActions();
+  }
+
   getDayHours(day: string): PlanHour[] {
     return this.dayHours[day] ?? this.hours.slice(0, this.hoursCount);
   }
@@ -220,6 +235,19 @@ export class PlansComponent implements OnChanges {
       this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
       return;
     }
+    if ((this.tasks.length > 0 || this.categories.length > 0)
+      && this.uniformActivities && this.uniformTaskId === null) {
+      this.toastService.show(false, 'Bitte für die einheitlichen Aktivitäten einen Task auswählen.');
+      return;
+    }
+    if ((this.tasks.length > 0 || this.categories.length > 0)
+      && !this.uniformActivities && this.selectedDays.some((day) =>
+      (this.activitySubjects[day]?.length ?? 0) !== this.getDayHours(day).length
+      || this.activitySubjects[day]?.some((taskId) => taskId === null || taskId === 0)
+    )) {
+      this.toastService.show(false, 'Bitte für jede Einheit einen Task auswählen.');
+      return;
+    }
     if (this.selectedDays.length === 0) {
       this.toastService.show(false, 'Bitte mindestens einen Wochentag auswählen.');
       return;
@@ -248,6 +276,9 @@ export class PlansComponent implements OnChanges {
       hours: this.hours,
       uniform_time: this.uniformTime,
       uniform_count: this.uniformCount,
+      uniform_activities: this.uniformActivities,
+      uniform_task_id: this.uniformTaskId,
+      activity_subjects: this.activitySubjects,
       day_hours: this.uniformTime && this.uniformCount
         ? {}
         : Object.fromEntries(days.map((day) => [day, this.getDayHours(day)])),
@@ -309,6 +340,8 @@ export class PlansComponent implements OnChanges {
   }
 
   editPlan(plan: PlanDefinition): void {
+    this.setupStep = false;
+    this.setupViewChange.emit(false);
     this.editingPlanId = plan.id;
     this.planName = plan.name;
     this.selectedDays = this.daysOfWeek.filter((day) => plan.days.includes(day));
@@ -316,6 +349,11 @@ export class PlansComponent implements OnChanges {
     this.hours = plan.hours.map((hour) => ({ ...hour }));
     this.uniformTime = plan.uniform_time ?? true;
     this.uniformCount = plan.uniform_count ?? true;
+    this.uniformActivities = plan.uniform_activities ?? true;
+    this.uniformTaskId = plan.uniform_task_id ?? null;
+    this.activitySubjects = Object.fromEntries(
+      this.selectedDays.map((day) => [day, [...(plan.activity_subjects?.[day] ?? [])]])
+    );
     this.dayHours = Object.fromEntries(this.selectedDays.map((day) => {
       const fallbackCount = this.uniformCount ? this.hoursCount : 1;
       const savedHours = plan.day_hours?.[day] ?? this.hours.slice(0, fallbackCount);
@@ -397,7 +435,12 @@ export class PlansComponent implements OnChanges {
     this.hours = this.createDefaultHours(this.hoursCount);
     this.uniformTime = true;
     this.uniformCount = true;
+    this.uniformActivities = true;
+    this.uniformTaskId = null;
+    this.activitySubjects = {};
     this.dayHours = {};
+    this.setupStep = true;
+    this.setupViewChange.emit(false);
     this.excludeSchoolHolidays = false;
     this.excludePublicHolidays = false;
     this.savedFormSnapshot = this.formSnapshot();
@@ -434,10 +477,27 @@ export class PlansComponent implements OnChanges {
       hours: this.hours,
       uniformTime: this.uniformTime,
       uniformCount: this.uniformCount,
+      uniformActivities: this.uniformActivities,
+      uniformTaskId: this.uniformTaskId,
+      activitySubjects: this.activitySubjects,
       dayHours: this.dayHours,
       excludeSchoolHolidays: this.excludeSchoolHolidays,
       excludePublicHolidays: this.excludePublicHolidays,
     });
+  }
+
+  onPlanDayToggle(day: string, selected: boolean): void {
+    this.selectedDays = this.daysOfWeek.filter((item) =>
+      item === day ? selected : this.selectedDays.includes(item),
+    );
+    if (selected) {
+      const count = this.uniformCount ? this.hoursCount : 1;
+      this.dayHours[day] = this.resizeHours(this.dayHours[day] ?? this.hours, count);
+    }
+    if (this.uniformCount && this.uniformTime) {
+      this.dayHours[day] = this.hours.map((hour) => ({ ...hour }));
+    }
+    this.publishEditorActions();
   }
 
   onDayToggle(day: string, event: Event): void {
@@ -465,13 +525,48 @@ export class PlansComponent implements OnChanges {
       .join(', ');
   }
 
+  advanceSetup(): void {
+    if (!this.planName.trim()) {
+      this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
+      return;
+    }
+    this.planName = this.planName.trim();
+    this.setupStep = false;
+    this.setupViewChange.emit(true);
+    this.savedFormSnapshot = this.formSnapshot();
+    this.publishEditorActions();
+  }
+
+  onFormSubmit(): void {
+    if (this.editingPlanId === null && this.setupStep) {
+      this.advanceSetup();
+    }
+  }
+
   publishEditorActions(): void {
     const dirty = this.formSnapshot() !== this.savedFormSnapshot;
     const selected = this.plans.find((plan) => plan.id === this.selectedPlanId);
+    if (this.editingPlanId === null && this.setupStep) {
+      this.editorActionsChange.emit({
+        dirty: this.planName.trim().length > 0,
+        canDelete: false,
+        busy: this.saving,
+        showSave: true,
+        showSaveLabel: true,
+        hideCancel: true,
+        saveLabel: 'Weiter',
+        save: () => this.advanceSetup(),
+        cancel: () => this.resetForm(),
+      });
+      return;
+    }
     this.editorActionsChange.emit({
       dirty,
       canDelete: selected !== undefined,
       busy: this.saving,
+      showSave: this.editingPlanId === null,
+      showSaveLabel: this.editingPlanId === null,
+      saveLabel: this.editingPlanId === null ? 'Plan hinzufügen' : 'Speichern',
       save: () => this.savePlan(),
       cancel: () => this.cancelChanges(),
       delete: () => {

@@ -5,6 +5,7 @@ import { ApiService, PlanDefinition } from '../../../../../services/api.service'
 import { CalendarService } from '../../../../../services/calendar.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { PlansComponent } from './plans.component';
+import { PlanDetailsComponent } from './plan-details.component';
 
 describe('PlansComponent', () => {
   let fixture: ComponentFixture<PlansComponent>;
@@ -50,14 +51,17 @@ describe('PlansComponent', () => {
 
   it('shows seven abbreviated weekday checkboxes and saves the selected days', () => {
     const component = fixture.componentInstance;
+    component.setupStep = false;
+    fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const weekdayLabels = Array.from(element.querySelectorAll('.weekday-choice span'))
       .map((label) => label.textContent?.trim());
 
     expect(weekdayLabels).toEqual(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']);
     expect(element.querySelectorAll('.weekday-choice input')).toHaveLength(7);
-    expect(Array.from(element.querySelectorAll<HTMLInputElement>('.plan-mode-options input'))
-      .every((input) => input.checked)).toBe(true);
+    expect(component.uniformTime).toBe(true);
+    expect(component.uniformCount).toBe(true);
+    expect(component.uniformActivities).toBe(true);
     expect(element.querySelector('select[name="startDay"]')).toBeNull();
     expect(element.querySelector('select[name="endDay"]')).toBeNull();
 
@@ -76,6 +80,8 @@ describe('PlansComponent', () => {
 
   it('requires at least one selected weekday', () => {
     const component = fixture.componentInstance;
+    component.setupStep = false;
+    fixture.detectChanges();
     component.planName = 'Ohne Wochentag';
     component.selectedDays = [];
 
@@ -85,8 +91,32 @@ describe('PlansComponent', () => {
     expect(toastShow).toHaveBeenCalledWith(false, 'Bitte mindestens einen Wochentag auswählen.');
   });
 
+  it('uses the plan-learn library when filling activities individually', () => {
+    const component = fixture.componentInstance;
+    component.setupStep = false;
+    component.uniformActivities = false;
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-plan-details lib-plan-learn')).not.toBeNull();
+  });
+
+  it('shows all tasks without a category filter and limits tasks to the selected category', () => {
+    const details = new PlanDetailsComponent();
+    details.tasks = [
+      { id: 1, title: 'Lesen', color: '#228be6', category_id: 8, category_label: 'Schule', member_ids: [] },
+      { id: 2, title: 'Fußball', color: '#40c057', category_id: 9, category_label: 'Freizeit', member_ids: [] },
+    ];
+
+    expect(details.availableTasks.map((task) => task.id)).toEqual([2, 1]);
+    details.selectedCategoryId = 9;
+    expect(details.availableTasks.map((task) => task.id)).toEqual([2]);
+  });
+
   it('lets selected weekdays use individual times and hour counts', () => {
     const component = fixture.componentInstance;
+    component.setupStep = false;
+    fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     component.planName = 'Individuelle Zeiten';
     component.onUniformCountChange(false);
@@ -121,6 +151,8 @@ describe('PlansComponent', () => {
 
   it('rejects overlapping times within an individual weekday', () => {
     const component = fixture.componentInstance;
+    component.setupStep = false;
+    fixture.detectChanges();
     component.planName = 'Überschneidung';
     component.selectedDays = ['Montag'];
     component.uniformTime = false;

@@ -17,15 +17,6 @@ import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictR
 import { CalendarService, Category, User } from '../../../../../../services/calendar.service';
 import { ToastService } from '../../../../../../services/toast.service';
 import { AdminEditorActions } from '../../../action-footer/action-footer.component';
-import {
-  PlanLearn,
-  type PlanCategory,
-  type PlanDay,
-  type PlanEntry,
-  type PlanEntryChange,
-  type PlanSubject as PlanLearnSubject,
-  type PlanTimeSlot,
-} from 'plan-learn';
 
 type ConflictAction = '' | 'delete' | 'move';
 
@@ -47,7 +38,7 @@ interface ScheduleEntry extends Omit<PlanSubject, 'event_type_id'> {
 @Component({
   selector: 'app-member-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, PlanLearn],
+  imports: [CommonModule, FormsModule],
   templateUrl: './member-details.component.html',
   styleUrls: ['./member-details.component.css', './member-details-plan-days.css'],
 })
@@ -179,116 +170,6 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
       .filter((day) => days.includes(day))
       .map((day) => this.dayAbbreviations[day])
       .join(', ');
-  }
-
-  get planLearnDays(): readonly PlanDay[] {
-    return this.scheduleDays.map((day) => ({ id: day, name: day }));
-  }
-
-  getScheduleEntry(day: string, period: number): ScheduleEntry | undefined {
-    return this.scheduleEntries.find((entry) => entry.day_of_week === day && entry.period === period);
-  }
-
-  get planLearnTimeSlots(): readonly PlanTimeSlot[] {
-    return (this.selectedPlan?.hours ?? []).map((hour, index) => ({
-      id: String(index + 1),
-      start: hour.start_time,
-      end: hour.end_time,
-      label: `${index + 1}.`,
-    }));
-  }
-
-  planLearnDaysForDay(day: string): readonly PlanDay[] {
-    return [{ id: day, name: day }];
-  }
-
-  planLearnTimeSlotsForDay(day: string): readonly PlanTimeSlot[] {
-    const plan = this.selectedPlan;
-    const hours = plan?.day_hours?.[day] ?? plan?.hours ?? [];
-    return hours.map((hour, index) => ({
-      id: String(index + 1),
-      start: hour.start_time,
-      end: hour.end_time,
-      label: `${index + 1}.`,
-    }));
-  }
-
-  get planLearnCategories(): readonly PlanCategory[] {
-    const categories = this.savedCategories.map((category) => ({
-      id: String(category.id),
-      name: category.label,
-    }));
-    const categoryIds = new Set(this.savedCategories.map((category) => category.id));
-    if (this.personEventTypes.some((item) => item.category_id == null || !categoryIds.has(item.category_id))) {
-      categories.push({ id: 'event-types', name: 'Fächer und Eventarten' });
-    }
-    return categories;
-  }
-
-  get planLearnSubjects(): readonly PlanLearnSubject[] {
-    const categoryIds = new Set(this.savedCategories.map((category) => category.id));
-    return this.personEventTypes.map((eventType) => ({
-      id: String(eventType.id),
-      categoryId: eventType.category_id != null && categoryIds.has(eventType.category_id)
-        ? String(eventType.category_id)
-        : 'event-types',
-      name: eventType.name,
-      color: eventType.color,
-    }));
-  }
-
-  planLearnEntriesForDay(day: string): readonly PlanEntry[] {
-    return this.scheduleEntries
-      .filter((entry) => entry.day_of_week === day)
-      .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
-      .map((entry) => ({
-        dayId: entry.day_of_week,
-        timeSlotId: String(entry.period),
-        subjectId: String(entry.event_type_id),
-        hidden: !entry.visible,
-      }));
-  }
-
-  get planLearnEntries(): readonly PlanEntry[] {
-    return this.scheduleEntries
-      .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
-      .map((entry) => ({
-        dayId: entry.day_of_week,
-        timeSlotId: String(entry.period),
-        subjectId: String(entry.event_type_id),
-        hidden: !entry.visible,
-      }));
-  }
-
-  onPlanEntryChange(change: PlanEntryChange): void {
-    const period = Number(change.timeSlotId);
-    const entry = this.getScheduleEntry(change.dayId, period);
-    if (!entry) {
-      console.error('Der Stundenplan hat eine unbekannte Zelle gemeldet:', change);
-      return;
-    }
-
-    if (change.subjectId === null) {
-      entry.event_type_id = null;
-    } else {
-      const eventTypeId = Number(change.subjectId);
-      if (!Number.isInteger(eventTypeId) || !this.personEventTypes.some((item) => item.id === eventTypeId)) {
-        console.error('Der Stundenplan hat ein unbekanntes Fach oder eine unbekannte Eventart gemeldet:', change);
-        return;
-      }
-      entry.event_type_id = eventTypeId;
-    }
-    this.publishEditorActions();
-  }
-
-  onPlanHideRequested(change: PlanEntry): void {
-    const entry = this.getScheduleEntry(change.dayId, Number(change.timeSlotId));
-    if (!entry || !this.personEventTypes.some((item) => String(item.id) === change.subjectId)) {
-      console.error('Der Stundenplan hat eine unbekannte Sichtbarkeitsänderung gemeldet:', change);
-      return;
-    }
-    entry.visible = !change.hidden;
-    this.publishEditorActions();
   }
 
   loadPlans(): void {

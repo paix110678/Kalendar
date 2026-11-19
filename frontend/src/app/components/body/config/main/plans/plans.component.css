@@ -49,12 +49,31 @@
   padding: 0;
 }
 
+.plan-name-step {
+  max-width: 420px;
+  padding-top: 4px;
+}
+
+.plan-name-heading {
+  margin: 0 0 16px;
+  color: #212529;
+  font-size: 18px;
+}
+
 .form-grid {
   display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
 
-  grid-template-columns: minmax(180px, 2fr) minmax(260px, 1.8fr) minmax(130px, 0.8fr);
+.field-name,
+.field-count,
+.day-selection {
+  max-width: 420px;
+}
 
-  gap: 14px;
+.field-count input {
+  max-width: 80px;
 }
 
 .holiday-options {
@@ -179,26 +198,41 @@
 
 .hours-grid {
   display: grid;
-
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
 .hour-row {
   display: grid;
-
-  grid-template-columns: minmax(70px, 0.8fr) repeat(2, minmax(105px, 1fr));
-
-  align-items: end;
-
+  grid-template-columns: 100px 116px 116px;
+  align-items: center;
   gap: 10px;
 }
 
 .hour-row > strong {
-  align-self: center;
+  font-size: 14px;
+  line-height: 36px;
+}
 
-  font-size: 13px;
+.hour-time-table {
+  gap: 6px;
+}
+
+.hour-grid-header {
+  display: grid;
+  grid-template-columns: 100px 116px 116px;
+  gap: 10px;
+  color: #495057;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hour-row .field input {
+  width: 116px;
+  min-height: 36px;
+  height: 36px;
+  padding: 6px 8px;
+  font-size: 14px;
 }
 
 @media (max-width: 760px) {

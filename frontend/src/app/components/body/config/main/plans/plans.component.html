@@ -2,182 +2,60 @@
   <header class="plans-header">
     <div>
       <h3>{{ editingPlanId === null ? '📅 Plan hinzufügen' : '📅 Plan bearbeiten' }}</h3>
-      @if (editingPlanId === null) {
-        <p>Wähle die Wochentage aus und lege individuelle Anfangs- und Endzeiten für jede Stunde fest.</p>
+      @if (editingPlanId === null && setupStep) {
+        <p>Gib dem neuen Plan einen Namen.</p>
+      } @else if (editingPlanId === null) {
+        <p>Lege Wochentage, Einheiten und Zeiten für „{{ planName }}“ fest.</p>
       }
     </div>
   </header>
 
-  <form class="plan-form" (ngSubmit)="$event.preventDefault()">
-    <div class="form-grid">
-      <label class="field field-name">
-        <span>Name des Plans</span>
-        <input
-          type="text"
-          name="planName"
-          [(ngModel)]="planName"
-          (ngModelChange)="publishEditorActions()"
-          maxlength="100"
-          placeholder="z. B. Stundenplan Kay"
-          required>
-      </label>
-
-      <fieldset class="day-selection">
-        <legend>Wochentage</legend>
-        <div class="weekday-checkboxes">
-          @for (day of daysOfWeek; track day) {
-            <label class="weekday-choice">
-              <span>{{ dayAbbreviations[day] }}</span>
-              @if (!uniformCount && selectedDays.includes(day)) {
-                <input
-                  type="number"
-                  [name]="'weekday-count-' + day"
-                  [value]="getDayHours(day).length"
-                  min="0"
-                  max="24"
-                  [attr.aria-label]="'Stunden am ' + day + ' (0 deaktiviert den Wochentag)'"
-                  title="0 deaktiviert den Wochentag"
-                  (change)="onDayCountInput(day, $event)">
-              } @else {
-                <input
-                  type="checkbox"
-                  [name]="'weekday-' + day"
-                  [checked]="selectedDays.includes(day)"
-                  [attr.aria-label]="day"
-                  (change)="onDayToggle(day, $event)">
-              }
-            </label>
-          }
-        </div>
-      </fieldset>
-
-      <div class="field field-count">
-        <span id="hours-count-label">Anzahl der Stunden</span>
-        @if (uniformCount) {
+  <form class="plan-form" (ngSubmit)="$event.preventDefault(); onFormSubmit()">
+    @if (setupStep && editingPlanId === null) {
+      <div class="plan-name-step">
+        <label class="field field-name">
+          <span>Name des Plans</span>
           <input
-            type="number"
-            name="hoursCount"
-            min="1"
-            max="24"
-            aria-labelledby="hours-count-label"
-            [ngModel]="hoursCount"
-            (ngModelChange)="onHoursCountChange($event)">
-        } @else {
-          <small>Stundenanzahl je ausgewähltem Wochentag</small>
-        }
-      </div>
-    </div>
-
-    <fieldset class="holiday-options plan-mode-options">
-      <legend>Stunden für die ausgewählten Wochentage</legend>
-      <label>
-        <input
-          type="checkbox"
-          name="uniformTime"
-          [ngModel]="uniformTime"
-          (ngModelChange)="onUniformTimeChange($event)">
-        <span>Einheitliche Zeiten</span>
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          name="uniformCount"
-          [ngModel]="uniformCount"
-          (ngModelChange)="onUniformCountChange($event)">
-        <span>Einheitliche Stundenanzahl</span>
-      </label>
-    </fieldset>
-
-    <fieldset class="holiday-options">
-      <legend>Kalendertage aus dem Plan ausklammern</legend>
-      <label>
-        <input
-          type="checkbox"
-          name="excludeSchoolHolidays"
-          [(ngModel)]="excludeSchoolHolidays"
-          (ngModelChange)="publishEditorActions()">
-        <span>Schulferientage aus dem Plan ausklammern</span>
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          name="excludePublicHolidays"
-          [(ngModel)]="excludePublicHolidays"
-          (ngModelChange)="publishEditorActions()">
-        <span>Gesetzliche Feiertage aus dem Plan ausklammern</span>
-      </label>
-      <p>Die passenden Tage werden bei Mitgliedern mit ausgewähltem Bundesland nicht als Plantermine angezeigt.</p>
-    </fieldset>
-
-    <div class="hours-heading">
-      <div>
-        <h4>Stundenzeiten</h4>
-        <p>{{ uniformTime ? 'Die vorgeschlagenen Zeiten kannst du für jede Stunde anpassen.' : 'Lege die Zeiten für jeden ausgewählten Wochentag einzeln fest.' }}</p>
-      </div>
-      <span>{{ uniformCount ? hoursCount + ' Stunden' : 'Individuelle Anzahl je Tag' }}</span>
-    </div>
-
-    @if (uniformTime) {
-      <div class="hours-grid">
-        @for (hour of hours; track $index; let index = $index) {
-          <div class="hour-row">
-            <strong>{{ index + 1 }}. Stunde</strong>
-            <label class="field">
-              <span>Beginn</span>
-              <input
-                type="time"
-                [name]="'hourStart' + index"
-                [(ngModel)]="hour.start_time"
-                (ngModelChange)="publishEditorActions()"
-                required>
-            </label>
-            <label class="field">
-              <span>Ende</span>
-              <input
-                type="time"
-                [name]="'hourEnd' + index"
-                [(ngModel)]="hour.end_time"
-                (ngModelChange)="publishEditorActions()"
-                required>
-            </label>
-          </div>
-        }
+            type="text"
+            name="planName"
+            [(ngModel)]="planName"
+            (ngModelChange)="publishEditorActions()"
+            maxlength="100"
+            placeholder="z. B. Stundenplan"
+            autofocus
+            required>
+        </label>
       </div>
     } @else {
-      <div class="day-hours-grid">
-        @for (day of selectedDays; track day) {
-          <fieldset class="day-hours-section">
-            <legend>{{ day }}</legend>
-            <div class="hours-grid">
-              @for (hour of getDayHours(day); track $index; let index = $index) {
-                <div class="hour-row">
-                  <strong>{{ index + 1 }}. Stunde</strong>
-                  <label class="field">
-                    <span>Beginn</span>
-                    <input
-                      type="time"
-                      [name]="'hourStart' + day + index"
-                      [(ngModel)]="dayHours[day][index].start_time"
-                      (ngModelChange)="publishEditorActions()"
-                      required>
-                  </label>
-                  <label class="field">
-                    <span>Ende</span>
-                    <input
-                      type="time"
-                      [name]="'hourEnd' + day + index"
-                      [(ngModel)]="dayHours[day][index].end_time"
-                      (ngModelChange)="publishEditorActions()"
-                      required>
-                  </label>
-                </div>
-              }
-            </div>
-          </fieldset>
-        }
-      </div>
+      <app-plan-details
+        [planName]="planName"
+        [daysOfWeek]="daysOfWeek"
+        [selectedDays]="selectedDays"
+        [uniformCount]="uniformCount"
+        [uniformTime]="uniformTime"
+        [uniformActivities]="uniformActivities"
+        [hoursCount]="hoursCount"
+        [hours]="hours"
+        [dayHours]="dayHours"
+        [excludeSchoolHolidays]="excludeSchoolHolidays"
+        [excludePublicHolidays]="excludePublicHolidays"
+        [categories]="categories"
+        [tasks]="tasks"
+        [uniformTaskId]="uniformTaskId"
+        [activitySubjects]="activitySubjects"
+        (uniformTimeChange)="onUniformTimeChange($event)"
+        (uniformCountChange)="onUniformCountChange($event)"
+        (uniformActivitiesChange)="onUniformActivitiesChange($event)"
+        (uniformTaskIdChange)="uniformTaskId = $event; publishEditorActions()"
+        (activitySubjectsChange)="activitySubjects = $event; publishEditorActions()"
+        (excludeSchoolHolidaysChange)="excludeSchoolHolidays = $event; publishEditorActions()"
+        (excludePublicHolidaysChange)="excludePublicHolidays = $event; publishEditorActions()"
+        (hoursCountChange)="onHoursCountChange($event)"
+        (hourTimesChange)="publishEditorActions()"
+        (dayCountChange)="onDayCountChange($event.day, $event.value)"
+        (dayToggleChange)="onPlanDayToggle($event.day, $event.checked)">
+      </app-plan-details>
     }
-
   </form>
 
 

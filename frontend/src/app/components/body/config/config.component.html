@@ -7,6 +7,7 @@
   </app-admin-navigation>
 
   <div class="config-workspace">
+    @if (!(activeTab === 'plans' && planSetupViewActive)) {
     <div class="config-tree-column">
       <app-admin-navigation-tree
         [activeUsers]="activeUsers"
@@ -45,8 +46,9 @@
         (action)="onNavigationAction($event)">
       </app-admin-navigation-tree>
     </div>
+    }
 
-    <div class="config-main-column">
+    <div class="config-main-column" [class.config-main-full-width]="activeTab === 'plans' && planSetupViewActive">
       <app-config-main
         [activeTab]="activeTab"
         [isAdmin]="isAdmin"
@@ -72,6 +74,7 @@
         [selectedTaskId]="selectedTaskId"
         [selectedTaskCategoryId]="selectedTaskCategoryId"
         (editorActionsChange)="onEditorActionsChanged($event)"
+        (planSetupViewChange)="planSetupViewActive = $event"
         (accountTreeDataChange)="accountTreeData = $event"
         (accountTreeItemChange)="selectedAccountItemId = $event"
         (memberClosed)="selectedMemberId = null"

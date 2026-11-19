@@ -109,6 +109,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     database: false,
   };
   public editorActions: AdminEditorActions | null = null;
+  public planSetupViewActive = false;
   public editorMessage = '';
   public editorError = false;
   private pendingNavigationAction: AdminNavigationAction | null = null;
@@ -204,6 +205,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
   }
 
   private applyNavigationAction(action: AdminNavigationAction): void {
+    if (action.type !== 'plans' && action.type !== 'savedPlan') {
+      this.planSetupViewActive = false;
+    }
     switch (action.type) {
       case 'members':
         this.selectMembers();
@@ -278,16 +282,20 @@ export class ConfigComponent implements OnInit, OnDestroy {
   }
 
   openPlans(): void {
+    this.planSetupViewActive = false;
     this.editorActions = null;
     const shouldLoad = !this.expandedSections.plans;
     this.expandedSections.plans = true;
     this.activeTab = 'plans';
     this.selectedPlanId = null;
     if (shouldLoad) this.refreshSavedPlans();
+    if (this.calendarCategories.length === 0) this.calendarService.loadCategories();
+    if (this.tasks.length === 0 && !this.tasksLoading) this.refreshSavedTasks();
     this.mainComponent?.resetPlanForm();
   }
 
   openSavedPlan(planId: number): void {
+    this.planSetupViewActive = false;
     this.editorActions = null;
     this.expandedSections.plans = true;
     this.activeTab = 'plans';

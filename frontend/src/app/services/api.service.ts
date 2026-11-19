@@ -16,6 +16,9 @@ export interface PlanDefinition {
   hours: PlanHour[];
   uniform_time: boolean;
   uniform_count: boolean;
+  uniform_activities?: boolean;
+  uniform_task_id?: number | null;
+  activity_subjects?: Record<string, number[]>;
   day_hours: Record<string, PlanHour[]>;
   exclude_school_holidays: boolean;
   exclude_public_holidays: boolean;

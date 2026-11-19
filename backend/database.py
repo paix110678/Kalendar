@@ -231,6 +231,9 @@ def _init_db_connection(conn):
             hours_json TEXT NOT NULL,
             uniform_time INTEGER NOT NULL DEFAULT 1,
             uniform_count INTEGER NOT NULL DEFAULT 1,
+            uniform_activities INTEGER NOT NULL DEFAULT 1,
+            uniform_task_id INTEGER,
+            activity_subjects_json TEXT NOT NULL DEFAULT '{}',
             day_hours_json TEXT NOT NULL DEFAULT '{}',
             exclude_school_holidays INTEGER NOT NULL DEFAULT 0,
             exclude_public_holidays INTEGER NOT NULL DEFAULT 0
@@ -265,6 +268,12 @@ def _init_db_connection(conn):
         cursor.execute("ALTER TABLE plans ADD COLUMN uniform_time INTEGER NOT NULL DEFAULT 1")
     if "uniform_count" not in plan_columns:
         cursor.execute("ALTER TABLE plans ADD COLUMN uniform_count INTEGER NOT NULL DEFAULT 1")
+    if "uniform_activities" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN uniform_activities INTEGER NOT NULL DEFAULT 1")
+    if "uniform_task_id" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN uniform_task_id INTEGER")
+    if "activity_subjects_json" not in plan_columns:
+        cursor.execute("ALTER TABLE plans ADD COLUMN activity_subjects_json TEXT NOT NULL DEFAULT '{}'")
     if "day_hours_json" not in plan_columns:
         cursor.execute("ALTER TABLE plans ADD COLUMN day_hours_json TEXT NOT NULL DEFAULT '{}'")
 

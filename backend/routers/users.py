@@ -478,25 +478,93 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
         ):
             raise HTTPException(status_code=422, detail="Der Plan enthält ungültige Stundenzeiten.")
         subjects_by_slot = {}
-        for subject in payload.subjects:
-            key = (subject.day_of_week, subject.period)
-            if key in subjects_by_slot:
-                raise HTTPException(status_code=422, detail="Für eine Stunde wurde mehr als ein Fach angegeben.")
-            event_type = conn.execute(
-                """
-                SELECT id, name, color FROM person_event_types
-                WHERE id = ? AND user_id = ?
-                """,
-                (subject.event_type_id, user_id),
-            ).fetchone()
-            if event_type is None:
-                raise HTTPException(status_code=422, detail="Das ausgewählte Fach gehört nicht zu dieser Person.")
-            subjects_by_slot[key] = {
-                "event_type_id": event_type["id"],
-                "title": event_type["name"],
-                "color": event_type["color"],
-                "visible": subject.visible,
-            }
+        uniform_activities = bool(plan["uniform_activities"])
+        if uniform_activities:
+            task_id = plan["uniform_task_id"]
+            if task_id is None:
+                for subject in payload.subjects:
+                    key = (subject.day_of_week, subject.period)
+                    event_type = conn.execute(
+                        "SELECT id, name, color FROM person_event_types WHERE id = ? AND user_id = ?",
+                        (subject.event_type_id, user_id),
+                    ).fetchone()
+                    if event_type is None:
+                        raise HTTPException(status_code=422, detail="Das ausgewählte Fach gehört nicht zu dieser Person.")
+                    subjects_by_slot[key] = {
+                        "event_type_id": event_type["id"],
+                        "title": event_type["name"],
+                        "color": event_type["color"],
+                        "visible": subject.visible,
+                    }
+            else:
+                event_type = conn.execute(
+                    """
+                    SELECT person_event_types.id, person_event_types.name, person_event_types.color
+                    FROM task_event_type_migrations
+                    JOIN person_event_types
+                      ON person_event_types.id = task_event_type_migrations.event_type_id
+                    WHERE task_event_type_migrations.task_id = ?
+                      AND person_event_types.user_id = ?
+                    """,
+                    (task_id, user_id),
+                ).fetchone()
+                if event_type is None:
+                    raise HTTPException(status_code=422, detail="Der ausgewählte Task ist für dieses Mitglied nicht verfügbar.")
+                for day, day_hours in hours_by_day.items():
+                    for period in range(1, len(day_hours) + 1):
+                        subjects_by_slot[(day, period)] = {
+                            "event_type_id": event_type["id"],
+                            "title": event_type["name"],
+                            "color": event_type["color"],
+                            "visible": True,
+                        }
+        else:
+            try:
+                activity_subjects = json.loads(plan["activity_subjects_json"])
+            except (TypeError, ValueError) as error:
+                raise HTTPException(status_code=422, detail="Der Plan enthält keine gültigen Aktivitäten.") from error
+            if not isinstance(activity_subjects, dict) or not activity_subjects:
+                for subject in payload.subjects:
+                    key = (subject.day_of_week, subject.period)
+                    event_type = conn.execute(
+                        "SELECT id, name, color FROM person_event_types WHERE id = ? AND user_id = ?",
+                        (subject.event_type_id, user_id),
+                    ).fetchone()
+                    if event_type is None:
+                        raise HTTPException(status_code=422, detail="Das ausgewählte Fach gehört nicht zu dieser Person.")
+                    subjects_by_slot[key] = {
+                        "event_type_id": event_type["id"],
+                        "title": event_type["name"],
+                        "color": event_type["color"],
+                        "visible": subject.visible,
+                    }
+                activity_subjects = {}
+            for day, day_hours in hours_by_day.items():
+                if not activity_subjects:
+                    continue
+                task_ids = activity_subjects.get(day, []) if isinstance(activity_subjects, dict) else []
+                if len(task_ids) != len(day_hours):
+                    raise HTTPException(status_code=422, detail="Für jede Einheit des Plans muss ein Task ausgewählt sein.")
+                for period, task_id in enumerate(task_ids, start=1):
+                    event_type = conn.execute(
+                        """
+                        SELECT person_event_types.id, person_event_types.name, person_event_types.color
+                        FROM task_event_type_migrations
+                        JOIN person_event_types
+                          ON person_event_types.id = task_event_type_migrations.event_type_id
+                        WHERE task_event_type_migrations.task_id = ?
+                          AND person_event_types.user_id = ?
+                        """,
+                        (task_id, user_id),
+                    ).fetchone()
+                    if event_type is None:
+                        raise HTTPException(status_code=422, detail="Ein ausgewählter Task ist für dieses Mitglied nicht verfügbar.")
+                    subjects_by_slot[(day, period)] = {
+                        "event_type_id": event_type["id"],
+                        "title": event_type["name"],
+                        "color": event_type["color"],
+                        "visible": True,
+                    }
 
         expected_slots = {
             (day, period)

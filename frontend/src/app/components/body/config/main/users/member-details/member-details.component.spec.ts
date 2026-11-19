@@ -96,54 +96,21 @@ describe('MemberDetailsComponent', () => {
     await fixture.whenStable();
   });
 
-  it('renders the plan grid and maps its choices and visibility back to the assignment', () => {
+  it('renders only the plan selection without the removed plan grid', () => {
     const component = fixture.componentInstance;
     component.selectPlan(plan.id);
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.textContent).not.toContain('Persönliche Fächer und Eventarten');
-    expect(element.querySelector('lib-plan-learn')).not.toBeNull();
-    expect(element.querySelectorAll('lib-plan-learn')).toHaveLength(3);
+    expect(element.textContent).not.toContain('Wähle für jede Stunde');
+    expect(element.querySelector('lib-plan-learn')).toBeNull();
     expect(component.scheduleDays).toEqual(['Montag', 'Mittwoch', 'Freitag']);
-    expect(component.planLearnTimeSlotsForDay('Mittwoch')).toEqual([
-      { id: '1', start: '09:00', end: '09:45', label: '1.' },
-      { id: '2', start: '10:00', end: '10:45', label: '2.' },
-    ]);
     expect(component.scheduleEntries.map(({ day_of_week, period }) => ({ day_of_week, period }))).toEqual([
       { day_of_week: 'Montag', period: 1 },
       { day_of_week: 'Mittwoch', period: 1 },
       { day_of_week: 'Mittwoch', period: 2 },
       { day_of_week: 'Freitag', period: 1 },
-    ]);
-    expect(component.planLearnTimeSlotsForDay('Montag')).toEqual([
-      { id: '1', start: '08:00', end: '08:45', label: '1.' },
-    ]);
-    expect(component.planLearnCategories).toEqual([
-      { id: '8', name: 'Schule' },
-      { id: '9', name: 'Freizeit' },
-      { id: '10', name: 'Ohne Tasks' },
-    ]);
-    expect(component.planLearnSubjects.map(({ id, categoryId }) => ({ id, categoryId }))).toEqual([
-      { id: '12', categoryId: '8' },
-      { id: '13', categoryId: '9' },
-    ]);
-
-    component.onPlanEntryChange({ dayId: 'Montag', timeSlotId: '1', subjectId: '12' });
-    component.onPlanHideRequested({
-      dayId: 'Montag',
-      timeSlotId: '1',
-      subjectId: '12',
-      hidden: true,
-    });
-
-    expect(component.scheduleEntries[0]).toMatchObject({
-      event_type_id: eventType.id,
-      visible: false,
-    });
-    expect(component.planLearnEntriesForDay('Montag')).toEqual([
-      { dayId: 'Montag', timeSlotId: '1', subjectId: '12', hidden: true },
     ]);
   });
 

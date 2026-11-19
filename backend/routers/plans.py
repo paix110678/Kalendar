@@ -39,6 +39,9 @@ class PlanPayload(BaseModel):
     hours: list[PlanHour]
     uniform_time: bool = True
     uniform_count: bool = True
+    uniform_activities: bool = True
+    uniform_task_id: int | None = None
+    activity_subjects: dict[str, list[int]] = Field(default_factory=dict)
     day_hours: dict[str, list[PlanHour]] = Field(default_factory=dict)
     exclude_school_holidays: bool = False
     exclude_public_holidays: bool = False
@@ -129,6 +132,9 @@ def serialize_plan(row):
         "hours": json.loads(row["hours_json"]),
         "uniform_time": bool(row["uniform_time"]),
         "uniform_count": bool(row["uniform_count"]),
+        "uniform_activities": bool(row["uniform_activities"]),
+        "uniform_task_id": row["uniform_task_id"],
+        "activity_subjects": json.loads(row["activity_subjects_json"]),
         "day_hours": day_hours,
         "exclude_school_holidays": bool(row["exclude_school_holidays"]),
         "exclude_public_holidays": bool(row["exclude_public_holidays"]),
@@ -161,10 +167,11 @@ def create_plan(payload: PlanPayload):
             """
             INSERT INTO plans (
                 name, start_day, end_day, days_json, hours_count, hours_json,
-                uniform_time, uniform_count, day_hours_json,
+                uniform_time, uniform_count, uniform_activities, day_hours_json,
+                uniform_task_id, activity_subjects_json,
                 exclude_school_holidays, exclude_public_holidays
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.name.strip(),
@@ -175,12 +182,15 @@ def create_plan(payload: PlanPayload):
                 json.dumps([hour.model_dump() for hour in payload.hours]),
                 payload.uniform_time,
                 payload.uniform_count,
+                payload.uniform_activities,
                 json.dumps(
                     {
                         day: [hour.model_dump() for hour in hours]
                         for day, hours in payload.day_hours.items()
                     } if not (payload.uniform_time and payload.uniform_count) else {}
                 ),
+                payload.uniform_task_id,
+                json.dumps(payload.activity_subjects),
                 payload.exclude_school_holidays,
                 payload.exclude_public_holidays,
             ),
@@ -279,8 +289,9 @@ def update_plan(plan_id: int, payload: PlanPayload):
             """
             UPDATE plans
             SET name = ?, start_day = ?, end_day = ?, days_json = ?,
-                hours_count = ?, hours_json = ?, uniform_time = ?, uniform_count = ?,
+                hours_count = ?, hours_json = ?, uniform_time = ?, uniform_count = ?, uniform_activities = ?,
                 day_hours_json = ?,
+                uniform_task_id = ?, activity_subjects_json = ?,
                 exclude_school_holidays = ?, exclude_public_holidays = ?
             WHERE id = ?
             """,
@@ -293,12 +304,15 @@ def update_plan(plan_id: int, payload: PlanPayload):
                 json.dumps([hour.model_dump() for hour in payload.hours]),
                 payload.uniform_time,
                 payload.uniform_count,
+                payload.uniform_activities,
                 json.dumps(
                     {
                         day: [hour.model_dump() for hour in hours]
                         for day, hours in payload.day_hours.items()
                     } if not (payload.uniform_time and payload.uniform_count) else {}
                 ),
+                payload.uniform_task_id,
+                json.dumps(payload.activity_subjects),
                 payload.exclude_school_holidays,
                 payload.exclude_public_holidays,
                 plan_id,

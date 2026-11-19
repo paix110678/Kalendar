@@ -52,55 +52,6 @@
       <p class="error-message" role="alert">{{ eventTypeError }}</p>
     }
 
-    @if (selectedPlan && scheduleEntries.length > 0 && !assignmentLoading) {
-      <p class="plan-intro">
-        Wähle für jede Stunde einen Task aus der passenden Kategorie oder ein persönliches Fach beziehungsweise eine Eventart aus. Die Einträge erscheinen als Termine im Kalender; ihre Farbe wird automatisch übernommen.
-      </p>
-      @if (personEventTypes.length === 0) {
-        <p class="muted-message">Für dieses Mitglied sind noch keine Tasks, Fächer oder Eventarten für den Stundenplan hinterlegt.</p>
-      }
-      <label class="assignment-title">
-        <span>Titel der Kalendertermine</span>
-        <input type="text" name="assignmentTitle" [(ngModel)]="assignmentTitle" (ngModelChange)="publishEditorActions()" maxlength="100" required>
-      </label>
-      @if (planLearnCategories.length > 0) {
-        @if (selectedPlan.uniform_time && selectedPlan.uniform_count) {
-          <div class="plan-learn-wrapper">
-            <lib-plan-learn
-              [planName]="assignmentTitle"
-              [days]="planLearnDays"
-              [timeSlots]="planLearnTimeSlots"
-              [categories]="planLearnCategories"
-              [subjects]="planLearnSubjects"
-              [entries]="planLearnEntries"
-              [showPeriods]="true"
-              (entryChange)="onPlanEntryChange($event)"
-              (hideRequested)="onPlanHideRequested($event)">
-            </lib-plan-learn>
-          </div>
-        } @else {
-          <div class="plan-learn-wrapper plan-learn-days">
-            @for (day of scheduleDays; track day) {
-              <section class="plan-learn-day">
-                <h6>{{ day }}</h6>
-                <lib-plan-learn
-                  [planName]="assignmentTitle"
-                  [days]="planLearnDaysForDay(day)"
-                  [timeSlots]="planLearnTimeSlotsForDay(day)"
-                  [categories]="planLearnCategories"
-                  [subjects]="planLearnSubjects"
-                  [entries]="planLearnEntriesForDay(day)"
-                  [showPeriods]="true"
-                  (entryChange)="onPlanEntryChange($event)"
-                  (hideRequested)="onPlanHideRequested($event)">
-                </lib-plan-learn>
-              </section>
-            }
-          </div>
-        }
-      }
-    }
-
       <div class="conflict-backdrop" [hidden]="!conflictDialogOpen">
       <section class="conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="conflict-heading">
         <h6 id="conflict-heading">Überschneidungen im Kalender auflösen</h6>

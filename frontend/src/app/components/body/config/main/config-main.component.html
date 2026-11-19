@@ -21,7 +21,10 @@
       <app-plans
         [initialPlans]="savedPlans"
         [selectedPlanId]="selectedPlanId"
+        [categories]="calendarCategories"
+        [tasks]="tasks"
         (editorActionsChange)="editorActionsChange.emit($event)"
+        (setupViewChange)="planSetupViewChange.emit($event)"
         (plansChanged)="plansChanged.emit($event)">
       </app-plans>
     }

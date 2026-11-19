@@ -80,6 +80,7 @@ export class ConfigMainComponent {
   @Output() selectedTaskIdChange = new EventEmitter<number | null>();
   @Output() selectedBackupIdChange = new EventEmitter<string | null>();
   @Output() backupsChanged = new EventEmitter<DatabaseBackupList>();
+  @Output() planSetupViewChange = new EventEmitter<boolean>();
 
   @ViewChild(PlansComponent) private plansComponent?: PlansComponent;
   @ViewChild(SystemComponent) private systemComponent?: SystemComponent;

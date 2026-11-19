@@ -1,0 +1,197 @@
+<section class="plan-details-component plans-page">
+  <h4 class="plan-name-heading">{{ planName }}</h4>
+
+  <div class="form-grid">
+    <fieldset class="day-selection">
+      <legend>Wochentage</legend>
+      <div class="weekday-checkboxes">
+        @for (day of daysOfWeek; track day) {
+          <label class="weekday-choice">
+            <span>{{ day.slice(0, 2) }}</span>
+            @if (!uniformCount && selectedDays.includes(day)) {
+              <input
+                type="number"
+                [name]="'weekday-count-' + day"
+                [value]="dayHours[day]?.length ?? 1"
+                min="0"
+                max="24"
+                [attr.aria-label]="'Einheiten am ' + day"
+                (change)="dayCountChange.emit({ day, value: $any($event.target).valueAsNumber })">
+            } @else {
+              <input
+                type="checkbox"
+                [name]="'weekday-' + day"
+                [checked]="selectedDays.includes(day)"
+                [attr.aria-label]="day"
+                (change)="dayToggleChange.emit({ day, checked: $any($event.target).checked })">
+            }
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <div class="field field-count">
+      <span id="hours-count-label">Anzahl Einheiten</span>
+      @if (uniformCount) {
+        <input
+          type="number"
+          name="hoursCount"
+          min="1"
+          max="24"
+          aria-labelledby="hours-count-label"
+          [ngModel]="hoursCount"
+          (ngModelChange)="hoursCountChange.emit($event)">
+      } @else {
+        <small>Einheitenanzahl je ausgewähltem Wochentag</small>
+      }
+    </div>
+  </div>
+
+  <fieldset class="holiday-options plan-mode-options">
+    <legend>Einheiten für die ausgewählten Wochentage</legend>
+    <label>
+      <input type="checkbox" name="uniformTime" [ngModel]="uniformTime" (ngModelChange)="uniformTimeChange.emit($event)">
+      <span>Einheitliche Zeiten</span>
+    </label>
+    <label>
+      <input type="checkbox" name="uniformCount" [ngModel]="uniformCount" (ngModelChange)="uniformCountChange.emit($event)">
+      <span>Einheitliche Einheitenanzahl</span>
+    </label>
+    <label>
+      <input type="checkbox" name="uniformActivities" [ngModel]="uniformActivities" (ngModelChange)="uniformActivitiesChange.emit($event)">
+      <span>Einheitliche Aktivitäten</span>
+    </label>
+  </fieldset>
+
+    <fieldset class="holiday-options">
+    <legend>Kalendertage aus dem Plan ausklammern</legend>
+    <label>
+      <input type="checkbox" name="excludeSchoolHolidays" [ngModel]="excludeSchoolHolidays" (ngModelChange)="excludeSchoolHolidaysChange.emit($event)">
+      <span>Schulferientage aus dem Plan ausklammern</span>
+    </label>
+    <label>
+      <input type="checkbox" name="excludePublicHolidays" [ngModel]="excludePublicHolidays" (ngModelChange)="excludePublicHolidaysChange.emit($event)">
+      <span>Gesetzliche Feiertage aus dem Plan ausklammern</span>
+    </label>
+  </fieldset>
+
+  @if (uniformActivities) {
+    <div class="uniform-activity-selection">
+      <label class="field">
+        <span>Kategorie</span>
+        <select name="uniformActivityCategory" [ngModel]="selectedCategoryId" (ngModelChange)="onCategoryChange($event)">
+          <option [ngValue]="null">Alle Kategorien</option>
+          @for (category of categories; track category.id) {
+            <option [ngValue]="category.id">{{ category.label }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>Task</span>
+        <select name="uniformActivityTask" [ngModel]="uniformTaskId" (ngModelChange)="uniformTaskIdChange.emit($event)">
+          <option [ngValue]="null">Task auswählen …</option>
+          @for (task of availableTasks; track task.id) {
+            <option [ngValue]="task.id">{{ task.category_label }} · {{ task.title }}</option>
+          }
+        </select>
+      </label>
+      @if (tasks.length === 0) {
+        <p class="form-message form-error">Es sind keine Tasks verfügbar. Lege zuerst unter Einstellungen → Kategorien einen Task an.</p>
+      }
+    </div>
+  }
+
+
+  <div class="hours-heading">
+    <div>
+      <h4>Stundenzeiten</h4>
+      <p>{{ uniformTime ? 'Die vorgeschlagenen Zeiten kannst du für jede Stunde anpassen.' : 'Lege die Zeiten für jeden ausgewählten Wochentag einzeln fest.' }}</p>
+    </div>
+  </div>
+
+  @if (uniformTime) {
+    <div class="hours-grid hour-time-table">
+      <div class="hour-grid-header" aria-hidden="true">
+        <span>Stunde</span>
+        <span>Beginn</span>
+        <span>Ende</span>
+      </div>
+      @for (hour of hours; track $index; let index = $index) {
+        <div class="hour-row">
+          <strong>{{ index + 1 }}. Stunde</strong>
+          <label class="field">
+            <input type="time" [name]="'hourStart' + index" [(ngModel)]="hour.start_time" (ngModelChange)="hourTimesChange.emit()" required>
+          </label>
+          <label class="field">
+            <input type="time" [name]="'hourEnd' + index" [(ngModel)]="hour.end_time" (ngModelChange)="hourTimesChange.emit()" required>
+          </label>
+        </div>
+      }
+    </div>
+  } @else {
+    @for (day of selectedDays; track day) {
+      <fieldset class="day-hours-section">
+        <legend>{{ day }}</legend>
+        <div class="hours-grid hour-time-table">
+          <div class="hour-grid-header" aria-hidden="true">
+            <span>Stunde</span>
+            <span>Beginn</span>
+            <span>Ende</span>
+          </div>
+          @for (hour of dayHours[day]; track $index; let index = $index) {
+            <div class="hour-row">
+              <strong>{{ index + 1 }}. Stunde</strong>
+              <label class="field">
+                <input type="time" [name]="'hourStart' + day + index" [(ngModel)]="hour.start_time" (ngModelChange)="hourTimesChange.emit()" required>
+              </label>
+              <label class="field">
+                <input type="time" [name]="'hourEnd' + day + index" [(ngModel)]="hour.end_time" (ngModelChange)="hourTimesChange.emit()" required>
+              </label>
+            </div>
+          }
+        </div>
+      </fieldset>
+    }
+  }
+
+  @if (!uniformActivities) {
+    <fieldset class="holiday-options plan-activity-selection">
+      <legend>Plan befüllen</legend>
+      @if (uniformTime && uniformCount) {
+        <div class="plan-learn-container">
+          <lib-plan-learn
+            [planName]="planName"
+            [days]="planLearnDays"
+            [timeSlots]="planLearnTimeSlots"
+            [categories]="planLearnCategories"
+            [subjects]="planLearnSubjects"
+            [entries]="planLearnEntries"
+            [showPeriods]="true"
+            (entryChange)="onPlanEntryChange($event)">
+          </lib-plan-learn>
+        </div>
+      } @else {
+        @for (day of selectedDays; track day) {
+          <section class="plan-learn-day">
+            <h6>{{ day }}</h6>
+            <div class="plan-learn-container">
+              <lib-plan-learn
+                [planName]="planName"
+                [days]="planLearnDaysForDay(day)"
+                [timeSlots]="planLearnTimeSlotsForDay(day)"
+                [categories]="planLearnCategories"
+                [subjects]="planLearnSubjects"
+                [entries]="planLearnEntriesForDay(day)"
+                [showPeriods]="true"
+                (entryChange)="onPlanEntryChange($event)">
+              </lib-plan-learn>
+            </div>
+          </section>
+        }
+      }
+      @if (categories.length === 0 || tasks.length === 0) {
+        <p class="form-message form-error">Lege zuerst Kategorien und Tasks an, um den Plan zu befüllen.</p>
+      }
+    </fieldset>
+  }
+</section>
