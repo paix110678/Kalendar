@@ -341,7 +341,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     this.assignmentLoading = true;
     this.scheduleEntries = [];
     this.planError = '';
-    this.apiService.getUserPlanAssignment(userId).pipe(timeout({ first: 15000 })).subscribe({
+    this.apiService.getUserPlanAssignment(userId, planId).pipe(timeout({ first: 15000 })).subscribe({
       next: (assignment) => {
         if (this.user.id !== userId || this.selectedPlanId !== planId) return;
         this.assignmentLoading = false;

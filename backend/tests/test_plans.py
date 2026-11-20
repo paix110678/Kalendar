@@ -93,6 +93,45 @@ def test_plan_crud_persists_arbitrary_selected_days(tmp_path):
     assert updated["day_hours"]["Dienstag"] == [{"start_time": "09:00", "end_time": "09:45"}]
 
 
+def test_get_user_plan_assignment_filters_by_plan_id(tmp_path):
+    database_path = tmp_path / "multiple-plan-assignments.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        first_plan = plans.create_plan(_plan_payload(["Montag"]))
+        second_plan = plans.create_plan(_plan_payload(["Dienstag"]))
+        conn = database.get_db_connection()
+        try:
+            user_id = conn.execute(
+                """
+                INSERT INTO users (name, role, current_points, status_school, status_sport, color_code)
+                VALUES ('Alex', 'child_10', 0, 'GREEN', 'BASE', '#228be6')
+                """
+            ).lastrowid
+            conn.executemany(
+                """
+                INSERT INTO user_plan_assignments (user_id, plan_id, title)
+                VALUES (?, ?, ?)
+                """,
+                [
+                    (user_id, first_plan["id"], first_plan["name"]),
+                    (user_id, second_plan["id"], second_plan["name"]),
+                ],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        assignment = users.get_user_plan_assignment(
+            user_id,
+            plan_id=second_plan["id"],
+            actor=None,
+        )
+
+    assert assignment["plan_id"] == second_plan["id"]
+    assert assignment["title"] == second_plan["name"]
+
+
 def test_apply_plan_creates_blocks_only_on_selected_days(tmp_path):
     database_path = tmp_path / "apply-plan.sqlite3"
     database.init_db(database_path)

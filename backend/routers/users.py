@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, model_validator
 from typing import List, Literal, Optional
 import database
@@ -338,13 +338,19 @@ def delete_person_event_type(
 @router.get("/{user_id}/plan-assignment")
 def get_user_plan_assignment(
     user_id: int,
+    plan_id: Optional[int] = Query(default=None, gt=0),
     actor: AccountContext = Depends(require_profile_access),
 ):
     conn = database.get_db_connection()
     try:
         assignment = conn.execute(
-            "SELECT * FROM user_plan_assignments WHERE user_id = ?",
-            (user_id,),
+            """
+            SELECT * FROM user_plan_assignments
+            WHERE user_id = ? AND (? IS NULL OR plan_id = ?)
+            ORDER BY id
+            LIMIT 1
+            """,
+            (user_id, plan_id, plan_id),
         ).fetchone()
         if assignment is None:
             return None

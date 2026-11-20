@@ -233,8 +233,9 @@ export class ApiService {
       resolutions,
     });
   }
-  getUserPlanAssignment(userId: number): Observable<PlanAssignment | null> {
-    return this.http.get<PlanAssignment | null>(`${this.apiBase}/users/${userId}/plan-assignment`);
+  getUserPlanAssignment(userId: number, planId?: number): Observable<PlanAssignment | null> {
+    const query = planId === undefined ? '' : `?plan_id=${planId}`;
+    return this.http.get<PlanAssignment | null>(`${this.apiBase}/users/${userId}/plan-assignment${query}`);
   }
   getUserPlanAssignments(userId: number): Observable<PlanAssignment[]> {
     return this.http.get<PlanAssignment[]>(`${this.apiBase}/users/${userId}/plan-assignments`);

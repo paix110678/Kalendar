@@ -132,6 +132,14 @@ describe('MemberDetailsComponent', () => {
     ]);
   });
 
+  it('loads the saved assignment for the selected plan', async () => {
+    const component = fixture.componentInstance;
+    component.selectedPlanId = plan.id;
+    component.loadPlans();
+
+    await vi.waitFor(() => expect(getUserPlanAssignment).toHaveBeenCalledWith(user.id, plan.id));
+  });
+
   it('applies one selected task to every time slot for uniform activities', () => {
     const component = fixture.componentInstance;
     component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];
