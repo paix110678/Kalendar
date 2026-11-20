@@ -41,6 +41,83 @@
   font-size: 16px;
 }
 
+.active-plans-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.add-plan-button,
+.remove-plan-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.add-plan-button {
+  width: 24px;
+  height: 24px;
+  color: #40a829;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.add-plan-button:disabled,
+.remove-plan-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.assigned-plan-list {
+  display: grid;
+  gap: 2px;
+  width: 260px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assigned-plan-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.assigned-plan-name {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #212529;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assigned-plan-name span {
+  color: #68717b;
+  font-size: 12px;
+}
+
+.remove-plan-button {
+  width: 24px;
+  height: 24px;
+  color: #c92a2a;
+  font-size: 24px;
+  font-weight: 700;
+}
+
 .settings-grid {
   display: grid;
 

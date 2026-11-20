@@ -376,6 +376,53 @@ def get_user_plan_assignment(
         conn.close()
 
 
+@router.get("/{user_id}/plan-assignments")
+def get_user_plan_assignments(
+    user_id: int,
+    actor: AccountContext = Depends(require_profile_access),
+):
+    conn = database.get_db_connection()
+    try:
+        assignments = conn.execute(
+            """
+            SELECT id, user_id, plan_id, title
+            FROM user_plan_assignments
+            WHERE user_id = ?
+            ORDER BY id
+            """,
+            (user_id,),
+        ).fetchall()
+        result = []
+        for assignment in assignments:
+            events = conn.execute(
+                """
+                SELECT time_blocks.id, time_blocks.plan_period AS period,
+                       COALESCE(person_event_types.name, time_blocks.title) AS title,
+                       time_blocks.day_of_week, time_blocks.start_time, time_blocks.end_time,
+                       COALESCE(person_event_types.color, time_blocks.color) AS color,
+                       time_blocks.person_event_type_id AS event_type_id,
+                       time_blocks.is_visible AS visible
+                FROM time_blocks
+                LEFT JOIN person_event_types
+                    ON person_event_types.id = time_blocks.person_event_type_id
+                   AND person_event_types.user_id = time_blocks.user_id
+                WHERE plan_assignment_id = ?
+                ORDER BY time_blocks.day_of_week, time_blocks.plan_period, time_blocks.id
+                """,
+                (assignment["id"],),
+            ).fetchall()
+            result.append({
+                "id": assignment["id"],
+                "user_id": assignment["user_id"],
+                "plan_id": assignment["plan_id"],
+                "title": assignment["title"],
+                "events": [dict(event) for event in events],
+            })
+        return result
+    finally:
+        conn.close()
+
+
 @router.get("")
 def get_users(actor: AccountContext = Depends(require_authenticated)):
     conn = database.get_db_connection()
@@ -656,8 +703,8 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
                     )
 
         current_assignment = conn.execute(
-            "SELECT id FROM user_plan_assignments WHERE user_id = ?",
-            (user_id,),
+            "SELECT id FROM user_plan_assignments WHERE user_id = ? AND plan_id = ?",
+            (user_id, payload.plan_id),
         ).fetchone()
         current_assignment_id = current_assignment["id"] if current_assignment else None
         existing_blocks = [
@@ -880,6 +927,42 @@ def update_user(
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+@router.delete("/{user_id}/plan-assignments/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT,
+           dependencies=[Depends(require_roles("admin", "adult"))])
+def delete_user_plan_assignment(
+    user_id: int,
+    assignment_id: int,
+    actor: AccountContext = Depends(require_profile_access),
+):
+    conn = database.get_db_connection()
+    try:
+        assignment = conn.execute(
+            "SELECT id FROM user_plan_assignments WHERE id = ? AND user_id = ?",
+            (assignment_id, user_id),
+        ).fetchone()
+        if assignment is None:
+            raise HTTPException(status_code=404, detail="Die Plan-Zuordnung wurde nicht gefunden.")
+        conn.execute(
+            "DELETE FROM time_blocks WHERE plan_assignment_id = ?",
+            (assignment_id,),
+        )
+        conn.execute(
+            "DELETE FROM user_plan_assignments WHERE id = ? AND user_id = ?",
+            (assignment_id, user_id),
+        )
+        remaining = conn.execute(
+            "SELECT plan_id FROM user_plan_assignments WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        conn.execute(
+            "UPDATE users SET assigned_plan_id = ? WHERE id = ?",
+            (remaining["plan_id"] if remaining else None, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
 
 @router.delete("/{user_id}", dependencies=[Depends(require_roles("admin", "adult"))])
 def delete_user(

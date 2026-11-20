@@ -236,6 +236,12 @@ export class ApiService {
   getUserPlanAssignment(userId: number): Observable<PlanAssignment | null> {
     return this.http.get<PlanAssignment | null>(`${this.apiBase}/users/${userId}/plan-assignment`);
   }
+  getUserPlanAssignments(userId: number): Observable<PlanAssignment[]> {
+    return this.http.get<PlanAssignment[]>(`${this.apiBase}/users/${userId}/plan-assignments`);
+  }
+  deleteUserPlanAssignment(userId: number, assignmentId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/users/${userId}/plan-assignments/${assignmentId}`);
+  }
   deleteUser(id: number): Observable<any> { return this.http.delete(this.apiBase + '/users/' + id); }
   saveUserOrder(ids: number[]): Observable<any> { return this.http.put(this.apiBase + '/users/reorder', { user_ids: ids }); }
   updateSchoolStatus(id: number, status: string): Observable<any> { return this.http.put(this.apiBase + '/users/' + id + '/status-school', { status }); }

@@ -378,6 +378,39 @@ def _init_db_connection(conn):
         )
     """)
 
+    # A member may use multiple plans. Older databases contain the UNIQUE(user_id)
+    # constraint, so recreate the table without it when that constraint is present.
+    cursor.execute("PRAGMA index_list('user_plan_assignments')")
+    unique_indexes = [
+        row
+        for row in cursor.fetchall()
+        if row["unique"]
+        and row["origin"] != "pk"
+    ]
+    for index in unique_indexes:
+        cursor.execute(f"PRAGMA index_info('{index['name']}')")
+        indexed_columns = [row["name"] for row in cursor.fetchall()]
+        if indexed_columns == ["user_id"]:
+            cursor.execute("ALTER TABLE user_plan_assignments RENAME TO user_plan_assignments_old")
+            cursor.execute("""
+                CREATE TABLE user_plan_assignments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    plan_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id),
+                    FOREIGN KEY(plan_id) REFERENCES plans(id),
+                    UNIQUE(user_id, plan_id)
+                )
+            """)
+            cursor.execute("""
+                INSERT INTO user_plan_assignments (id, user_id, plan_id, title)
+                SELECT id, user_id, plan_id, title
+                FROM user_plan_assignments_old
+            """)
+            cursor.execute("DROP TABLE user_plan_assignments_old")
+            break
+
     cursor.execute("PRAGMA table_info(users)")
     user_cols = [row["name"] for row in cursor.fetchall()]
     if "state_code" not in user_cols:

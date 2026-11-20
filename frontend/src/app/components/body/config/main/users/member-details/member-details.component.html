@@ -27,19 +27,52 @@
   </form>
 
   <section class="plan-section">
-    <h5>Aktive Pläne</h5>
-    <label class="plan-select">
-      <select
-        name="selectedPlan"
-        [value]="selectedPlanId ?? ''"
-        (change)="onPlanSelection($event)"
-        [disabled]="plansLoading">
-        <option value="">Kein Plan zugewiesen</option>
-        @for (plan of plans; track plan.id) {
-          <option [value]="plan.id">{{ plan.name }} ({{ formatPlanDays(plan.days) }})</option>
+    <div class="active-plans-heading">
+      <h5>Aktive Pläne</h5>
+      <button
+        type="button"
+        class="add-plan-button"
+        aria-label="Stundenplan hinzufügen"
+        title="Stundenplan hinzufügen"
+        [disabled]="plansLoading || availablePlans.length === 0"
+        [attr.aria-expanded]="planPickerOpen"
+        (click)="togglePlanPicker()">+</button>
+    </div>
+    @if (planPickerOpen) {
+      <label class="plan-select">
+        <span>Stundenplan auswählen</span>
+        <select
+          name="selectedPlan"
+          [value]="''"
+          (change)="onPlanSelection($event)"
+          [disabled]="plansLoading">
+          <option value="">Stundenplan auswählen …</option>
+          @for (plan of availablePlans; track plan.id) {
+            <option [value]="plan.id">{{ plan.name }} ({{ formatPlanDays(plan.days) }})</option>
+          }
+        </select>
+      </label>
+    }
+    @if (assignedPlans.length > 0) {
+      <ul class="assigned-plan-list">
+        @for (assignment of assignedPlans; track assignment.id) {
+          @if (plans.find((plan) => plan.id === assignment.plan_id); as plan) {
+            <li>
+              <button type="button" class="assigned-plan-name" (click)="selectAssignedPlan(plan.id)">
+                {{ plan.name }} <span>{{ formatPlanDays(plan.days) }}</span>
+              </button>
+              <button
+                type="button"
+                class="remove-plan-button"
+                [attr.aria-label]="plan.name + ' entfernen'"
+                title="Zuordnung aufheben"
+                [disabled]="assignmentLoading"
+                (click)="removePlanAssignment(assignment.id)">×</button>
+            </li>
+          }
         }
-      </select>
-    </label>
+      </ul>
+    }
     @if (plansLoading) {
       <p class="muted-message">Pläne werden geladen …</p>
     } @else if (plans.length === 0) {

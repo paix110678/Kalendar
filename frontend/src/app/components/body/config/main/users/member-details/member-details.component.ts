@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EMPTY, Subscription, TimeoutError, asyncScheduler, catchError, finalize, firstValueFrom, observeOn, switchMap, timeout } from 'rxjs';
-import { ApiService, GERMAN_STATES, PersonEventType, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../../../services/api.service';
+import { ApiService, GERMAN_STATES, PersonEventType, PlanAssignment, PlanConflict, PlanConflictResolution, PlanDefinition, PlanSubject } from '../../../../../../services/api.service';
 import { CalendarService, Category, User } from '../../../../../../services/calendar.service';
 import { ToastService } from '../../../../../../services/toast.service';
 import { ActionFooterComponent, AdminEditorActions } from '../../../action-footer/action-footer.component';
@@ -80,6 +80,8 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
   plansLoading = false;
   assignmentLoading = false;
   selectedPlanId: number | null = null;
+  assignedPlans: PlanAssignment[] = [];
+  planPickerOpen = false;
   assignmentTitle = '';
   scheduleEntries: ScheduleEntry[] = [];
   conflicts: ResolvableConflict[] = [];
@@ -105,6 +107,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
           if (!this.user || this.loadedUserId !== this.user.id) return;
           this.loadPersonEventTypes(this.user.id);
           this.loadPlans();
+          this.loadPlanAssignments(this.user.id);
         }),
       );
     }
@@ -145,12 +148,14 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     this.selectedPlanId = this.user.assigned_plan_id;
     this.personEventTypes = [];
     this.scheduleEntries = [];
+    this.assignedPlans = [];
     this.assignmentLoading = false;
     this.eventTypesLoading = false;
     this.profileSaving = false;
     this.eventTypeError = '';
     this.loadPersonEventTypes(this.user.id);
     this.loadPlans();
+    this.loadPlanAssignments(this.user.id);
     this.publishEditorActions();
   }
 
@@ -163,6 +168,94 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     return plan
       ? this.daysOfWeek.filter((day) => plan.days.includes(day))
       : [];
+  }
+
+  togglePlanPicker(): void {
+    this.planPickerOpen = !this.planPickerOpen;
+  }
+
+  selectAssignedPlan(planId: number): void {
+    this.selectedPlanId = planId;
+    const assignment = this.assignedPlans.find((item) => item.plan_id === planId);
+    if (assignment && assignment.id > 0) {
+      this.assignmentLoading = false;
+      this.assignmentTitle = assignment.title;
+      this.scheduleEntries = assignment.events.map((entry) => ({
+        day_of_week: entry.day_of_week,
+        period: entry.period,
+        event_type_id: entry.event_type_id,
+        visible: Boolean(entry.visible),
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        blockId: entry.id,
+      }));
+    } else {
+      this.selectPlan(planId);
+    }
+    this.publishEditorActions();
+  }
+
+  get availablePlans(): PlanDefinition[] {
+    const assignedIds = new Set(this.assignedPlans.map((assignment) => assignment.plan_id));
+    return this.plans.filter((plan) => !assignedIds.has(plan.id));
+  }
+
+  private loadPlanAssignments(userId: number): void {
+    if (!('getUserPlanAssignments' in this.apiService)) return;
+    this.apiService.getUserPlanAssignments(userId).pipe(timeout({ first: 15000 })).subscribe({
+      next: (assignments) => {
+        if (this.user.id !== userId) return;
+        this.assignedPlans = assignments;
+        this.changeDetector.markForCheck();
+      },
+      error: () => {
+        if (this.user.id !== userId) return;
+        this.assignedPlans = [];
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  removePlanAssignment(assignmentId: number): void {
+    const userId = this.user.id;
+    if (assignmentId < 0) {
+      const planId = -assignmentId;
+      this.assignedPlans = this.assignedPlans.filter((assignment) => assignment.id !== assignmentId);
+      if (this.selectedPlanId === planId) {
+        this.selectedPlanId = this.assignedPlans.find((assignment) => assignment.id > 0)?.plan_id ?? null;
+        this.scheduleEntries = [];
+        this.assignmentTitle = '';
+      }
+      this.planPickerOpen = false;
+      this.publishEditorActions();
+      this.changeDetector.markForCheck();
+      return;
+    }
+    if (!('deleteUserPlanAssignment' in this.apiService)) return;
+    this.assignmentLoading = true;
+    this.apiService.deleteUserPlanAssignment(userId, assignmentId).pipe(
+      timeout({ first: 15000 }),
+      catchError(() => {
+        this.planError = 'Die Plan-Zuordnung konnte nicht entfernt werden.';
+        this.toastService.show(false, this.planError);
+        return EMPTY;
+      }),
+      finalize(() => {
+        if (this.user.id === userId) {
+          this.assignmentLoading = false;
+          this.changeDetector.markForCheck();
+        }
+      }),
+    ).subscribe({
+      next: () => {
+        if (this.user.id !== userId) return;
+        this.assignedPlans = this.assignedPlans.filter((assignment) => assignment.id !== assignmentId);
+        this.loadPlanAssignments(userId);
+        this.calendarService.reloadUsers().subscribe();
+        this.publishEditorActions();
+        this.changeDetector.markForCheck();
+      },
+    });
   }
 
   formatPlanDays(days: string[]): string {
@@ -226,10 +319,20 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
     const value = (event.target as HTMLSelectElement).value;
     const planId = value ? Number(value) : null;
     this.selectedPlanId = planId;
+    this.planPickerOpen = false;
     if (planId !== null && planId === this.user.assigned_plan_id) {
       this.loadSavedPlanAssignment(this.user.id, planId);
     } else {
       this.selectPlan(planId);
+      if (planId !== null && !this.assignedPlans.some((assignment) => assignment.plan_id === planId)) {
+        this.assignedPlans = [...this.assignedPlans, {
+          id: -planId,
+          user_id: this.user.id,
+          plan_id: planId,
+          title: this.selectedPlan?.name ?? '',
+          events: [],
+        }];
+      }
     }
     this.publishEditorActions();
   }
@@ -398,6 +501,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
         this.loadPersonEventTypes(savedUser.id);
         this.selectedPlanId = savedUser.assigned_plan_id;
         this.loadPlans();
+        this.loadPlanAssignments(savedUser.id);
         this.publishEditorActions();
       },
       error: (error: unknown) => {
@@ -518,6 +622,7 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
         this.conflictDialogOpen = false;
         this.planMessage = `${result.created_blocks} Kalenderblöcke wurden gespeichert und „${this.assignmentTitle.trim()}“ zugeordnet (Zuordnungs-ID ${result.assignment_id}).`;
         this.loadSavedPlanAssignment(userId, plan.id);
+        this.loadPlanAssignments(userId);
         this.publishEditorActions();
       },
     });
