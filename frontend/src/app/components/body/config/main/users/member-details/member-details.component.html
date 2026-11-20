@@ -84,6 +84,9 @@
     @if (eventTypeError) {
       <p class="error-message" role="alert">{{ eventTypeError }}</p>
     }
+    @if (planError && !conflictDialogOpen) {
+      <p class="error-message" role="alert">{{ planError }}</p>
+    }
 
       <div class="conflict-backdrop" [hidden]="!conflictDialogOpen">
       <section class="conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="conflict-heading">

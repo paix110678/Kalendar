@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, PlanDefinition } from '../../../../../services/api.service';
 import { CalendarService } from '../../../../../services/calendar.service';
@@ -24,10 +25,18 @@ describe('PlansComponent', () => {
   const createPlan = vi.fn((plan: Omit<PlanDefinition, 'id'>) =>
     of({ id: savedPlan.id, ...plan }),
   );
+  const updatePlan = vi.fn((_id: number, plan: Omit<PlanDefinition, 'id'>) =>
+    of({ id: savedPlan.id, ...plan }),
+  );
+  const getPlans = vi.fn(() => of([savedPlan]));
+  const refreshAllBlocks = vi.fn(() => of([]));
   const toastShow = vi.fn();
 
   beforeEach(async () => {
     createPlan.mockClear();
+    updatePlan.mockClear();
+    getPlans.mockClear();
+    refreshAllBlocks.mockClear();
     toastShow.mockClear();
     await TestBed.configureTestingModule({
       imports: [PlansComponent],
@@ -36,10 +45,11 @@ describe('PlansComponent', () => {
           provide: ApiService,
           useValue: {
             createPlan,
-            getPlans: vi.fn(() => of([savedPlan])),
+            updatePlan,
+            getPlans,
           },
         },
-        { provide: CalendarService, useValue: {} },
+        { provide: CalendarService, useValue: { refreshAllBlocks } },
         { provide: ToastService, useValue: { show: toastShow } },
       ],
     }).compileComponents();
@@ -89,6 +99,90 @@ describe('PlansComponent', () => {
 
     expect(createPlan).not.toHaveBeenCalled();
     expect(toastShow).toHaveBeenCalledWith(false, 'Bitte mindestens einen Wochentag auswählen.');
+  });
+
+  it('saves incomplete task selections as empty slots and resizes them to the new hours', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.uniformActivities = false;
+    component.selectedDays = ['Montag'];
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '08:50', end_time: '09:35' },
+    ];
+    component.dayHours = {};
+    component.activitySubjects = { Montag: [11, 0, 13] };
+
+    component.savePlan();
+
+    expect(updatePlan).toHaveBeenCalledWith(
+      savedPlan.id,
+      expect.objectContaining({ activity_subjects: { Montag: [11, 0] } }),
+    );
+    expect(toastShow).not.toHaveBeenCalled();
+  });
+
+  it('saves all selected tasks when the plan has more time slots than before', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.uniformActivities = false;
+    component.selectedDays = ['Montag'];
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '08:50', end_time: '09:35' },
+    ];
+    component.dayHours = {};
+    component.activitySubjects = { Montag: [11, 12, 13] };
+
+    component.savePlan();
+
+    expect(updatePlan).toHaveBeenCalledWith(
+      savedPlan.id,
+      expect.objectContaining({ activity_subjects: { Montag: [11, 12] } }),
+    );
+    expect(toastShow).not.toHaveBeenCalled();
+  });
+
+  it('allows saving a uniform plan without a selected task', () => {
+    const component = fixture.componentInstance;
+    component.setupStep = false;
+    component.planName = 'Plan ohne Task';
+    component.tasks = [
+      { id: 11, title: 'Lesen', color: '#228be6', category_id: 8, category_label: 'Schule', member_ids: [] },
+    ];
+    component.uniformActivities = true;
+    component.uniformTaskId = null;
+
+    component.savePlan();
+
+    expect(createPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ uniform_task_id: null }),
+    );
+    expect(toastShow).not.toHaveBeenCalled();
+  });
+
+  it('keeps form changes when saving fails and the plan list refreshes', () => {
+    const component = fixture.componentInstance;
+    const draftName = 'Entwurf nach Erweiterung';
+    component.plansChanged.subscribe((plans) => {
+      fixture.componentRef.setInput('initialPlans', plans);
+      fixture.detectChanges();
+    });
+    component.editPlan(savedPlan);
+    component.planName = draftName;
+    component.selectedDays = ['Montag'];
+    updatePlan.mockImplementationOnce(() => throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: { detail: 'Ungültige Planzeiten.' },
+    })));
+
+    component.savePlan();
+
+    expect(component.planName).toBe(draftName);
+    expect(component.errorMessage).toBe('Ungültige Planzeiten.');
+    expect(component.saving).toBe(false);
   });
 
   it('uses the plan-learn library when filling activities individually', () => {

@@ -93,6 +93,40 @@ def test_plan_crud_persists_arbitrary_selected_days(tmp_path):
     assert updated["day_hours"]["Dienstag"] == [{"start_time": "09:00", "end_time": "09:45"}]
 
 
+def test_plan_update_saves_added_and_empty_task_slots(tmp_path):
+    database_path = tmp_path / "plan-task-slots.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        created = plans.create_plan(
+            plans.PlanPayload(
+                name="Task-Slots",
+                days=["Montag"],
+                hours_count=1,
+                hours=[{"start_time": "08:00", "end_time": "08:45"}],
+                uniform_activities=False,
+                activity_subjects={"Montag": [41]},
+            ),
+        )
+        updated = plans.update_plan(
+            created["id"],
+            plans.PlanPayload(
+                name="Task-Slots",
+                days=["Montag"],
+                hours_count=2,
+                hours=[
+                    {"start_time": "08:00", "end_time": "08:45"},
+                    {"start_time": "08:50", "end_time": "09:35"},
+                ],
+                uniform_activities=False,
+                activity_subjects={"Montag": [41, 0]},
+            ),
+        )
+
+    assert updated["hours_count"] == 2
+    assert updated["activity_subjects"] == {"Montag": [41, 0]}
+
+
 def test_get_user_plan_assignment_filters_by_plan_id(tmp_path):
     database_path = tmp_path / "multiple-plan-assignments.sqlite3"
     database.init_db(database_path)
@@ -214,6 +248,56 @@ def test_apply_plan_creates_blocks_only_on_selected_days(tmp_path):
         ("Montag", 1): ("07:00", "07:45"),
         ("Mittwoch", 1): ("09:00", "09:45"),
         ("Mittwoch", 2): ("10:00", "10:45"),
+    }
+
+
+def test_apply_plan_keeps_a_members_other_plan_assignment(tmp_path):
+    database_path = tmp_path / "multiple-applied-plans.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        conn = database.get_db_connection()
+        try:
+            user_id = conn.execute(
+                """
+                INSERT INTO users (name, role, current_points, status_school, status_sport, color_code)
+                VALUES ('Alex', 'child_10', 0, 'GREEN', 'BASE', '#228be6')
+                """
+            ).lastrowid
+            event_type_id = conn.execute(
+                """
+                INSERT INTO person_event_types (user_id, name, color)
+                VALUES (?, 'Mathematik', '#228be6')
+                """,
+                (user_id,),
+            ).lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        first_plan = plans.create_plan(_plan_payload(["Montag"]))
+        second_plan = plans.create_plan(_plan_payload(["Dienstag"]))
+        for plan, day in ((first_plan, "Montag"), (second_plan, "Dienstag")):
+            result = users.apply_plan(
+                user_id,
+                ApplyPlanPayload(
+                    plan_id=plan["id"],
+                    title=plan["name"],
+                    subjects=[{
+                        "day_of_week": day,
+                        "period": 1,
+                        "event_type_id": event_type_id,
+                        "visible": True,
+                    }],
+                ),
+            )
+            assert result["status"] == "success"
+
+        assignments = users.get_user_plan_assignments(user_id, actor=None)
+
+    assert {assignment["plan_id"] for assignment in assignments} == {
+        first_plan["id"],
+        second_plan["id"],
     }
 
 

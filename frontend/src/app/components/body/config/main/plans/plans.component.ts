@@ -71,12 +71,15 @@ export class PlansComponent implements OnChanges {
   errorMessage = '';
   successMessage = '';
   private savedFormSnapshot = '';
+  private preserveFormOnNextPlanListChange = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['initialPlans']) {
       this.plans = this.initialPlans;
       this.loading = false;
-      if (this.selectedPlanId !== null) {
+      if (this.preserveFormOnNextPlanListChange) {
+        this.preserveFormOnNextPlanListChange = false;
+      } else if (this.selectedPlanId !== null) {
         const selected = this.plans.find((plan) => plan.id === this.selectedPlanId);
         if (selected) this.editPlan(selected);
       } else {
@@ -91,7 +94,7 @@ export class PlansComponent implements OnChanges {
     }
   }
 
-  loadPlans(preserveError = false): void {
+  loadPlans(preserveError = false, preserveForm = false): void {
     this.loading = true;
     if (!preserveError) {
       this.errorMessage = '';
@@ -100,8 +103,9 @@ export class PlansComponent implements OnChanges {
       next: (plans) => {
         this.plans = plans;
         this.loading = false;
+        if (preserveForm) this.preserveFormOnNextPlanListChange = true;
         this.plansChanged.emit(plans);
-        if (this.pendingPlanId !== null) {
+        if (!preserveForm && this.pendingPlanId !== null) {
           const selectedPlan = plans.find((plan) => plan.id === this.pendingPlanId);
           this.pendingPlanId = null;
           if (selectedPlan) {
@@ -235,19 +239,6 @@ export class PlansComponent implements OnChanges {
       this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
       return;
     }
-    if ((this.tasks.length > 0 || this.categories.length > 0)
-      && this.uniformActivities && this.uniformTaskId === null) {
-      this.toastService.show(false, 'Bitte für die einheitlichen Aktivitäten einen Task auswählen.');
-      return;
-    }
-    if ((this.tasks.length > 0 || this.categories.length > 0)
-      && !this.uniformActivities && this.selectedDays.some((day) =>
-      (this.activitySubjects[day]?.length ?? 0) !== this.getDayHours(day).length
-      || this.activitySubjects[day]?.some((taskId) => taskId === null || taskId === 0)
-    )) {
-      this.toastService.show(false, 'Bitte für jede Einheit einen Task auswählen.');
-      return;
-    }
     if (this.selectedDays.length === 0) {
       this.toastService.show(false, 'Bitte mindestens einen Wochentag auswählen.');
       return;
@@ -269,6 +260,17 @@ export class PlansComponent implements OnChanges {
     }
 
     const days = this.daysOfWeek.filter((day) => this.selectedDays.includes(day));
+    const activitySubjects = this.uniformActivities
+      ? {}
+      : Object.fromEntries(days.map((day) => [
+        day,
+        Array.from({ length: this.getDayHours(day).length }, (_, index) => {
+          const taskId = this.activitySubjects[day]?.[index];
+          return typeof taskId === 'number' && Number.isInteger(taskId) && taskId > 0
+            ? taskId
+            : 0;
+        }),
+      ]));
     const payload = {
       name: this.planName.trim(),
       days,
@@ -278,7 +280,7 @@ export class PlansComponent implements OnChanges {
       uniform_count: this.uniformCount,
       uniform_activities: this.uniformActivities,
       uniform_task_id: this.uniformTaskId,
-      activity_subjects: this.activitySubjects,
+      activity_subjects: activitySubjects,
       day_hours: this.uniformTime && this.uniformCount
         ? {}
         : Object.fromEntries(days.map((day) => [day, this.getDayHours(day)])),
@@ -333,7 +335,8 @@ export class PlansComponent implements OnChanges {
       error: (error: unknown) => {
         this.saving = false;
         this.errorMessage = this.getSaveErrorMessage(error);
-        this.loadPlans(true);
+        this.loadPlans(true, true);
+        this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
     });
@@ -607,7 +610,7 @@ export class PlansComponent implements OnChanges {
       if (typeof detail === 'string') return detail;
       if (detail && typeof detail.message === 'string') return detail.message;
     }
-    return 'Speichern fehlgeschlagen oder die Antwort blieb aus. Die Planliste wird zur Kontrolle aktualisiert.';
+    return 'Speichern fehlgeschlagen oder die Antwort blieb aus. Deine Änderungen bleiben im Formular.';
   }
 
 }

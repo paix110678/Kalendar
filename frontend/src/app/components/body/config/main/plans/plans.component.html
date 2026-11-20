@@ -9,6 +9,12 @@
       }
     </div>
   </header>
+  @if (errorMessage) {
+    <p class="plan-save-message plan-save-error" role="alert">{{ errorMessage }}</p>
+  }
+  @if (successMessage) {
+    <p class="plan-save-message plan-save-success" role="status">{{ successMessage }}</p>
+  }
 
   <form class="plan-form" (ngSubmit)="$event.preventDefault(); onFormSubmit()">
     @if (setupStep && editingPlanId === null) {

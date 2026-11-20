@@ -45,6 +45,19 @@
   font-size: 13px;
 }
 
+.plan-save-message {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.plan-save-error {
+  color: #c92a2a;
+}
+
+.plan-save-success {
+  color: #2b8a3e;
+}
+
 .plan-form {
   padding: 0;
 }

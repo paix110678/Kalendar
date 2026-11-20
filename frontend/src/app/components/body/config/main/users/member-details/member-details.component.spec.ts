@@ -140,6 +140,23 @@ describe('MemberDetailsComponent', () => {
     await vi.waitFor(() => expect(getUserPlanAssignment).toHaveBeenCalledWith(user.id, plan.id));
   });
 
+  it('displays plan application errors outside the conflict manager', async () => {
+    const component = fixture.componentInstance;
+    component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];
+    component.selectPlan(plan.id);
+    applyPlan.mockImplementationOnce(() => throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: { detail: 'Der Plan kann nicht übernommen werden.' },
+    })));
+
+    component.applyPlan();
+
+    await vi.waitFor(() => expect(component.planError).toBe('Der Plan kann nicht übernommen werden.'));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent)
+      .toContain('Der Plan kann nicht übernommen werden.');
+  });
+
   it('applies one selected task to every time slot for uniform activities', () => {
     const component = fixture.componentInstance;
     component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];
