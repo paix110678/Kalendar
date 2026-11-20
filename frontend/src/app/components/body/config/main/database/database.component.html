@@ -73,17 +73,67 @@
 
   <div *ngIf="selectedTableName" class="live-table-data-box">
     <h4 class="database-table-heading">Tabelle: <span>{{ selectedTableName }}</span></h4>
+    <p *ngIf="tableError" class="database-row-error" role="alert">{{ tableError }}</p>
     <div class="table-scroll-frame">
       <table class="generative-sql-table">
         <thead>
-          <tr><th *ngFor="let col of currentTableColumns">{{ col }}</th></tr>
+          <tr>
+            <th *ngFor="let col of currentTableColumns">{{ col }}</th>
+            <th class="row-actions-heading">Aktionen</th>
+          </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of currentTableRows">
-            <td *ngFor="let col of currentTableColumns">{{ row[col] !== null ? row[col] : 'NULL' }}</td>
+          <tr *ngFor="let row of currentTableRows; let i = index">
+            <td *ngFor="let col of currentTableColumns">
+              <ng-container *ngIf="editingRowIndex === i; else readOnlyCell">
+                <input
+                  class="row-edit-input"
+                  [type]="isNumericCell(row[col]) ? 'number' : 'text'"
+                  [ngModel]="editRowValues[col]"
+                  (ngModelChange)="editRowValues[col] = $event"
+                  [ngModelOptions]="{ standalone: true }"
+                  [attr.aria-label]="col + ' ändern'">
+              </ng-container>
+              <ng-template #readOnlyCell>{{ row[col] !== null ? row[col] : 'NULL' }}</ng-template>
+            </td>
+            <td class="row-actions">
+              <ng-container *ngIf="editingRowIndex === i; else rowEditAction">
+                <button
+                  type="button"
+                  class="backup-button"
+                  [disabled]="rowSaving || deletingRowIndex !== null"
+                  (click)="saveRow(i, row)">
+                  {{ rowSaving ? 'Speichert …' : 'Speichern' }}
+                </button>
+                <button
+                  type="button"
+                  class="backup-button"
+                  [disabled]="rowSaving"
+                  (click)="cancelRowEdit()">Abbrechen</button>
+              </ng-container>
+              <ng-template #rowEditAction>
+                <button
+                  type="button"
+                  class="backup-button"
+                  [disabled]="rowSaving || deletingRowIndex !== null"
+                  [attr.aria-label]="'Zeile ' + (i + 1) + ' bearbeiten'"
+                  (click)="beginRowEdit(i, row)">Ändern</button>
+                <button
+                  type="button"
+                  class="backup-button row-delete-button"
+                  [disabled]="rowSaving || deletingRowIndex !== null"
+                  [attr.aria-label]="'Zeile ' + (i + 1) + ' löschen'"
+                  (click)="deleteRow(i, row)">
+                  {{ deletingRowIndex === i ? 'Löscht …' : 'Löschen' }}
+                </button>
+              </ng-template>
+            </td>
           </tr>
-          <tr *ngIf="currentTableRows.length === 0">
-            <td class="database-empty-cell" [attr.colspan]="currentTableColumns.length">Keine Datensätze vorhanden.</td>
+          <tr *ngIf="tableLoading">
+            <td class="database-empty-cell" [attr.colspan]="currentTableColumns.length + 1">Tabellenzeilen werden geladen …</td>
+          </tr>
+          <tr *ngIf="!tableLoading && currentTableRows.length === 0">
+            <td class="database-empty-cell" [attr.colspan]="currentTableColumns.length + 1">Keine Datensätze vorhanden.</td>
           </tr>
         </tbody>
       </table>

@@ -123,6 +123,36 @@
   white-space: nowrap;
 }
 
+.generative-sql-table .row-actions {
+  white-space: nowrap;
+
+  background: var(--config-background, #fff);
+}
+
+.row-actions .backup-button + .backup-button {
+  margin-left: 5px;
+}
+
+.row-edit-input {
+  width: 100%;
+  min-width: 90px;
+  padding: 5px 7px;
+  border: 1px solid #adb5bd;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.row-delete-button {
+  border-color: #e03131;
+  color: #c92a2a;
+}
+
+.database-row-error {
+  margin: 0 0 10px;
+  color: #c92a2a;
+  font-size: 13px;
+}
+
 .database-empty-cell {
   padding: 25px !important;
 

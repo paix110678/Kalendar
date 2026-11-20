@@ -1,13 +1,15 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApiService, DatabaseBackup, DatabaseBackupList } from '../../../../../services/api.service';
+import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiService, DatabaseBackup, DatabaseBackupList, DatabaseTableData } from '../../../../../services/api.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { AdminEditorActions } from '../../action-footer/action-footer.component';
 
 @Component({
   selector: 'app-database',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   // KORREKTUR: Template- und Stylesheet-Pfade präzise auf die eigene Komponente umgestellt!
   templateUrl: './database.component.html',
   styleUrl: './database.component.css',
@@ -26,7 +28,15 @@ export class DatabaseComponent implements OnInit, OnChanges {
 
   public selectedTableName: string | null = null;
   public currentTableColumns: string[] = [];
-  public currentTableRows: any[] = [];
+  public currentTableRows: Array<Record<string, unknown>> = [];
+  public currentTablePrimaryKey: string[] = [];
+  public currentTableRowidColumn: string | null = null;
+  public editingRowIndex: number | null = null;
+  public editRowValues: Record<string, unknown> = {};
+  public tableLoading = false;
+  public rowSaving = false;
+  public deletingRowIndex: number | null = null;
+  public tableError = '';
   public backups: DatabaseBackup[] = [];
   public backupErrors: Array<{ file: string; error: string }> = [];
   public backupsLoading = false;
@@ -270,10 +280,112 @@ export class DatabaseComponent implements OnInit, OnChanges {
 
   public openTableContent(tableName: string): void {
     this.selectedTableName = tableName;
-    this.apiService.getTableData(tableName).subscribe((res: { columns: string[], rows: any[] }) => {
-      this.currentTableColumns = res.columns;
-      this.currentTableRows = res.rows;
-      this.cdr.detectChanges(); // Garantiert die verzögerungsfreie Live-Anzeige beim ersten Klick
+    this.editingRowIndex = null;
+    this.loadTableData();
+  }
+
+  public beginRowEdit(index: number, row: Record<string, unknown>): void {
+    this.editingRowIndex = index;
+    this.editRowValues = Object.fromEntries(
+      this.currentTableColumns.map((column) => [column, row[column]]),
+    );
+    this.tableError = '';
+  }
+
+  public cancelRowEdit(): void {
+    this.editingRowIndex = null;
+    this.editRowValues = {};
+    this.tableError = '';
+  }
+
+  public isNumericCell(value: unknown): boolean {
+    return typeof value === 'number';
+  }
+
+  public saveRow(index: number, row: Record<string, unknown>): void {
+    const tableName = this.selectedTableName;
+    if (!tableName || this.editingRowIndex !== index || this.rowSaving) return;
+    this.rowSaving = true;
+    this.tableError = '';
+    this.apiService.updateTableRow(
+      tableName,
+      this.rowKey(row),
+      this.editRowValues,
+    ).subscribe({
+      next: () => {
+        this.rowSaving = false;
+        this.editingRowIndex = null;
+        this.editRowValues = {};
+        this.toastService.show(true, 'Zeile gespeichert.');
+        this.loadTableData();
+      },
+      error: (error: unknown) => {
+        console.error(`Zeile in Tabelle ${tableName} konnte nicht gespeichert werden:`, error);
+        this.rowSaving = false;
+        this.tableError = this.errorMessage(error, 'Die Zeile konnte nicht gespeichert werden.');
+        this.cdr.markForCheck();
+      },
     });
+  }
+
+  public deleteRow(index: number, row: Record<string, unknown>): void {
+    const tableName = this.selectedTableName;
+    if (!tableName || this.deletingRowIndex !== null) return;
+    if (!confirm('Diese Tabellenzeile wirklich löschen?')) return;
+    this.deletingRowIndex = index;
+    this.tableError = '';
+    this.apiService.deleteTableRow(tableName, this.rowKey(row)).subscribe({
+      next: () => {
+        this.deletingRowIndex = null;
+        if (this.editingRowIndex === index) this.cancelRowEdit();
+        this.toastService.show(true, 'Zeile gelöscht.');
+        this.loadTableData();
+      },
+      error: (error: unknown) => {
+        console.error(`Zeile in Tabelle ${tableName} konnte nicht gelöscht werden:`, error);
+        this.deletingRowIndex = null;
+        this.tableError = this.errorMessage(error, 'Die Zeile konnte nicht gelöscht werden.');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private loadTableData(): void {
+    const tableName = this.selectedTableName;
+    if (!tableName) return;
+    this.tableLoading = true;
+    this.tableError = '';
+    this.apiService.getTableData(tableName).subscribe({
+      next: (result: DatabaseTableData) => {
+        if (this.selectedTableName !== tableName) return;
+        this.currentTableColumns = result.columns;
+        this.currentTableRows = result.rows;
+        this.currentTablePrimaryKey = result.primary_key;
+        this.currentTableRowidColumn = result.rowid_column;
+        this.tableLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: (error: unknown) => {
+        if (this.selectedTableName !== tableName) return;
+        console.error(`Tabelle ${tableName} konnte nicht geladen werden:`, error);
+        this.tableLoading = false;
+        this.tableError = this.errorMessage(error, 'Tabellenzeilen konnten nicht geladen werden.');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private rowKey(row: Record<string, unknown>): Record<string, unknown> {
+    const keyColumns = this.currentTablePrimaryKey.length > 0
+      ? this.currentTablePrimaryKey
+      : this.currentTableRowidColumn ? [this.currentTableRowidColumn] : [];
+    return Object.fromEntries(keyColumns.map((column) => [column, row[column]]));
+  }
+
+  private errorMessage(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse && typeof error.error?.detail === 'string') {
+      return error.error.detail;
+    }
+    return fallback;
   }
 }

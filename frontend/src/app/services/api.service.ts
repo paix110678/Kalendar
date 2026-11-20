@@ -149,6 +149,13 @@ export interface DatabaseBackupList {
   errors: Array<{ file: string; error: string }>;
 }
 
+export interface DatabaseTableData {
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+  primary_key: string[];
+  rowid_column: string | null;
+}
+
 export interface DatabaseRestoreResult {
   restored_backup_id: string;
   recovery_backup_id: string;
@@ -274,7 +281,26 @@ export class ApiService {
 
   // NEU: Datenbank-Katalog-Abfragen
   getDatabaseTables(): Observable<string[]> { return this.http.get<string[]>(`${this.apiBase}/blocks/db/tables`); }
-  getTableData(tableName: string): Observable<{columns: string[], rows: any[]}> { return this.http.get<any>(`${this.apiBase}/blocks/db/tables/${tableName}`); }
+  getTableData(tableName: string): Observable<DatabaseTableData> {
+    return this.http.get<DatabaseTableData>(`${this.apiBase}/blocks/db/tables/${encodeURIComponent(tableName)}`);
+  }
+  updateTableRow(
+    tableName: string,
+    rowKey: Record<string, unknown>,
+    values: Record<string, unknown>,
+  ): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiBase}/blocks/db/tables/${encodeURIComponent(tableName)}/rows`,
+      { row_key: rowKey, values },
+    );
+  }
+  deleteTableRow(tableName: string, rowKey: Record<string, unknown>): Observable<void> {
+    return this.http.request<void>(
+      'DELETE',
+      `${this.apiBase}/blocks/db/tables/${encodeURIComponent(tableName)}/rows`,
+      { body: { row_key: rowKey } },
+    );
+  }
   getDatabaseBackups(): Observable<DatabaseBackupList> {
     return this.http.get<DatabaseBackupList>(`${this.apiBase}/backups`);
   }

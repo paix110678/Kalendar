@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Any, Optional
 import sqlite3
 import database
 from security import (
@@ -35,6 +35,15 @@ class TimeBlockOwnerUpdate(BaseModel):
 
 class PlanBlockVisibilityUpdate(BaseModel):
     visible: bool
+
+
+class DatabaseRowUpdate(BaseModel):
+    row_key: dict[str, Any]
+    values: dict[str, Any]
+
+
+class DatabaseRowDelete(BaseModel):
+    row_key: dict[str, Any]
 
 class CategoryUpdate(BaseModel):
     label: str
@@ -366,13 +375,171 @@ def get_db_tables():
 @router.get("/db/tables/{table_name}", dependencies=[Depends(require_roles("admin"))])
 def get_db_table_data(table_name: str):
     conn = database.get_db_connection()
-    valid_tables = [t["name"] for t in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
-    if table_name not in valid_tables:
+    try:
+        columns_info = _get_inspector_columns(conn, table_name)
+        columns = [column["name"] for column in columns_info]
+        primary_key = [
+            column["name"]
+            for column in sorted(columns_info, key=lambda item: item["pk"])
+            if column["pk"]
+        ]
+        rowid_column = None
+        if primary_key:
+            rows = conn.execute(f"SELECT * FROM {_quote_identifier(table_name)}").fetchall()
+        else:
+            rowid_source = next(
+                (name for name in ("rowid", "_rowid_", "oid") if name not in columns),
+                None,
+            )
+            if rowid_source is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Diese Tabelle hat keinen unterstützten Zeilenschlüssel.",
+                )
+            rowid_column = "__db_inspector_rowid__"
+            while rowid_column in columns:
+                rowid_column += "_"
+            rows = conn.execute(
+                f"SELECT {_quote_identifier(rowid_source)} AS {_quote_identifier(rowid_column)}, * "
+                f"FROM {_quote_identifier(table_name)}"
+            ).fetchall()
+        return {
+            "columns": columns,
+            "rows": [dict(row) for row in rows],
+            "primary_key": primary_key,
+            "rowid_column": rowid_column,
+        }
+    finally:
         conn.close()
-        raise HTTPException(status_code=400, detail="Ungueltiger Tabellenname")
-    
-    columns_info = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
-    columns = [c["name"] for c in columns_info]
-    rows = conn.execute(f"SELECT * FROM {table_name}").fetchall()
-    conn.close()
-    return {"columns": columns, "rows": [dict(r) for r in rows]}
+
+
+@router.put(
+    "/db/tables/{table_name}/rows",
+    dependencies=[Depends(require_roles("admin"))],
+)
+def update_db_table_row(table_name: str, payload: DatabaseRowUpdate):
+    conn = database.get_db_connection()
+    try:
+        columns_info = _get_inspector_columns(conn, table_name)
+        columns = [column["name"] for column in columns_info]
+        key_columns = [
+            column["name"]
+            for column in sorted(columns_info, key=lambda item: item["pk"])
+            if column["pk"]
+        ]
+        rowid_column = None if key_columns else _get_rowid_key_column(columns)
+        where_sql, key_values = _build_inspector_row_key(
+            payload.row_key,
+            key_columns,
+            rowid_column,
+            columns,
+        )
+        if not payload.values:
+            raise HTTPException(status_code=422, detail="Bitte mindestens eine Spalte ändern.")
+        unknown_columns = set(payload.values) - set(columns)
+        if unknown_columns:
+            raise HTTPException(status_code=422, detail="Die Änderung enthält unbekannte Spalten.")
+        set_sql = ", ".join(f"{_quote_identifier(name)} = ?" for name in payload.values)
+        try:
+            cursor = conn.execute(
+                f"UPDATE {_quote_identifier(table_name)} SET {set_sql} WHERE {where_sql}",
+                [*payload.values.values(), *key_values],
+            )
+            if cursor.rowcount != 1:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Die ausgewählte Zeile wurde nicht gefunden.")
+            conn.commit()
+        except sqlite3.IntegrityError as error:
+            conn.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Die Änderung verletzt eine Datenbankbedingung.",
+            ) from error
+        return {"status": "success"}
+    finally:
+        conn.close()
+
+
+@router.delete(
+    "/db/tables/{table_name}/rows",
+    dependencies=[Depends(require_roles("admin"))],
+)
+def delete_db_table_row(table_name: str, payload: DatabaseRowDelete):
+    conn = database.get_db_connection()
+    try:
+        columns_info = _get_inspector_columns(conn, table_name)
+        columns = [column["name"] for column in columns_info]
+        key_columns = [
+            column["name"]
+            for column in sorted(columns_info, key=lambda item: item["pk"])
+            if column["pk"]
+        ]
+        rowid_column = None if key_columns else _get_rowid_key_column(columns)
+        where_sql, key_values = _build_inspector_row_key(
+            payload.row_key,
+            key_columns,
+            rowid_column,
+            columns,
+        )
+        try:
+            cursor = conn.execute(
+                f"DELETE FROM {_quote_identifier(table_name)} WHERE {where_sql}",
+                key_values,
+            )
+            if cursor.rowcount != 1:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Die ausgewählte Zeile wurde nicht gefunden.")
+            conn.commit()
+        except sqlite3.IntegrityError as error:
+            conn.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Die Zeile kann wegen verknüpfter Daten nicht gelöscht werden.",
+            ) from error
+        return {"status": "success"}
+    finally:
+        conn.close()
+
+
+def _get_inspector_columns(conn, table_name: str):
+    valid_table = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? AND name NOT LIKE 'sqlite_%'",
+        (table_name,),
+    ).fetchone()
+    if valid_table is None:
+        raise HTTPException(status_code=400, detail="Ungültiger Tabellenname.")
+    return conn.execute(f"PRAGMA table_info({_quote_identifier(table_name)})").fetchall()
+
+
+def _get_rowid_key_column(columns: list[str]) -> str:
+    if not any(name not in columns for name in ("rowid", "_rowid_", "oid")):
+        raise HTTPException(
+            status_code=400,
+            detail="Diese Tabelle hat keinen unterstützten Zeilenschlüssel.",
+        )
+    rowid_column = "__db_inspector_rowid__"
+    while rowid_column in columns:
+        rowid_column += "_"
+    return rowid_column
+
+
+def _build_inspector_row_key(
+    row_key: dict[str, Any],
+    primary_key: list[str],
+    rowid_column: str | None,
+    columns: list[str],
+) -> tuple[str, list[Any]]:
+    expected_keys = primary_key or [rowid_column]
+    if set(row_key) != set(expected_keys) or any(value is None for value in row_key.values()):
+        raise HTTPException(status_code=422, detail="Der Zeilenschlüssel ist ungültig.")
+    if primary_key:
+        where_parts = [f"{_quote_identifier(name)} = ?" for name in primary_key]
+        return " AND ".join(where_parts), [row_key[name] for name in primary_key]
+    rowid_source = next(
+        name for name in ("rowid", "_rowid_", "oid") if name not in columns
+    )
+    return f"{_quote_identifier(rowid_source)} = ?", [row_key[rowid_column]]
+
+
+def _quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
