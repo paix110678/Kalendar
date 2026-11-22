@@ -58,6 +58,10 @@
   color: #2b8a3e;
 }
 
+.plan-save-warning {
+  color: #9c6500;
+}
+
 .plan-form {
   padding: 0;
 }

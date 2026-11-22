@@ -15,6 +15,9 @@
   @if (successMessage) {
     <p class="plan-save-message plan-save-success" role="status">{{ successMessage }}</p>
   }
+  @if (warningMessage) {
+    <p class="plan-save-message plan-save-warning" role="status">{{ warningMessage }}</p>
+  }
 
   <form class="plan-form" (ngSubmit)="$event.preventDefault(); onFormSubmit()">
     @if (setupStep && editingPlanId === null) {

@@ -70,6 +70,7 @@ export class PlansComponent implements OnChanges {
   saving = false;
   errorMessage = '';
   successMessage = '';
+  warningMessage = '';
   private savedFormSnapshot = '';
   private preserveFormOnNextPlanListChange = false;
 
@@ -234,6 +235,7 @@ export class PlansComponent implements OnChanges {
   savePlan(): void {
     this.errorMessage = '';
     this.successMessage = '';
+    this.warningMessage = '';
 
     if (!this.planName.trim()) {
       this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
@@ -313,14 +315,6 @@ export class PlansComponent implements OnChanges {
     ).subscribe({
       next: ({ savedPlan, calendarRefreshed }) => {
         this.saving = false;
-        this.successMessage = !updatingPlan
-          ? 'Plan wurde gespeichert.'
-          : calendarRefreshed
-            ? 'Plan und zugehörige wiederkehrende Termine wurden aktualisiert.'
-            : 'Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.';
-        if (!calendarRefreshed) {
-          this.toastService.show(false, 'Plan wurde gespeichert, aber der Kalender konnte nicht aktualisiert werden. Bitte aktualisieren.');
-        }
         this.plans = [
           ...this.plans.filter((plan) => plan.id !== savedPlan.id),
           savedPlan,
@@ -328,13 +322,22 @@ export class PlansComponent implements OnChanges {
         this.plansChanged.emit(this.plans);
         if (updatingPlan) this.editPlan(savedPlan);
         else this.resetForm();
-        this.loadPlans();
+        this.successMessage = !updatingPlan
+          ? 'Plan wurde gespeichert.'
+          : calendarRefreshed
+            ? 'Plan und zugehörige wiederkehrende Termine wurden aktualisiert.'
+            : '';
+        this.warningMessage = updatingPlan && !calendarRefreshed
+          ? 'Plan wurde gespeichert. Der Kalender konnte nicht aktualisiert werden; bitte lade die Ansicht neu.'
+          : '';
+        this.loadPlans(false, true);
         this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
       error: (error: unknown) => {
         this.saving = false;
         this.errorMessage = this.getSaveErrorMessage(error);
+        this.warningMessage = '';
         this.loadPlans(true, true);
         this.publishEditorActions();
         this.changeDetector.markForCheck();
@@ -366,6 +369,7 @@ export class PlansComponent implements OnChanges {
     this.excludePublicHolidays = plan.exclude_public_holidays;
     this.successMessage = '';
     this.errorMessage = '';
+    this.warningMessage = '';
     this.savedFormSnapshot = this.formSnapshot();
     this.publishEditorActions();
   }
@@ -446,6 +450,9 @@ export class PlansComponent implements OnChanges {
     this.setupViewChange.emit(false);
     this.excludeSchoolHolidays = false;
     this.excludePublicHolidays = false;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.warningMessage = '';
     this.savedFormSnapshot = this.formSnapshot();
     this.publishEditorActions();
   }

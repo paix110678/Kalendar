@@ -185,6 +185,32 @@ describe('PlansComponent', () => {
     expect(component.saving).toBe(false);
   });
 
+  it('keeps successful save feedback when refreshing the calendar fails', () => {
+    const component = fixture.componentInstance;
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    updatePlan.mockImplementationOnce((_id, plan) => of({ id: savedPlan.id, ...plan }));
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '08:50', end_time: '09:35' },
+    ];
+    component.dayHours = {};
+    refreshAllBlocks.mockImplementationOnce(() => throwError(() => new Error('Refresh failed.')));
+
+    component.savePlan();
+    fixture.detectChanges();
+    consoleError.mockRestore();
+
+    expect(component.errorMessage).toBe('');
+    expect(component.successMessage).toBe('');
+    expect(component.warningMessage).toContain('Plan wurde gespeichert.');
+    expect(toastShow).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')?.textContent)
+      .toContain('Der Kalender konnte nicht aktualisiert werden');
+  });
+
   it('uses the plan-learn library when filling activities individually', () => {
     const component = fixture.componentInstance;
     component.setupStep = false;
