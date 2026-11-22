@@ -3,6 +3,7 @@ import database
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from security import require_roles
+from routers.users import ensure_task_event_type
 
 router = APIRouter(
     prefix="/api/plans",
@@ -205,12 +206,13 @@ def create_plan(payload: PlanPayload):
 def update_plan(plan_id: int, payload: PlanPayload):
     conn = database.get_db_connection()
     try:
+        conn.execute("BEGIN IMMEDIATE")
         scheduled_days = ordered_days(payload.days)
         current_plan = conn.execute("SELECT id FROM plans WHERE id = ?", (plan_id,)).fetchone()
         if current_plan is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan nicht gefunden.")
 
-        scheduled_slots = [
+        all_scheduled_slots = [
             {
                 "day_of_week": day,
                 "period": period,
@@ -224,6 +226,17 @@ def update_plan(plan_id: int, payload: PlanPayload):
                 else payload.day_hours[day],
                 start=1,
             )
+        ]
+
+        def task_id_for_slot(day: str, period: int) -> int:
+            if payload.uniform_activities:
+                return payload.uniform_task_id or 0
+            task_ids = payload.activity_subjects.get(day, [])
+            return task_ids[period - 1] if len(task_ids) >= period else 0
+
+        scheduled_slots = [
+            slot for slot in all_scheduled_slots
+            if task_id_for_slot(slot["day_of_week"], slot["period"]) > 0
         ]
 
         assignments = conn.execute(
@@ -319,7 +332,7 @@ def update_plan(plan_id: int, payload: PlanPayload):
             ),
         )
 
-        scheduled_keys = {(slot["day_of_week"], slot["period"]) for slot in scheduled_slots}
+        scheduled_keys = {(slot["day_of_week"], slot["period"]) for slot in all_scheduled_slots}
         for assignment in assignments:
             assignment_id = assignment["id"]
             existing_blocks = existing_by_assignment[assignment_id]
@@ -327,29 +340,34 @@ def update_plan(plan_id: int, payload: PlanPayload):
                 if key not in scheduled_keys:
                     conn.execute("DELETE FROM time_blocks WHERE id = ?", (block["id"],))
 
-            for slot in scheduled_slots:
+            for slot in all_scheduled_slots:
                 key = (slot["day_of_week"], slot["period"])
                 existing = existing_blocks.get(key)
+                task_id = task_id_for_slot(slot["day_of_week"], slot["period"])
+                if task_id <= 0:
+                    if existing:
+                        conn.execute("DELETE FROM time_blocks WHERE id = ?", (existing["id"],))
+                    continue
+                event_type = ensure_task_event_type(conn, assignment["user_id"], task_id)
                 if existing:
                     conn.execute(
                         """
                         UPDATE time_blocks
-                        SET start_time = ?, end_time = ?
+                        SET start_time = ?, end_time = ?, title = ?, short_title = ?,
+                            color = ?, person_event_type_id = ?
                         WHERE id = ?
                         """,
-                        (slot["start_time"], slot["end_time"], existing["id"]),
+                        (
+                            slot["start_time"],
+                            slot["end_time"],
+                            event_type["name"],
+                            event_type["name"][:6],
+                            event_type["color"],
+                            event_type["id"],
+                            existing["id"],
+                        ),
                     )
                 else:
-                    event_type = conn.execute(
-                        """
-                        SELECT id, name, color FROM person_event_types
-                        WHERE user_id = ? ORDER BY id LIMIT 1
-                        """,
-                        (assignment["user_id"],),
-                    ).fetchone()
-                    title = event_type["name"] if event_type else f'Fach {slot["period"]}'
-                    color = event_type["color"] if event_type else "#fd7e14"
-                    event_type_id = event_type["id"] if event_type else None
                     conn.execute(
                         """
                         INSERT INTO time_blocks
@@ -365,15 +383,18 @@ def update_plan(plan_id: int, payload: PlanPayload):
                             slot["day_of_week"],
                             slot["start_time"],
                             slot["end_time"],
-                            color,
+                            event_type["color"],
                             assignment_id,
                             slot["period"],
-                            event_type_id,
+                            event_type["id"],
                         ),
                     )
 
         conn.commit()
         return get_plan_or_404(conn, plan_id)
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

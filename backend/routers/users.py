@@ -650,22 +650,15 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
                 if not activity_subjects:
                     continue
                 task_ids = activity_subjects.get(day, []) if isinstance(activity_subjects, dict) else []
-                if len(task_ids) != len(day_hours):
-                    raise HTTPException(status_code=422, detail="Für jede Einheit des Plans muss ein Task ausgewählt sein.")
-                for period, task_id in enumerate(task_ids, start=1):
-                    event_type = conn.execute(
-                        """
-                        SELECT person_event_types.id, person_event_types.name, person_event_types.color
-                        FROM task_event_type_migrations
-                        JOIN person_event_types
-                          ON person_event_types.id = task_event_type_migrations.event_type_id
-                        WHERE task_event_type_migrations.task_id = ?
-                          AND person_event_types.user_id = ?
-                        """,
-                        (task_id, user_id),
-                    ).fetchone()
-                    if event_type is None:
-                        raise HTTPException(status_code=422, detail="Ein ausgewählter Task ist für dieses Mitglied nicht verfügbar.")
+                if not isinstance(task_ids, list) or len(task_ids) > len(day_hours):
+                    raise HTTPException(status_code=422, detail="Der Plan enthält eine ungültige Task-Zuordnung.")
+                for period in range(1, len(day_hours) + 1):
+                    task_id = task_ids[period - 1] if period <= len(task_ids) else 0
+                    if task_id is None or task_id == 0:
+                        continue
+                    if not isinstance(task_id, int) or task_id < 0:
+                        raise HTTPException(status_code=422, detail="Der Plan enthält eine ungültige Task-Zuordnung.")
+                    event_type = ensure_task_event_type(conn, user_id, task_id)
                     subjects_by_slot[(day, period)] = {
                         "event_type_id": event_type["id"],
                         "title": event_type["name"],
@@ -678,12 +671,15 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
             for day, day_hours in hours_by_day.items()
             for period in range(1, len(day_hours) + 1)
         }
-        if set(subjects_by_slot) != expected_slots:
-            raise HTTPException(status_code=422, detail="Bitte für jede Stunde des Plans ein Fach angeben.")
+        if not set(subjects_by_slot).issubset(expected_slots):
+            raise HTTPException(status_code=422, detail="Der Plan enthält eine ungültige Task-Zuordnung.")
 
         planned_blocks = []
         for day in scheduled_days:
             for period, hour in enumerate(hours_by_day[day], start=1):
+                subject = subjects_by_slot.get((day, period))
+                if subject is None:
+                    continue
                 start_time = hour["start_time"]
                 end_time = hour["end_time"]
                 if end_time <= start_time:
@@ -693,7 +689,7 @@ def apply_plan(user_id: int, payload: ApplyPlanPayload):
                     "period": period,
                     "start_time": start_time,
                     "end_time": end_time,
-                    **subjects_by_slot[(day, period)],
+                    **subject,
                 })
 
         for index, planned in enumerate(planned_blocks):

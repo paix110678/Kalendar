@@ -127,6 +127,195 @@ def test_plan_update_saves_added_and_empty_task_slots(tmp_path):
     assert updated["activity_subjects"] == {"Montag": [41, 0]}
 
 
+def test_apply_plan_does_not_create_blocks_for_unassigned_slots(tmp_path):
+    database_path = tmp_path / "empty-plan-slots.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        conn = database.get_db_connection()
+        try:
+            user_id = conn.execute(
+                """
+                INSERT INTO users (name, role, current_points, status_school, status_sport, color_code)
+                VALUES ('Alex', 'child_10', 0, 'GREEN', 'BASE', '#228be6')
+                """
+            ).lastrowid
+            category_id = conn.execute(
+                "INSERT INTO categories (value, label, color, default_short) VALUES (?, ?, ?, ?)",
+                ("plan-empty-slot", "Plan-Empty-Slot", "#228be6", "PES"),
+            ).lastrowid
+            task_id = conn.execute(
+                "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                ("Mathematik", "#228be6", category_id),
+            ).lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        plan = plans.create_plan(
+            plans.PlanPayload(
+                name="Teilweise befüllt",
+                days=["Montag"],
+                hours_count=2,
+                hours=[
+                    {"start_time": "08:00", "end_time": "08:45"},
+                    {"start_time": "08:50", "end_time": "09:35"},
+                ],
+                uniform_activities=False,
+                activity_subjects={"Montag": [task_id, 0]},
+            ),
+        )
+        result = users.apply_plan(
+            user_id,
+            ApplyPlanPayload(plan_id=plan["id"], title=plan["name"], subjects=[]),
+        )
+
+        conn = database.get_db_connection()
+        try:
+            blocks = conn.execute(
+                """
+                SELECT plan_period, title
+                FROM time_blocks
+                WHERE user_id = ? AND plan_assignment_id = ?
+                """,
+                (user_id, result["assignment_id"]),
+            ).fetchall()
+        finally:
+            conn.close()
+
+    assert result["created_blocks"] == 1
+    assert [(block["plan_period"], block["title"]) for block in blocks] == [(1, "Mathematik")]
+
+
+def test_applying_plan_without_tasks_creates_no_calendar_blocks(tmp_path):
+    database_path = tmp_path / "plan-without-tasks.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        conn = database.get_db_connection()
+        try:
+            user_id = conn.execute(
+                """
+                INSERT INTO users (name, role, current_points, status_school, status_sport, color_code)
+                VALUES ('Alex', 'child_10', 0, 'GREEN', 'BASE', '#228be6')
+                """
+            ).lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+        plan = plans.create_plan(
+            plans.PlanPayload(
+                name="Ohne Tasks",
+                days=["Montag"],
+                hours_count=1,
+                hours=[{"start_time": "08:00", "end_time": "08:45"}],
+                uniform_activities=True,
+                uniform_task_id=None,
+            ),
+        )
+        result = users.apply_plan(
+            user_id,
+            ApplyPlanPayload(plan_id=plan["id"], title=plan["name"], subjects=[]),
+        )
+        conn = database.get_db_connection()
+        try:
+            block_count = conn.execute(
+                "SELECT COUNT(*) FROM time_blocks WHERE plan_assignment_id = ?",
+                (result["assignment_id"],),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+    assert result["created_blocks"] == 0
+    assert block_count == 0
+
+
+def test_updating_plan_tasks_updates_assigned_blocks_and_removes_empty_slots(tmp_path):
+    database_path = tmp_path / "updated-plan-tasks.sqlite3"
+    database.init_db(database_path)
+
+    with database.use_database_file(database_path):
+        conn = database.get_db_connection()
+        try:
+            user_id = conn.execute(
+                """
+                INSERT INTO users (name, role, current_points, status_school, status_sport, color_code)
+                VALUES ('Alex', 'child_10', 0, 'GREEN', 'BASE', '#228be6')
+                """
+            ).lastrowid
+            category_id = conn.execute(
+                "INSERT INTO categories (value, label, color, default_short) VALUES (?, ?, ?, ?)",
+                ("plan-updated-task", "Plan-Updated-Task", "#228be6", "PUT"),
+            ).lastrowid
+            first_task_id = conn.execute(
+                "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                ("Altes Fach", "#228be6", category_id),
+            ).lastrowid
+            second_task_id = conn.execute(
+                "INSERT INTO tasks (title, color, category_id) VALUES (?, ?, ?)",
+                ("Neues Fach", "#40c057", category_id),
+            ).lastrowid
+            conn.commit()
+        finally:
+            conn.close()
+
+        plan = plans.create_plan(
+            plans.PlanPayload(
+                name="Aktualisierbarer Plan",
+                days=["Montag"],
+                hours_count=1,
+                hours=[{"start_time": "08:00", "end_time": "08:45"}],
+                uniform_activities=False,
+                activity_subjects={"Montag": [first_task_id]},
+            ),
+        )
+        users.apply_plan(
+            user_id,
+            ApplyPlanPayload(plan_id=plan["id"], title=plan["name"], subjects=[]),
+        )
+
+        plans.update_plan(
+            plan["id"],
+            plans.PlanPayload(
+                name=plan["name"],
+                days=["Montag"],
+                hours_count=2,
+                hours=[
+                    {"start_time": "08:00", "end_time": "08:45"},
+                    {"start_time": "08:50", "end_time": "09:35"},
+                ],
+                uniform_activities=False,
+                activity_subjects={"Montag": [second_task_id, 0]},
+            ),
+        )
+
+        conn = database.get_db_connection()
+        try:
+            blocks = conn.execute(
+                """
+                SELECT time_blocks.plan_period, time_blocks.title,
+                       time_blocks.person_event_type_id, user_plan_assignments.id AS assignment_id
+                FROM time_blocks
+                JOIN user_plan_assignments
+                  ON user_plan_assignments.id = time_blocks.plan_assignment_id
+                WHERE time_blocks.user_id = ? AND user_plan_assignments.plan_id = ?
+                """,
+                (user_id, plan["id"]),
+            ).fetchall()
+            task_mapping = conn.execute(
+                """
+                SELECT event_type_id FROM task_event_type_migrations
+                WHERE task_id = ? AND event_type_id = ?
+                """,
+                (second_task_id, blocks[0]["person_event_type_id"] if blocks else -1),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    assert [(block["plan_period"], block["title"]) for block in blocks] == [(1, "Neues Fach")]
+    assert task_mapping is not None
+
+
 def test_get_user_plan_assignment_filters_by_plan_id(tmp_path):
     database_path = tmp_path / "multiple-plan-assignments.sqlite3"
     database.init_db(database_path)

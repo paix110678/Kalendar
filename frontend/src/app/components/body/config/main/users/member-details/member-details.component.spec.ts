@@ -174,6 +174,35 @@ describe('MemberDetailsComponent', () => {
     expect(component.planError).toBe('');
   });
 
+  it('does not reuse old assignment tasks for empty slots in a partly filled plan', () => {
+    const component = fixture.componentInstance;
+    const partlyFilledPlan: PlanDefinition = {
+      ...plan,
+      uniform_activities: false,
+      activity_subjects: {
+        Montag: [42],
+        Mittwoch: [0, 0],
+        Freitag: [0],
+      },
+    };
+    component.plans = [partlyFilledPlan];
+    component.selectPlan(plan.id);
+    component.scheduleEntries = component.scheduleEntries.map((entry) => ({
+      ...entry,
+      event_type_id: eventType.id,
+    }));
+
+    component.applyPlan();
+
+    expect(applyPlan).toHaveBeenCalledWith(
+      user.id,
+      plan.id,
+      plan.name,
+      [],
+      [],
+    );
+  });
+
   it('keeps remaining conflicts open after saving and closes when the plan is applied', async () => {
     const component = fixture.componentInstance;
     component.plans = [{ ...plan, uniform_activities: true, uniform_task_id: 42 }];

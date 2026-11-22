@@ -553,21 +553,16 @@ export class MemberDetailsComponent implements OnChanges, OnInit, OnDestroy {
       return;
     }
 
-    const hasPlanActivities = plan.uniform_activities
-      ? Number.isInteger(plan.uniform_task_id) && (plan.uniform_task_id ?? 0) > 0
-      : plan.days.every((day) => {
-        const hours = plan.day_hours?.[day] ?? plan.hours;
-        const taskIds = plan.activity_subjects?.[day] ?? [];
-        return taskIds.length === hours.length && taskIds.every((taskId) => Number.isInteger(taskId) && taskId > 0);
-      });
+    const usesPlanTaskAssignments = plan.uniform_activities !== false
+      || plan.days.some((day) => Array.isArray(plan.activity_subjects?.[day]));
     const hasLegacyActivities = this.scheduleEntries.length > 0
       && this.scheduleEntries.every((entry) => entry.event_type_id !== null);
-    if (!hasPlanActivities && !hasLegacyActivities) {
+    if (!usesPlanTaskAssignments && !hasLegacyActivities) {
       this.planError = 'Bitte befülle den Plan zuerst unter Einstellungen → Pläne.';
       this.toastService.show(false, this.planError);
       return;
     }
-    const subjects: PlanSubject[] = hasPlanActivities
+    const subjects: PlanSubject[] = usesPlanTaskAssignments
       ? []
       : this.scheduleEntries
         .filter((entry): entry is ScheduleEntry & { event_type_id: number } => entry.event_type_id !== null)
