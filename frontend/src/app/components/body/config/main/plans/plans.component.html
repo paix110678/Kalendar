@@ -18,6 +18,11 @@
   @if (warningMessage) {
     <p class="plan-save-message plan-save-warning" role="status">{{ warningMessage }}</p>
   }
+  @if (tasksLoading) {
+    <p class="plan-save-message" role="status">Tasks werden geladen …</p>
+  } @else if (tasksLoadError) {
+    <p class="plan-save-message plan-save-error" role="alert">{{ tasksLoadError }}</p>
+  }
 
   <form class="plan-form" (ngSubmit)="$event.preventDefault(); onFormSubmit()">
     @if (setupStep && editingPlanId === null) {

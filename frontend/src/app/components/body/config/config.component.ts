@@ -289,8 +289,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.activeTab = 'plans';
     this.selectedPlanId = null;
     if (shouldLoad) this.refreshSavedPlans();
-    if (this.calendarCategories.length === 0) this.calendarService.loadCategories();
-    if (this.tasks.length === 0 && !this.tasksLoading) this.refreshSavedTasks();
+    this.loadPlanEditorDependencies();
     this.mainComponent?.resetPlanForm();
   }
 
@@ -300,11 +299,17 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.expandedSections.plans = true;
     this.activeTab = 'plans';
     this.selectedPlanId = planId;
+    this.loadPlanEditorDependencies();
     setTimeout(() => {
       if (this.activeTab === 'plans') {
         this.mainComponent?.openPlan(planId);
       }
     }, 50);
+  }
+
+  private loadPlanEditorDependencies(): void {
+    if (this.calendarCategories.length === 0) this.calendarService.loadCategories();
+    if (!this.tasksLoading) this.refreshSavedTasks();
   }
 
   refreshSavedPlans(): void {

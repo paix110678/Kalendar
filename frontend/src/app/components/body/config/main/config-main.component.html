@@ -23,6 +23,8 @@
         [selectedPlanId]="selectedPlanId"
         [categories]="calendarCategories"
         [tasks]="tasks"
+        [tasksLoading]="tasksLoading"
+        [tasksLoadError]="tasksLoadError"
         (editorActionsChange)="editorActionsChange.emit($event)"
         (setupViewChange)="planSetupViewChange.emit($event)"
         (plansChanged)="plansChanged.emit($event)">

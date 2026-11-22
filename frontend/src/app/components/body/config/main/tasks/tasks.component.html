@@ -35,6 +35,10 @@
       </select>
     </label>
 
+    @if (errorMessage) {
+      <p class="form-message form-error" role="alert">{{ errorMessage }}</p>
+    }
+
     @if (categories.length === 0) {
       <p class="form-message form-error">Lege zuerst unter „Kategorien“ eine Kategorie an.</p>
     }

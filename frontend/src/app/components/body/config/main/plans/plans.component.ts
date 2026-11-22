@@ -31,6 +31,8 @@ export class PlansComponent implements OnChanges {
   @Input() selectedPlanId: number | null = null;
   @Input() categories: Category[] = [];
   @Input() tasks: TaskDefinition[] = [];
+  @Input() tasksLoading = false;
+  @Input() tasksLoadError = '';
 
   readonly daysOfWeek = [
     'Montag',

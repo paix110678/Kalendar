@@ -62,6 +62,8 @@ export class ConfigMainComponent {
   @Input() calendarCategories: Category[] = [];
   @Input() selectedCategoryId: number | null = null;
   @Input() tasks: TaskDefinition[] = [];
+  @Input() tasksLoading = false;
+  @Input() tasksLoadError = '';
   @Input() selectedTaskId: number | null = null;
   @Input() selectedTaskCategoryId: number | null = null;
 
