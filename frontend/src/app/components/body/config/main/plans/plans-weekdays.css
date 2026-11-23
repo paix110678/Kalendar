@@ -16,7 +16,7 @@
 
 .weekday-checkboxes {
   display: grid;
-  grid-template-columns: repeat(7, minmax(30px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 4px;
 }
 
@@ -44,16 +44,47 @@
   accent-color: #228be6;
 }
 
-.weekday-choice input[type='number'] {
+.weekday-count-control {
+  display: grid;
   width: 100%;
-  max-width: 38px;
-  min-height: 28px;
-  padding: 2px 4px;
+  grid-template-columns: 28px minmax(24px, 1fr) 28px;
+  align-items: center;
+  gap: 2px;
+}
+
+.weekday-count-control input[type='text'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px;
   border: 1px solid #ced4da;
   border-radius: 5px;
   box-sizing: border-box;
   font: inherit;
   text-align: center;
+}
+
+.weekday-count-step {
+  display: inline-flex;
+  min-width: 28px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  background: #fff;
+  color: #343a40;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.weekday-count-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .day-hours-grid {

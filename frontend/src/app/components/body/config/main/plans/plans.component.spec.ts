@@ -379,7 +379,7 @@ describe('PlansComponent', () => {
     component.onUniformCountChange(false);
     fixture.detectChanges();
 
-    const dayCounts = Array.from(element.querySelectorAll<HTMLInputElement>('.weekday-choice input[type="number"]'));
+    const dayCounts = Array.from(element.querySelectorAll<HTMLInputElement>('.weekday-count-control input'));
     expect(dayCounts).toHaveLength(5);
     expect(dayCounts.map((input) => input.value)).toEqual(['1', '1', '1', '1', '1']);
 
@@ -404,6 +404,51 @@ describe('PlansComponent', () => {
         Mittwoch: [{ start_time: '10:00', end_time: '10:45' }],
       }),
     }));
+  });
+
+  it('keeps an empty mobile count draft until blur and provides step buttons', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.uniformCount = false;
+    component.uniformTime = false;
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ];
+    component.dayHours = {
+      Montag: [
+        { start_time: '08:00', end_time: '08:45' },
+        { start_time: '09:00', end_time: '09:45' },
+      ],
+    };
+    component.activitySubjects = { Montag: [11, 22] };
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const countInput = element.querySelector<HTMLInputElement>('input[name="weekday-count-Montag"]');
+    expect(countInput).not.toBeNull();
+    countInput!.value = '';
+    countInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(countInput!.value).toBe('');
+    expect(component.dayHours['Montag']).toHaveLength(2);
+    expect(component.activitySubjects['Montag']).toEqual([11, 22]);
+
+    countInput!.value = '1';
+    countInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(component.dayHours['Montag']).toHaveLength(2);
+    countInput!.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(component.dayHours['Montag']).toHaveLength(1);
+    expect(component.activitySubjects['Montag']).toEqual([22]);
+
+    element.querySelector<HTMLButtonElement>('[aria-label="Einheiten am Montag erhöhen"]')!.click();
+    fixture.detectChanges();
+    expect(component.dayHours['Montag']).toHaveLength(2);
+    expect(component.activitySubjects['Montag']).toEqual([0, 22]);
   });
 
   it('rejects overlapping times within an individual weekday', () => {

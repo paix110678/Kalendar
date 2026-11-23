@@ -49,6 +49,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Input() validationIssues: PlanValidationIssue[] = [];
   @Input() unitInsertionPosition: UnitInsertionPosition = 'before';
   selectedCategoryId: number | null = null;
+  private dayCountDrafts: Record<string, string> = {};
 
   @Output() uniformTimeChange = new EventEmitter<boolean>();
   @Output() uniformCountChange = new EventEmitter<boolean>();
@@ -121,6 +122,41 @@ export class PlanDetailsComponent implements OnChanges {
         && issue.day === day,
       )
       .map((issue) => issue.message);
+  }
+
+  getDayCount(day: string): number {
+    return this.dayHours[day]?.length ?? Math.max(1, this.hoursCount);
+  }
+
+  getDayCountInputValue(day: string): string {
+    return this.dayCountDrafts[day] ?? String(this.getDayCount(day));
+  }
+
+  onDayCountDraftInput(day: string, event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.dayCountDrafts[day] = event.target.value;
+    }
+  }
+
+  commitDayCount(day: string): void {
+    const draft = this.dayCountDrafts[day];
+    if (draft === undefined) return;
+    delete this.dayCountDrafts[day];
+    if (!/^\d+$/.test(draft)) return;
+    const value = Number(draft);
+    if (value < 0 || value > 24) return;
+    this.dayCountChange.emit({ day, value });
+  }
+
+  stepDayCount(day: string, change: -1 | 1): void {
+    const draft = this.dayCountDrafts[day];
+    const draftValue = draft?.trim() ? Number(draft) : this.getDayCount(day);
+    const currentValue = Number.isInteger(draftValue) && draftValue >= 0 && draftValue <= 24
+      ? draftValue
+      : this.getDayCount(day);
+    const value = Math.max(0, Math.min(24, currentValue + change));
+    delete this.dayCountDrafts[day];
+    this.dayCountChange.emit({ day, value });
   }
 
   get planLearnCategories(): readonly PlanCategory[] {

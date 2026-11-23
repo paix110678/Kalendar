@@ -18,28 +18,47 @@
       <legend>Wochentage</legend>
       <div class="weekday-checkboxes">
         @for (day of daysOfWeek; track day) {
-          <label class="weekday-choice">
-            <span>{{ day.slice(0, 2) }}</span>
-            @if (!uniformCount && selectedDays.includes(day)) {
-              <input
-                type="number"
-                [name]="'weekday-count-' + day"
-                [value]="dayHours[day]?.length ?? 1"
-                min="0"
-                max="24"
-                [class.plan-input-invalid]="hasValidationIssue('hours-count')"
-                [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
-                [attr.aria-label]="'Einheiten am ' + day"
-                (change)="dayCountChange.emit({ day, value: $any($event.target).valueAsNumber })">
-            } @else {
+          @if (!uniformCount && selectedDays.includes(day)) {
+            <div class="weekday-choice">
+              <span>{{ day.slice(0, 2) }}</span>
+              <div class="weekday-count-control">
+                <button
+                  type="button"
+                  class="weekday-count-step"
+                  [attr.aria-label]="'Einheiten am ' + day + ' verringern'"
+                  [disabled]="getDayCount(day) === 0"
+                  (click)="stepDayCount(day, -1)">-</button>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  [name]="'weekday-count-' + day"
+                  [value]="getDayCountInputValue(day)"
+                  [class.plan-input-invalid]="hasValidationIssue('hours-count')"
+                  [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
+                  [attr.aria-label]="'Einheiten am ' + day"
+                  (input)="onDayCountDraftInput(day, $event)"
+                  (blur)="commitDayCount(day)"
+                  (keydown.enter)="commitDayCount(day); $event.preventDefault()">
+                <button
+                  type="button"
+                  class="weekday-count-step"
+                  [attr.aria-label]="'Einheiten am ' + day + ' erhöhen'"
+                  [disabled]="getDayCount(day) >= 24"
+                  (click)="stepDayCount(day, 1)">+</button>
+              </div>
+            </div>
+          } @else {
+            <label class="weekday-choice">
+              <span>{{ day.slice(0, 2) }}</span>
               <input
                 type="checkbox"
                 [name]="'weekday-' + day"
                 [checked]="selectedDays.includes(day)"
                 [attr.aria-label]="day"
                 (change)="dayToggleChange.emit({ day, checked: $any($event.target).checked })">
-            }
-          </label>
+            </label>
+          }
         }
       </div>
       @for (message of getValidationMessages('weekdays'); track message) {
