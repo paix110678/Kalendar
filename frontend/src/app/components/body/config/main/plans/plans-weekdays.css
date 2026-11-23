@@ -127,3 +127,24 @@
   color: #68717b;
   font-size: 12px;
 }
+
+@media (max-width: 760px) {
+  .weekday-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .weekday-count-control {
+    grid-template-columns: 44px minmax(44px, 64px) 44px;
+    gap: 4px;
+  }
+
+  .weekday-count-control input[type='text'] {
+    font-size: 16px;
+  }
+
+  .weekday-count-step {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 22px;
+  }
+}

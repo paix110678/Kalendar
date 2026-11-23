@@ -27,6 +27,8 @@
                   class="weekday-count-step"
                   [attr.aria-label]="'Einheiten am ' + day + ' verringern'"
                   [disabled]="getDayCount(day) === 0"
+                  (pointerdown)="prepareDayCountStep(day)"
+                  (pointercancel)="cancelDayCountStep(day)"
                   (click)="stepDayCount(day, -1)">-</button>
                 <input
                   type="text"
@@ -37,6 +39,7 @@
                   [class.plan-input-invalid]="hasValidationIssue('hours-count')"
                   [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
                   [attr.aria-label]="'Einheiten am ' + day"
+                  (focus)="beginDayCountEdit(day, $event)"
                   (input)="onDayCountDraftInput(day, $event)"
                   (blur)="commitDayCount(day)"
                   (keydown.enter)="commitDayCount(day); $event.preventDefault()">
@@ -45,6 +48,8 @@
                   class="weekday-count-step"
                   [attr.aria-label]="'Einheiten am ' + day + ' erhöhen'"
                   [disabled]="getDayCount(day) >= 24"
+                  (pointerdown)="prepareDayCountStep(day)"
+                  (pointercancel)="cancelDayCountStep(day)"
                   (click)="stepDayCount(day, 1)">+</button>
               </div>
             </div>
@@ -75,6 +80,8 @@
             class="weekday-count-step"
             aria-label="Anzahl Einheiten verringern"
             [disabled]="hoursCount <= 1"
+            (pointerdown)="prepareHoursCountStep()"
+            (pointercancel)="cancelHoursCountStep()"
             (click)="stepHoursCount(-1)">-</button>
           <input
             type="text"
@@ -85,6 +92,7 @@
             [class.plan-input-invalid]="hasValidationIssue('hours-count')"
             [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
             aria-labelledby="hours-count-label"
+            (focus)="beginHoursCountEdit($event)"
             (input)="onHoursCountDraftInput($event)"
             (blur)="commitHoursCount()"
             (keydown.enter)="commitHoursCount(); $event.preventDefault()">
@@ -93,6 +101,8 @@
             class="weekday-count-step"
             aria-label="Anzahl Einheiten erhöhen"
             [disabled]="hoursCount >= 24"
+            (pointerdown)="prepareHoursCountStep()"
+            (pointercancel)="cancelHoursCountStep()"
             (click)="stepHoursCount(1)">+</button>
         </div>
       } @else {

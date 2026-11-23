@@ -50,7 +50,9 @@ export class PlanDetailsComponent implements OnChanges {
   @Input() unitInsertionPosition: UnitInsertionPosition = 'before';
   selectedCategoryId: number | null = null;
   private hoursCountDraft: string | null = null;
+  private hoursCountStepPending = false;
   private dayCountDrafts: Record<string, string> = {};
+  private dayCountStepsPending: Record<string, boolean> = {};
 
   @Output() uniformTimeChange = new EventEmitter<boolean>();
   @Output() uniformCountChange = new EventEmitter<boolean>();
@@ -66,7 +68,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Output() unitInsertionPositionChange = new EventEmitter<UnitInsertionPosition>();
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['hoursCount']) this.hoursCountDraft = null;
+    if (changes['hoursCount']) this.clearHoursCountDraft();
     if (changes['uniformTaskId'] || changes['tasks']) {
       const selectedTask = this.tasks.find((task) => task.id === this.uniformTaskId);
       this.selectedCategoryId = selectedTask?.category_id ?? null;
@@ -134,6 +136,11 @@ export class PlanDetailsComponent implements OnChanges {
     return this.hoursCountDraft ?? String(this.hoursCount);
   }
 
+  beginHoursCountEdit(event: Event): void {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    event.target.select();
+  }
+
   onHoursCountDraftInput(event: Event): void {
     if (event.target instanceof HTMLInputElement) {
       this.hoursCountDraft = event.target.value;
@@ -141,29 +148,47 @@ export class PlanDetailsComponent implements OnChanges {
   }
 
   commitHoursCount(): void {
+    if (this.hoursCountStepPending) return;
     const draft = this.hoursCountDraft;
+    this.clearHoursCountDraft();
     if (draft === null) return;
-    this.hoursCountDraft = null;
     if (!/^\d+$/.test(draft)) return;
     const value = Number(draft);
     if (value < 1 || value > 24) return;
     this.hoursCountChange.emit(value);
   }
 
+  prepareHoursCountStep(): void {
+    this.hoursCountStepPending = true;
+  }
+
+  cancelHoursCountStep(): void {
+    this.hoursCountStepPending = false;
+    this.commitHoursCount();
+  }
+
   stepHoursCount(change: -1 | 1): void {
     const draftValue = this.hoursCountDraft?.trim()
       ? Number(this.hoursCountDraft)
       : this.hoursCount;
-    const currentValue = Number.isInteger(draftValue) && draftValue >= 1 && draftValue <= 24
+    const currentValue = Number.isInteger(draftValue)
+      && draftValue >= 1
+      && draftValue <= 24
       ? draftValue
       : this.hoursCount;
     const value = Math.max(1, Math.min(24, currentValue + change));
-    this.hoursCountDraft = null;
+    this.hoursCountStepPending = false;
+    this.clearHoursCountDraft();
     this.hoursCountChange.emit(value);
   }
 
   getDayCountInputValue(day: string): string {
     return this.dayCountDrafts[day] ?? String(this.getDayCount(day));
+  }
+
+  beginDayCountEdit(day: string, event: Event): void {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    event.target.select();
   }
 
   onDayCountDraftInput(day: string, event: Event): void {
@@ -173,24 +198,45 @@ export class PlanDetailsComponent implements OnChanges {
   }
 
   commitDayCount(day: string): void {
+    if (this.dayCountStepsPending[day]) return;
     const draft = this.dayCountDrafts[day];
+    this.clearDayCountDraft(day);
     if (draft === undefined) return;
-    delete this.dayCountDrafts[day];
     if (!/^\d+$/.test(draft)) return;
     const value = Number(draft);
     if (value < 0 || value > 24) return;
     this.dayCountChange.emit({ day, value });
   }
 
+  prepareDayCountStep(day: string): void {
+    this.dayCountStepsPending[day] = true;
+  }
+
+  cancelDayCountStep(day: string): void {
+    this.dayCountStepsPending[day] = false;
+    this.commitDayCount(day);
+  }
+
   stepDayCount(day: string, change: -1 | 1): void {
     const draft = this.dayCountDrafts[day];
     const draftValue = draft?.trim() ? Number(draft) : this.getDayCount(day);
-    const currentValue = Number.isInteger(draftValue) && draftValue >= 0 && draftValue <= 24
+    const currentValue = Number.isInteger(draftValue)
+      && draftValue >= 0
+      && draftValue <= 24
       ? draftValue
       : this.getDayCount(day);
     const value = Math.max(0, Math.min(24, currentValue + change));
-    delete this.dayCountDrafts[day];
+    this.dayCountStepsPending[day] = false;
+    this.clearDayCountDraft(day);
     this.dayCountChange.emit({ day, value });
+  }
+
+  private clearHoursCountDraft(): void {
+    this.hoursCountDraft = null;
+  }
+
+  private clearDayCountDraft(day: string): void {
+    delete this.dayCountDrafts[day];
   }
 
   get planLearnCategories(): readonly PlanCategory[] {

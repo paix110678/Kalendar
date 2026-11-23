@@ -502,6 +502,96 @@ describe('PlansComponent', () => {
     expect(component.activitySubjects['Montag']).toEqual([0, 11, 22]);
   });
 
+  it('keeps the existing plan when backspace clears the selected count', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.uniformActivities = false;
+    component.hoursCount = 12;
+    const originalHours = Array.from({ length: 12 }, (_, index) => {
+      const start = 8 * 60 + index * 60;
+      const format = (minutes: number) =>
+        `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+      return { start_time: format(start), end_time: format(start + 45) };
+    });
+    component.hours = originalHours.map((hour) => ({ ...hour }));
+    component.dayHours = { Montag: originalHours.map((hour) => ({ ...hour })) };
+    component.activitySubjects = { Montag: Array.from({ length: 12 }, (_, index) => index + 11) };
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const countInput = element.querySelector<HTMLInputElement>('input[name="hoursCount"]')!;
+    countInput.dispatchEvent(new FocusEvent('focus'));
+    expect(countInput.selectionStart).toBe(0);
+    expect(countInput.selectionEnd).toBe(2);
+    countInput.value = '';
+    countInput.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'deleteContentBackward',
+    }));
+    countInput.dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(component.hoursCount).toBe(12);
+    expect(component.hours).toEqual(originalHours);
+    expect(component.activitySubjects['Montag']).toEqual(
+      Array.from({ length: 12 }, (_, index) => index + 11),
+    );
+
+    countInput.dispatchEvent(new FocusEvent('focus'));
+    countInput.value = '14';
+    countInput.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'insertText',
+      data: '14',
+    }));
+    countInput.dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(component.hoursCount).toBe(14);
+    expect(component.hours.slice(2)).toEqual(originalHours);
+    expect(component.activitySubjects['Montag']).toEqual([
+      0, 0, ...Array.from({ length: 12 }, (_, index) => index + 11),
+    ]);
+  });
+
+  it('applies a typed value once when a step button is tapped before blur', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.uniformActivities = false;
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ];
+    component.dayHours = { Montag: component.hours.map((hour) => ({ ...hour })) };
+    component.activitySubjects = { Montag: [11, 22] };
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const countInput = element.querySelector<HTMLInputElement>('input[name="hoursCount"]')!;
+    const increaseButton = element.querySelector<HTMLButtonElement>(
+      '[aria-label="Anzahl Einheiten erhöhen"]',
+    )!;
+    countInput.dispatchEvent(new FocusEvent('focus'));
+    countInput.value = '3';
+    countInput.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'insertText',
+      data: '3',
+    }));
+    increaseButton.dispatchEvent(new Event('pointerdown'));
+    countInput.dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(component.hoursCount).toBe(2);
+    increaseButton.click();
+    fixture.detectChanges();
+    expect(component.hoursCount).toBe(4);
+    expect(component.activitySubjects['Montag']).toEqual([0, 0, 11, 22]);
+  });
+
   it('rejects overlapping times within an individual weekday', () => {
     const component = fixture.componentInstance;
     component.setupStep = false;
