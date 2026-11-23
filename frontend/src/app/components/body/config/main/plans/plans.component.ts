@@ -9,7 +9,7 @@ import { AdminEditorActions } from '../../action-footer/action-footer.component'
 import { ToastService } from '../../../../../services/toast.service';
 import { Category } from '../../../../../services/calendar.service';
 import { PlanDetailsComponent } from './plan-details.component';
-import type { PlanValidationIssue } from './plan-details.component';
+import type { PlanValidationIssue, UnitInsertionPosition } from './plan-details.component';
 
 @Component({
   selector: 'app-plans',
@@ -73,6 +73,7 @@ export class PlansComponent implements OnChanges {
   saving = false;
   errorMessage = '';
   validationIssues: PlanValidationIssue[] = [];
+  unitInsertionPosition: UnitInsertionPosition = 'before';
   successMessage = '';
   warningMessage = '';
   private savedFormSnapshot = '';
@@ -142,15 +143,20 @@ export class PlansComponent implements OnChanges {
     );
     this.hoursCount = count;
     this.hours = this.uniformTime
-      ? this.adjustHoursAtStart(this.hours, count)
+      ? this.adjustHours(this.hours, count, this.unitInsertionPosition)
       : this.createDefaultHours(count);
     for (const day of this.selectedDays) {
       const oldDayHours = previousDayHours.get(day) ?? [];
       const dayCount = this.uniformCount ? count : oldDayHours.length;
-      this.adjustActivityAssignmentsAtStart(day, oldDayHours.length, dayCount);
+      this.adjustActivityAssignments(
+        day,
+        oldDayHours.length,
+        dayCount,
+        this.unitInsertionPosition,
+      );
       this.dayHours[day] = this.uniformTime
         ? this.hours.slice(0, dayCount).map((hour) => ({ ...hour }))
-        : this.adjustHoursAtStart(oldDayHours, dayCount);
+        : this.adjustHours(oldDayHours, dayCount, this.unitInsertionPosition);
     }
     this.publishEditorActions();
   }
@@ -186,14 +192,19 @@ export class PlansComponent implements OnChanges {
         ...Array.from(previousDayHours.values(), (hours) => hours.length),
       );
       this.hours = this.uniformTime
-        ? this.adjustHoursAtStart(this.hours, this.hoursCount)
+        ? this.adjustHours(this.hours, this.hoursCount, this.unitInsertionPosition)
         : this.createDefaultHours(this.hoursCount);
       for (const day of this.selectedDays) {
         const oldDayHours = previousDayHours.get(day) ?? [];
-        this.adjustActivityAssignmentsAtStart(day, oldDayHours.length, this.hoursCount);
+        this.adjustActivityAssignments(
+          day,
+          oldDayHours.length,
+          this.hoursCount,
+          this.unitInsertionPosition,
+        );
         this.dayHours[day] = this.uniformTime
           ? this.hours.map((hour) => ({ ...hour }))
-          : this.adjustHoursAtStart(oldDayHours, this.hoursCount);
+          : this.adjustHours(oldDayHours, this.hoursCount, this.unitInsertionPosition);
       }
     } else {
       this.hoursCount = 1;
@@ -240,14 +251,14 @@ export class PlansComponent implements OnChanges {
     if (!this.selectedDays.includes(day)) {
       this.selectedDays = this.daysOfWeek.filter((item) => item === day || this.selectedDays.includes(item));
     }
-    this.dayHours[day] = this.adjustHoursAtStart(previousDayHours, count);
-    this.adjustActivityAssignmentsAtStart(day, previousDayHours.length, count);
+    this.dayHours[day] = this.adjustHours(previousDayHours, count, this.unitInsertionPosition);
+    this.adjustActivityAssignments(day, previousDayHours.length, count, this.unitInsertionPosition);
     this.hoursCount = Math.max(
       1,
       ...this.selectedDays.map((selectedDay) => this.getDayHours(selectedDay).length),
     );
     this.hours = this.uniformTime
-      ? this.adjustHoursAtStart(this.hours, this.hoursCount)
+      ? this.adjustHours(this.hours, this.hoursCount, this.unitInsertionPosition)
       : this.createDefaultHours(this.hoursCount);
     if (this.uniformTime) {
       for (const selectedDay of this.selectedDays) {
@@ -263,6 +274,11 @@ export class PlansComponent implements OnChanges {
     if (event.target instanceof HTMLInputElement) {
       this.onDayCountChange(day, event.target.valueAsNumber);
     }
+  }
+
+  setUnitInsertionPosition(position: UnitInsertionPosition): void {
+    this.unitInsertionPosition = position;
+    this.publishEditorActions();
   }
 
   savePlan(): void {
@@ -388,6 +404,7 @@ export class PlansComponent implements OnChanges {
     this.errorMessage = '';
     this.validationIssues = [];
     this.warningMessage = '';
+    this.unitInsertionPosition = 'before';
     this.savedFormSnapshot = this.formSnapshot();
     this.publishEditorActions();
   }
@@ -472,6 +489,7 @@ export class PlansComponent implements OnChanges {
     this.validationIssues = [];
     this.successMessage = '';
     this.warningMessage = '';
+    this.unitInsertionPosition = 'before';
     this.savedFormSnapshot = this.formSnapshot();
     this.publishEditorActions();
   }
@@ -634,39 +652,68 @@ export class PlansComponent implements OnChanges {
     }));
   }
 
-  private adjustHoursAtStart(hours: PlanHour[], count: number): PlanHour[] {
-    if (count <= hours.length) {
-      return hours.slice(hours.length - count).map((hour) => ({ ...hour }));
+  private adjustHours(
+    hours: PlanHour[],
+    count: number,
+    position: UnitInsertionPosition,
+  ): PlanHour[] {
+    if (count < hours.length) {
+      return (position === 'before' ? hours.slice(hours.length - count) : hours.slice(0, count))
+        .map((hour) => ({ ...hour }));
     }
+    if (count === hours.length) return hours.map((hour) => ({ ...hour }));
     if (hours.length === 0) return this.createDefaultHours(count);
 
     const addedCount = count - hours.length;
-    const firstStart = this.timeToMinutes(hours[0].start_time);
-    const firstEnd = this.timeToMinutes(hours[0].end_time);
-    const interval = firstStart !== null && firstEnd !== null && firstEnd > firstStart
-      ? firstEnd - firstStart
-      : 45;
-    const canFitBeforeFirstHour = firstStart !== null && firstStart >= interval * addedCount;
-    const addedHours = canFitBeforeFirstHour
+    const adjacentHour = position === 'before' ? hours[0] : hours[hours.length - 1];
+    const start = this.timeToMinutes(
+      position === 'before' ? adjacentHour.start_time : adjacentHour.end_time,
+    );
+    const duration = 30;
+    const gap = 30;
+    const totalAddedTime = addedCount * (duration + gap);
+    const canFit = start !== null && (
+      position === 'before'
+        ? start >= totalAddedTime
+        : start + totalAddedTime <= 24 * 60
+    );
+    const newHours = canFit
       ? Array.from({ length: addedCount }, (_, index) => {
-        const start = firstStart - interval * (addedCount - index);
+        const offset = (duration + gap) * index;
+        const newStart = position === 'before'
+          ? start - totalAddedTime + offset
+          : start + gap + offset;
         return {
-          start_time: this.formatMinutes(start),
-          end_time: this.formatMinutes(start + interval),
+          start_time: this.formatMinutes(newStart),
+          end_time: this.formatMinutes(newStart + duration),
         };
       })
       : Array.from({ length: addedCount }, () => ({ start_time: '', end_time: '' }));
 
-    return [...addedHours, ...hours.map((hour) => ({ ...hour }))];
+    return position === 'before'
+      ? [...newHours, ...hours.map((hour) => ({ ...hour }))]
+      : [...hours.map((hour) => ({ ...hour })), ...newHours];
   }
 
-  private adjustActivityAssignmentsAtStart(day: string, previousCount: number, nextCount: number): void {
+  private adjustActivityAssignments(
+    day: string,
+    previousCount: number,
+    nextCount: number,
+    position: UnitInsertionPosition,
+  ): void {
     const difference = nextCount - previousCount;
     if (difference === 0) return;
     const existing = this.activitySubjects[day] ?? [];
-    const updated = difference > 0
-      ? [...Array.from({ length: difference }, () => 0), ...existing]
-      : existing.slice(Math.min(-difference, existing.length));
+    let updated: number[];
+    if (difference > 0) {
+      const emptySlots = Array.from({ length: difference }, () => 0);
+      updated = position === 'before' ? [...emptySlots, ...existing] : [...existing, ...emptySlots];
+    } else {
+      const removedCount = -difference;
+      updated = position === 'before'
+        ? existing.slice(Math.min(removedCount, existing.length))
+        : existing.slice(0, Math.max(0, existing.length - removedCount));
+    }
     this.activitySubjects = { ...this.activitySubjects, [day]: updated };
   }
 

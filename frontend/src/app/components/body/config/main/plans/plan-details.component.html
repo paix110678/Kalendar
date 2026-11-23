@@ -67,6 +67,18 @@
         <small class="plan-field-error">{{ message }}</small>
       }
     </div>
+
+    <label class="field field-insertion-position">
+      <span>Neue Einheiten einfügen</span>
+      <select
+        name="unitInsertionPosition"
+        [ngModel]="unitInsertionPosition"
+        (ngModelChange)="unitInsertionPositionChange.emit($event)">
+        <option value="before">Vor den bisherigen Einheiten (oben)</option>
+        <option value="after">Nach den bisherigen Einheiten (unten)</option>
+      </select>
+      <small>Neue Einheiten dauern jeweils 30 Minuten; der Abstand zu bisherigen Einheiten beträgt 30 Minuten.</small>
+    </label>
   </div>
 
   <fieldset class="holiday-options plan-mode-options">

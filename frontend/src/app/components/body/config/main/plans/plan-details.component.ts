@@ -21,6 +21,8 @@ export interface PlanValidationIssue {
   field?: 'start_time' | 'end_time';
 }
 
+export type UnitInsertionPosition = 'before' | 'after';
+
 @Component({
   selector: 'app-plan-details',
   standalone: true,
@@ -45,6 +47,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Input() uniformTaskId: number | null = null;
   @Input() activitySubjects: Record<string, number[]> = {};
   @Input() validationIssues: PlanValidationIssue[] = [];
+  @Input() unitInsertionPosition: UnitInsertionPosition = 'before';
   selectedCategoryId: number | null = null;
 
   @Output() uniformTimeChange = new EventEmitter<boolean>();
@@ -58,6 +61,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Output() dayToggleChange = new EventEmitter<{ day: string; checked: boolean }>();
   @Output() uniformTaskIdChange = new EventEmitter<number | null>();
   @Output() activitySubjectsChange = new EventEmitter<Record<string, number[]>>();
+  @Output() unitInsertionPositionChange = new EventEmitter<UnitInsertionPosition>();
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['uniformTaskId'] || changes['tasks']) {

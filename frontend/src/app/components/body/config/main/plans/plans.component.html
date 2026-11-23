@@ -61,6 +61,7 @@
         [categories]="categories"
         [tasks]="tasks"
         [validationIssues]="validationIssues"
+        [unitInsertionPosition]="unitInsertionPosition"
         [uniformTaskId]="uniformTaskId"
         [activitySubjects]="activitySubjects"
         (uniformTimeChange)="onUniformTimeChange($event)"
@@ -71,6 +72,7 @@
         (excludeSchoolHolidaysChange)="excludeSchoolHolidays = $event; publishEditorActions()"
         (excludePublicHolidaysChange)="excludePublicHolidays = $event; publishEditorActions()"
         (hoursCountChange)="onHoursCountChange($event)"
+        (unitInsertionPositionChange)="setUnitInsertionPosition($event)"
         (hourTimesChange)="publishEditorActions()"
         (dayCountChange)="onDayCountChange($event.day, $event.value)"
         (dayToggleChange)="onPlanDayToggle($event.day, $event.checked)">

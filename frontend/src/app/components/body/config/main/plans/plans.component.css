@@ -97,6 +97,7 @@
 
 .field-name,
 .field-count,
+.field-insertion-position,
 .day-selection {
   max-width: 420px;
 }

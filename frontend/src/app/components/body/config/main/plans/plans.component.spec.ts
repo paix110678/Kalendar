@@ -153,21 +153,54 @@ describe('PlansComponent', () => {
     component.editPlan(savedPlan);
     component.selectedDays = ['Montag', 'Mittwoch'];
     component.uniformActivities = false;
-    component.activitySubjects = { Montag: [11], Mittwoch: [22] };
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ];
+    component.dayHours = {
+      Montag: component.hours.map((hour) => ({ ...hour })),
+      Mittwoch: component.hours.map((hour) => ({ ...hour })),
+    };
+    component.activitySubjects = { Montag: [11, 22], Mittwoch: [33, 44] };
 
     component.onHoursCountChange(3);
 
     expect(component.hours).toEqual([
-      { start_time: '06:30', end_time: '07:15' },
-      { start_time: '07:15', end_time: '08:00' },
+      { start_time: '07:00', end_time: '07:30' },
       { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
     ]);
     expect(component.activitySubjects).toEqual({
-      Montag: [0, 0, 11],
-      Mittwoch: [0, 0, 22],
+      Montag: [0, 11, 22],
+      Mittwoch: [0, 33, 44],
     });
     expect(component.dayHours['Montag']).toEqual(component.hours);
     expect(component.dayHours['Mittwoch']).toEqual(component.hours);
+  });
+
+  it('can add a new unit after existing units with a 30-minute break', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.uniformActivities = false;
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ];
+    component.dayHours = { Montag: component.hours.map((hour) => ({ ...hour })) };
+    component.activitySubjects = { Montag: [11, 22] };
+    component.setUnitInsertionPosition('after');
+
+    component.onHoursCountChange(3);
+
+    expect(component.hours).toEqual([
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+      { start_time: '10:15', end_time: '10:45' },
+    ]);
+    expect(component.activitySubjects['Montag']).toEqual([11, 22, 0]);
   });
 
   it('preserves individual day units when adding a unit above them', () => {
@@ -188,7 +221,7 @@ describe('PlansComponent', () => {
 
     expect(component.uniformTime).toBe(false);
     expect(component.dayHours['Montag']).toEqual([
-      { start_time: '07:15', end_time: '08:00' },
+      { start_time: '07:00', end_time: '07:30' },
       { start_time: '08:00', end_time: '08:45' },
     ]);
     expect(component.dayHours['Dienstag']).toEqual([
