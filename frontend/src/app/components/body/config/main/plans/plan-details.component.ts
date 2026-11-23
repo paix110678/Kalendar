@@ -13,6 +13,14 @@ import {
   type PlanTimeSlot,
 } from 'plan-learn';
 
+export interface PlanValidationIssue {
+  target: 'name' | 'weekdays' | 'hours-count' | 'hours' | 'hour' | 'uniform-task' | 'activity-grid' | 'general';
+  message: string;
+  day?: string;
+  hourIndex?: number;
+  field?: 'start_time' | 'end_time';
+}
+
 @Component({
   selector: 'app-plan-details',
   standalone: true,
@@ -36,6 +44,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Input() tasks: TaskDefinition[] = [];
   @Input() uniformTaskId: number | null = null;
   @Input() activitySubjects: Record<string, number[]> = {};
+  @Input() validationIssues: PlanValidationIssue[] = [];
   selectedCategoryId: number | null = null;
 
   @Output() uniformTimeChange = new EventEmitter<boolean>();
@@ -71,6 +80,43 @@ export class PlanDetailsComponent implements OnChanges {
     return this.tasks
       .filter((task) => this.selectedCategoryId === null || task.category_id === this.selectedCategoryId)
       .sort((left, right) => left.title.localeCompare(right.title, 'de'));
+  }
+
+  hasValidationIssue(target: PlanValidationIssue['target'], day?: string, hourIndex?: number): boolean {
+    return this.validationIssues.some((issue) =>
+      issue.target === target
+      && (day === undefined || issue.day === day)
+      && (hourIndex === undefined || issue.hourIndex === hourIndex),
+    );
+  }
+
+  getValidationMessages(target: PlanValidationIssue['target'], day?: string, hourIndex?: number): string[] {
+    return this.validationIssues
+      .filter((issue) =>
+        issue.target === target
+        && (day === undefined || issue.day === day)
+        && (hourIndex === undefined || issue.hourIndex === hourIndex),
+      )
+      .map((issue) => issue.message);
+  }
+
+  hasHourFieldIssue(day: string | undefined, hourIndex: number, field: 'start_time' | 'end_time'): boolean {
+    return this.validationIssues.some((issue) =>
+      issue.target === 'hour'
+      && issue.hourIndex === hourIndex
+      && issue.day === day
+      && (issue.field === undefined || issue.field === field),
+    );
+  }
+
+  getHourValidationMessages(day: string | undefined, hourIndex: number): string[] {
+    return this.validationIssues
+      .filter((issue) =>
+        issue.target === 'hour'
+        && issue.hourIndex === hourIndex
+        && issue.day === day,
+      )
+      .map((issue) => issue.message);
   }
 
   get planLearnCategories(): readonly PlanCategory[] {

@@ -98,7 +98,10 @@ describe('PlansComponent', () => {
     component.savePlan();
 
     expect(createPlan).not.toHaveBeenCalled();
-    expect(toastShow).toHaveBeenCalledWith(false, 'Bitte mindestens einen Wochentag auswählen.');
+    expect(toastShow).toHaveBeenCalledWith(
+      false,
+      'Plan konnte nicht gespeichert werden: Bitte mindestens einen Wochentag auswählen.',
+    );
   });
 
   it('saves incomplete task selections as empty slots and resizes them to the new hours', () => {
@@ -182,7 +185,46 @@ describe('PlansComponent', () => {
 
     expect(component.planName).toBe(draftName);
     expect(component.errorMessage).toBe('Ungültige Planzeiten.');
+    expect(component.validationIssues).toEqual([
+      { target: 'hours', message: 'Ungültige Planzeiten.' },
+    ]);
+    expect(toastShow).toHaveBeenCalledWith(
+      false,
+      'Plan konnte nicht gespeichert werden: Ungültige Planzeiten.',
+    );
     expect(component.saving).toBe(false);
+  });
+
+  it('marks a rejected server time field and shows its cause in the error toast', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    updatePlan.mockImplementationOnce(() => throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: {
+        detail: [{
+          loc: ['body', 'hours', 0, 'end_time'],
+          msg: 'Value error, Das Ende einer Stunde muss nach ihrem Beginn.',
+        }],
+      },
+    })));
+
+    component.savePlan();
+    fixture.detectChanges();
+
+    expect(component.validationIssues).toEqual([{
+      target: 'hour',
+      hourIndex: 0,
+      field: 'end_time',
+      message: '1. Stunde, Ende: Das Ende einer Stunde muss nach ihrem Beginn.',
+    }]);
+    expect(toastShow).toHaveBeenCalledWith(
+      false,
+      'Plan konnte nicht gespeichert werden: 1. Stunde, Ende: Das Ende einer Stunde muss nach ihrem Beginn.',
+    );
+    expect(fixture.nativeElement.querySelector('.hour-row.plan-invalid')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.hour-row.plan-invalid input.plan-input-invalid')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.hour-error-message')?.textContent)
+      .toContain('Das Ende einer Stunde muss nach ihrem Beginn.');
   });
 
   it('keeps successful save feedback when refreshing the calendar fails', () => {
@@ -296,9 +338,20 @@ describe('PlansComponent', () => {
     component.savePlan();
 
     expect(createPlan).not.toHaveBeenCalled();
-    expect(toastShow).toHaveBeenCalledWith(
-      false,
-      'Die Stundenzeiten dürfen sich innerhalb eines Wochentags nicht überschneiden.',
-    );
+    expect(component.validationIssues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        target: 'hour',
+        day: 'Montag',
+        hourIndex: 0,
+        message: 'Montag, 1. Stunde überschneidet sich mit 2. Stunde.',
+      }),
+      expect.objectContaining({
+        target: 'hour',
+        day: 'Montag',
+        hourIndex: 1,
+        message: 'Montag, 2. Stunde überschneidet sich mit 1. Stunde.',
+      }),
+    ]));
+    expect(toastShow).toHaveBeenCalledWith(false, expect.stringContaining('überschneidet sich'));
   });
 });

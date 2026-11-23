@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, PlanDefinition, PlanHour, TaskDefinition } from '../../../../../services/api.service';
 import { CalendarService } from '../../../../../services/calendar.service';
-import { catchError, map, of, switchMap, timeout } from 'rxjs';
+import { catchError, map, of, switchMap, TimeoutError, timeout } from 'rxjs';
 import { AdminEditorActions } from '../../action-footer/action-footer.component';
 import { ToastService } from '../../../../../services/toast.service';
 import { Category } from '../../../../../services/calendar.service';
 import { PlanDetailsComponent } from './plan-details.component';
+import type { PlanValidationIssue } from './plan-details.component';
 
 @Component({
   selector: 'app-plans',
@@ -71,9 +72,11 @@ export class PlansComponent implements OnChanges {
   loading = false;
   saving = false;
   errorMessage = '';
+  validationIssues: PlanValidationIssue[] = [];
   successMessage = '';
   warningMessage = '';
   private savedFormSnapshot = '';
+  private validationSnapshot = '';
   private preserveFormOnNextPlanListChange = false;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -120,9 +123,13 @@ export class PlansComponent implements OnChanges {
         this.publishEditorActions();
         this.changeDetector.markForCheck();
       },
-      error: () => {
+      error: (error: unknown) => {
         this.loading = false;
-        this.toastService.show(false, 'Pläne konnten nicht geladen werden.');
+        if (preserveError) {
+          console.error('Die Planliste konnte nach dem Speicherversuch nicht aktualisiert werden:', error);
+        } else {
+          this.toastService.show(false, 'Pläne konnten nicht geladen werden.');
+        }
         this.changeDetector.markForCheck();
       },
     });
@@ -236,30 +243,13 @@ export class PlansComponent implements OnChanges {
 
   savePlan(): void {
     this.errorMessage = '';
+    this.validationIssues = [];
     this.successMessage = '';
     this.warningMessage = '';
 
-    if (!this.planName.trim()) {
-      this.toastService.show(false, 'Bitte einen Namen für den Plan eingeben.');
-      return;
-    }
-    if (this.selectedDays.length === 0) {
-      this.toastService.show(false, 'Bitte mindestens einen Wochentag auswählen.');
-      return;
-    }
-    const hoursByDay = this.selectedDays.map((day) => this.getDayHours(day));
-    if (hoursByDay.some((hours) =>
-      hours.some((hour) => !hour.start_time || !hour.end_time || hour.end_time <= hour.start_time),
-    )) {
-      this.toastService.show(false, 'Für jede Stunde muss die Endzeit nach der Startzeit liegen.');
-      return;
-    }
-    if (hoursByDay.some((hours) => hours.some((hour, index) =>
-      hours.slice(index + 1).some((other) =>
-        hour.start_time < other.end_time && hour.end_time > other.start_time,
-      ),
-    ))) {
-      this.toastService.show(false, 'Die Stundenzeiten dürfen sich innerhalb eines Wochentags nicht überschneiden.');
+    const validationIssues = this.validatePlan();
+    if (validationIssues.length > 0) {
+      this.showValidationIssues(validationIssues);
       return;
     }
 
@@ -338,7 +328,8 @@ export class PlansComponent implements OnChanges {
       },
       error: (error: unknown) => {
         this.saving = false;
-        this.errorMessage = this.getSaveErrorMessage(error);
+        const issues = this.getSaveValidationIssues(error);
+        this.showValidationIssues(issues);
         this.warningMessage = '';
         this.loadPlans(true, true);
         this.publishEditorActions();
@@ -371,6 +362,7 @@ export class PlansComponent implements OnChanges {
     this.excludePublicHolidays = plan.exclude_public_holidays;
     this.successMessage = '';
     this.errorMessage = '';
+    this.validationIssues = [];
     this.warningMessage = '';
     this.savedFormSnapshot = this.formSnapshot();
     this.publishEditorActions();
@@ -453,6 +445,7 @@ export class PlansComponent implements OnChanges {
     this.excludeSchoolHolidays = false;
     this.excludePublicHolidays = false;
     this.errorMessage = '';
+    this.validationIssues = [];
     this.successMessage = '';
     this.warningMessage = '';
     this.savedFormSnapshot = this.formSnapshot();
@@ -556,6 +549,13 @@ export class PlansComponent implements OnChanges {
   }
 
   publishEditorActions(): void {
+    if (
+      this.validationIssues.length > 0
+      && this.validationSnapshot !== this.formSnapshot()
+    ) {
+      this.validationIssues = [];
+      this.errorMessage = '';
+    }
     const dirty = this.formSnapshot() !== this.savedFormSnapshot;
     const selected = this.plans.find((plan) => plan.id === this.selectedPlanId);
     if (this.editingPlanId === null && this.setupStep) {
@@ -587,6 +587,10 @@ export class PlansComponent implements OnChanges {
     });
   }
 
+  getValidationMessage(target: PlanValidationIssue['target']): string {
+    return this.validationIssues.find((issue) => issue.target === target)?.message ?? '';
+  }
+
   private createDefaultHours(count: number): PlanHour[] {
     const intervalMinutes = Math.min(45, Math.floor((23 * 60 - 8 * 60) / count));
     return Array.from({ length: count }, (_, index) => {
@@ -613,13 +617,240 @@ export class PlansComponent implements OnChanges {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
-  private getSaveErrorMessage(error: unknown): string {
+  private validatePlan(): PlanValidationIssue[] {
+    const issues: PlanValidationIssue[] = [];
+    if (!this.planName.trim()) {
+      issues.push({ target: 'name', message: 'Bitte einen Namen für den Plan eingeben.' });
+    }
+    if (this.selectedDays.length === 0) {
+      issues.push({ target: 'weekdays', message: 'Bitte mindestens einen Wochentag auswählen.' });
+      return issues;
+    }
+
+    const checkHours = (hours: PlanHour[], day?: string): void => {
+      hours.forEach((hour, index) => {
+        if (!hour.start_time || !hour.end_time) {
+          issues.push({
+            target: 'hour',
+            day,
+            hourIndex: index,
+            field: !hour.start_time ? 'start_time' : 'end_time',
+            message: `${day ? `${day}, ` : ''}${index + 1}. Stunde: Beginn und Ende müssen ausgefüllt sein.`,
+          });
+        } else if (hour.end_time <= hour.start_time) {
+          issues.push({
+            target: 'hour',
+            day,
+            hourIndex: index,
+            field: 'end_time',
+            message: `${day ? `${day}, ` : ''}${index + 1}. Stunde: Die Endzeit muss nach der Startzeit liegen.`,
+          });
+        }
+      });
+
+      hours.forEach((hour, index) => {
+        if (!hour.start_time || !hour.end_time || hour.end_time <= hour.start_time) return;
+        hours.slice(index + 1).forEach((other, offset) => {
+          if (
+            other.start_time
+            && other.end_time
+            && other.end_time > other.start_time
+            && hour.start_time < other.end_time
+            && hour.end_time > other.start_time
+          ) {
+            const otherIndex = index + offset + 1;
+            issues.push({
+              target: 'hour',
+              day,
+              hourIndex: index,
+              message: `${day ? `${day}, ` : ''}${index + 1}. Stunde überschneidet sich mit ${otherIndex + 1}. Stunde.`,
+            });
+            issues.push({
+              target: 'hour',
+              day,
+              hourIndex: otherIndex,
+              message: `${day ? `${day}, ` : ''}${otherIndex + 1}. Stunde überschneidet sich mit ${index + 1}. Stunde.`,
+            });
+          }
+        });
+      });
+    };
+
+    if (this.uniformTime) checkHours(this.hours);
+    else this.selectedDays.forEach((day) => checkHours(this.getDayHours(day), day));
+
+    return issues;
+  }
+
+  private showValidationIssues(issues: PlanValidationIssue[]): void {
+    this.validationIssues = issues;
+    this.validationSnapshot = this.formSnapshot();
+    const reasons = issues.map((issue) => issue.message);
+    this.errorMessage = issues.length === 1
+      ? issues[0].message
+      : `Bitte korrigiere die rot markierten Angaben (${issues.length} Fehler).`;
+    const visibleReasons = reasons.slice(0, 3).join(' ');
+    const remaining = reasons.length > 3 ? ` Im Plan sind ${reasons.length - 3} weitere Fehler markiert.` : '';
+    this.toastService.show(false, `Plan konnte nicht gespeichert werden: ${visibleReasons}${remaining}`);
+    this.publishEditorActions();
+  }
+
+  private getSaveValidationIssues(error: unknown): PlanValidationIssue[] {
     if (error instanceof HttpErrorResponse) {
       const detail = error.error?.detail;
-      if (typeof detail === 'string') return detail;
-      if (detail && typeof detail.message === 'string') return detail.message;
+      if (Array.isArray(detail)) {
+        const issues = detail
+          .map((item) => this.mapApiValidationIssue(item))
+          .filter((issue): issue is PlanValidationIssue => issue !== null);
+        if (issues.length > 0) return issues;
+      }
+      if (typeof detail === 'string') {
+        return [{ target: this.targetForMessage(detail), message: detail }];
+      }
+      if (detail && typeof detail.message === 'string') {
+        return [{ target: 'general', message: detail.message }];
+      }
+      if (error.status === 0) {
+        return [{
+          target: 'general',
+          message: 'Der Server ist nicht erreichbar. Bitte prüfe die Verbindung; deine Änderungen bleiben im Formular.',
+        }];
+      }
+      if (error.status > 0) {
+        const statusMessages: Record<number, string> = {
+          401: 'Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.',
+          403: 'Du hast keine Berechtigung, diesen Plan zu speichern.',
+          404: 'Der Plan wurde auf dem Server nicht gefunden.',
+          409: 'Der Plan wurde zwischenzeitlich geändert. Lade ihn neu und übernimm deine Änderungen erneut.',
+          422: 'Der Server hat die Planangaben abgelehnt, aber keine einzelnen Felder benannt.',
+        };
+        const explanation = statusMessages[error.status]
+          ?? `Der Server hat das Speichern mit HTTP ${error.status} abgelehnt.`;
+        return [{
+          target: 'general',
+          message: `${explanation} Deine Änderungen bleiben im Formular.`,
+        }];
+      }
     }
-    return 'Speichern fehlgeschlagen oder die Antwort blieb aus. Deine Änderungen bleiben im Formular.';
+    if (error instanceof TimeoutError) {
+      return [{
+        target: 'general',
+        message: 'Der Server hat innerhalb von 15 Sekunden nicht geantwortet. Deine Änderungen bleiben im Formular.',
+      }];
+    }
+    return [{
+      target: 'general',
+      message: 'Keine eindeutige Servermeldung erhalten. Bitte prüfe die Verbindung; deine Änderungen bleiben im Formular.',
+    }];
+  }
+
+  private mapApiValidationIssue(value: unknown): PlanValidationIssue | null {
+    if (!value || typeof value !== 'object') return null;
+    const item = value as { loc?: unknown; msg?: unknown };
+    if (typeof item.msg !== 'string') return null;
+    const location = Array.isArray(item.loc) ? item.loc : [];
+    const path = location.filter((part): part is string | number =>
+      (typeof part === 'string' || typeof part === 'number') && part !== 'body',
+    );
+    const field = path[path.length - 1];
+    let target: PlanValidationIssue['target'] = 'general';
+    let day: string | undefined;
+    let hourIndex: number | undefined;
+    let fieldName: PlanValidationIssue['field'];
+    let label = '';
+
+    if (path[0] === 'name') {
+      target = 'name';
+      label = 'Planname';
+    } else if (path[0] === 'days') {
+      target = 'weekdays';
+      label = 'Wochentage';
+    } else if (path[0] === 'hours_count') {
+      target = 'hours-count';
+      label = 'Anzahl Einheiten';
+    } else if (path[0] === 'uniform_task_id') {
+      target = 'uniform-task';
+      label = 'Task';
+    } else if (path[0] === 'activity_subjects') {
+      target = 'activity-grid';
+      label = 'Planbefüllung';
+    } else if (path[0] === 'hours' && typeof path[1] === 'number') {
+      target = 'hour';
+      hourIndex = path[1];
+      fieldName = this.timeField(field);
+      label = `${hourIndex + 1}. Stunde${fieldName ? `, ${this.timeFieldLabel(fieldName)}` : ''}`;
+    } else if (
+      path[0] === 'day_hours'
+      && typeof path[1] === 'string'
+      && typeof path[2] === 'number'
+    ) {
+      target = 'hour';
+      day = path[1];
+      hourIndex = path[2];
+      fieldName = this.timeField(field);
+      label = `${day}, ${hourIndex + 1}. Stunde${fieldName ? `, ${this.timeFieldLabel(fieldName)}` : ''}`;
+    } else {
+      target = this.targetForMessage(item.msg);
+      label = this.validationTargetLabel(target);
+    }
+
+    const message = this.translateValidationMessage(item.msg);
+    return {
+      target,
+      day,
+      hourIndex,
+      field: fieldName,
+      message: label ? `${label}: ${message}` : message,
+    };
+  }
+
+  private targetForMessage(message: string): PlanValidationIssue['target'] {
+    const normalized = message.toLocaleLowerCase('de');
+    if (normalized.includes('name') || normalized.includes('titel')) return 'name';
+    if (normalized.includes('wochentag') || normalized.includes('tage')) return 'weekdays';
+    if (normalized.includes('task') || normalized.includes('fach') || normalized.includes('aktivität')) {
+      return 'activity-grid';
+    }
+    if (normalized.includes('stunde') || normalized.includes('zeit')) return 'hours';
+    return 'general';
+  }
+
+  private validationTargetLabel(target: PlanValidationIssue['target']): string {
+    const labels: Partial<Record<PlanValidationIssue['target'], string>> = {
+      name: 'Planname',
+      weekdays: 'Wochentage',
+      'hours-count': 'Anzahl Einheiten',
+      hours: 'Stundenzeiten',
+      'uniform-task': 'Task',
+      'activity-grid': 'Planbefüllung',
+    };
+    return labels[target] ?? '';
+  }
+
+  private timeField(field: unknown): PlanValidationIssue['field'] {
+    if (field === 'start_time') return 'start_time';
+    if (field === 'end_time') return 'end_time';
+    return undefined;
+  }
+
+  private timeFieldLabel(field: 'start_time' | 'end_time'): string {
+    return field === 'start_time' ? 'Beginn' : 'Ende';
+  }
+
+  private translateValidationMessage(message: string): string {
+    const cleanMessage = message.replace(/^Value error, /, '').replace(/\.$/, '');
+    if (cleanMessage === 'Field required') return 'Dieses Feld ist erforderlich.';
+    if (cleanMessage.startsWith('String should match pattern')) {
+      return 'Bitte eine gültige Uhrzeit im Format HH:MM angeben.';
+    }
+    if (cleanMessage === 'Input should be a valid integer') return 'Bitte eine ganze Zahl angeben.';
+    if (cleanMessage === 'Input should be greater than or equal to 1') {
+      return 'Der Wert muss mindestens 1 sein.';
+    }
+    if (cleanMessage === 'Input should be less than or equal to 24') {
+      return 'Der Wert darf höchstens 24 sein.';
+    }
+    return `${cleanMessage}.`;
   }
 
 }

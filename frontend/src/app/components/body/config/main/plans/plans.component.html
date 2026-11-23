@@ -34,10 +34,15 @@
             name="planName"
             [(ngModel)]="planName"
             (ngModelChange)="publishEditorActions()"
+            [class.plan-input-invalid]="getValidationMessage('name')"
+            [attr.aria-invalid]="getValidationMessage('name') ? 'true' : null"
             maxlength="100"
             placeholder="z. B. Stundenplan"
             autofocus
             required>
+          @if (getValidationMessage('name')) {
+            <small class="plan-field-error">{{ getValidationMessage('name') }}</small>
+          }
         </label>
       </div>
     } @else {
@@ -55,6 +60,7 @@
         [excludePublicHolidays]="excludePublicHolidays"
         [categories]="categories"
         [tasks]="tasks"
+        [validationIssues]="validationIssues"
         [uniformTaskId]="uniformTaskId"
         [activitySubjects]="activitySubjects"
         (uniformTimeChange)="onUniformTimeChange($event)"

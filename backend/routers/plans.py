@@ -378,8 +378,8 @@ def update_plan(plan_id: int, payload: PlanPayload):
                         """,
                         (
                             assignment["user_id"],
-                            title,
-                            title[:6],
+                            event_type["name"],
+                            event_type["name"][:6],
                             slot["day_of_week"],
                             slot["start_time"],
                             slot["end_time"],

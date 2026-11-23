@@ -1,8 +1,20 @@
-<section class="plan-details-component plans-page">
+<section
+  class="plan-details-component plans-page"
+  [class.plan-invalid]="hasValidationIssue('general')">
+  @if (hasValidationIssue('general')) {
+    <div class="plan-field-error plan-error-box">
+      @for (message of getValidationMessages('general'); track message) {
+        <p>{{ message }}</p>
+      }
+    </div>
+  }
   <h4 class="plan-name-heading">{{ planName }}</h4>
+  @if (hasValidationIssue('name')) {
+    <p class="plan-field-error">{{ getValidationMessages('name')[0] }}</p>
+  }
 
   <div class="form-grid">
-    <fieldset class="day-selection">
+    <fieldset class="day-selection" [class.plan-invalid]="hasValidationIssue('weekdays')">
       <legend>Wochentage</legend>
       <div class="weekday-checkboxes">
         @for (day of daysOfWeek; track day) {
@@ -15,6 +27,8 @@
                 [value]="dayHours[day]?.length ?? 1"
                 min="0"
                 max="24"
+                [class.plan-input-invalid]="hasValidationIssue('hours-count')"
+                [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
                 [attr.aria-label]="'Einheiten am ' + day"
                 (change)="dayCountChange.emit({ day, value: $any($event.target).valueAsNumber })">
             } @else {
@@ -28,9 +42,12 @@
           </label>
         }
       </div>
+      @for (message of getValidationMessages('weekdays'); track message) {
+        <p class="plan-field-error">{{ message }}</p>
+      }
     </fieldset>
 
-    <div class="field field-count">
+    <div class="field field-count" [class.plan-invalid]="hasValidationIssue('hours-count')">
       <span id="hours-count-label">Anzahl Einheiten</span>
       @if (uniformCount) {
         <input
@@ -38,11 +55,16 @@
           name="hoursCount"
           min="1"
           max="24"
+          [class.plan-input-invalid]="hasValidationIssue('hours-count')"
+          [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
           aria-labelledby="hours-count-label"
           [ngModel]="hoursCount"
           (ngModelChange)="hoursCountChange.emit($event)">
       } @else {
         <small>Einheitenanzahl je ausgewähltem Wochentag</small>
+      }
+      @for (message of getValidationMessages('hours-count'); track message) {
+        <small class="plan-field-error">{{ message }}</small>
       }
     </div>
   </div>
@@ -88,12 +110,20 @@
       </label>
       <label class="field">
         <span>Task</span>
-        <select name="uniformActivityTask" [ngModel]="uniformTaskId" (ngModelChange)="uniformTaskIdChange.emit($event)">
+        <select
+          name="uniformActivityTask"
+          [ngModel]="uniformTaskId"
+          [class.plan-input-invalid]="hasValidationIssue('uniform-task')"
+          [attr.aria-invalid]="hasValidationIssue('uniform-task') ? 'true' : null"
+          (ngModelChange)="uniformTaskIdChange.emit($event)">
           <option [ngValue]="null">Task auswählen …</option>
           @for (task of availableTasks; track task.id) {
             <option [ngValue]="task.id">{{ task.category_label }} · {{ task.title }}</option>
           }
         </select>
+        @for (message of getValidationMessages('uniform-task'); track message) {
+          <small class="plan-field-error">{{ message }}</small>
+        }
       </label>
       @if (tasks.length === 0) {
         <p class="form-message form-error">Es sind keine Tasks verfügbar. Lege zuerst unter Einstellungen → Kategorien einen Task an.</p>
@@ -109,22 +139,47 @@
     </div>
   </div>
 
+  @if (hasValidationIssue('hours')) {
+    <div class="plan-field-error plan-error-box">
+      @for (message of getValidationMessages('hours'); track message) {
+        <p>{{ message }}</p>
+      }
+    </div>
+  }
+
   @if (uniformTime) {
-    <div class="hours-grid hour-time-table">
+    <div class="hours-grid hour-time-table" [class.plan-invalid]="hasValidationIssue('hours')">
       <div class="hour-grid-header" aria-hidden="true">
         <span>Stunde</span>
         <span>Beginn</span>
         <span>Ende</span>
       </div>
       @for (hour of hours; track $index; let index = $index) {
-        <div class="hour-row">
+        <div class="hour-row" [class.plan-invalid]="getHourValidationMessages(undefined, index).length > 0">
           <strong>{{ index + 1 }}. Stunde</strong>
           <label class="field">
-            <input type="time" [name]="'hourStart' + index" [(ngModel)]="hour.start_time" (ngModelChange)="hourTimesChange.emit()" required>
+            <input
+              type="time"
+              [name]="'hourStart' + index"
+              [(ngModel)]="hour.start_time"
+              [class.plan-input-invalid]="hasHourFieldIssue(undefined, index, 'start_time')"
+              [attr.aria-invalid]="hasHourFieldIssue(undefined, index, 'start_time') ? 'true' : null"
+              (ngModelChange)="hourTimesChange.emit()"
+              required>
           </label>
           <label class="field">
-            <input type="time" [name]="'hourEnd' + index" [(ngModel)]="hour.end_time" (ngModelChange)="hourTimesChange.emit()" required>
+            <input
+              type="time"
+              [name]="'hourEnd' + index"
+              [(ngModel)]="hour.end_time"
+              [class.plan-input-invalid]="hasHourFieldIssue(undefined, index, 'end_time')"
+              [attr.aria-invalid]="hasHourFieldIssue(undefined, index, 'end_time') ? 'true' : null"
+              (ngModelChange)="hourTimesChange.emit()"
+              required>
           </label>
+          @for (message of getHourValidationMessages(undefined, index); track message) {
+            <p class="plan-field-error hour-error-message">{{ message }}</p>
+          }
         </div>
       }
     </div>
@@ -132,21 +187,38 @@
     @for (day of selectedDays; track day) {
       <fieldset class="day-hours-section">
         <legend>{{ day }}</legend>
-        <div class="hours-grid hour-time-table">
+        <div class="hours-grid hour-time-table" [class.plan-invalid]="hasValidationIssue('hours')">
           <div class="hour-grid-header" aria-hidden="true">
             <span>Stunde</span>
             <span>Beginn</span>
             <span>Ende</span>
           </div>
           @for (hour of dayHours[day]; track $index; let index = $index) {
-            <div class="hour-row">
+            <div class="hour-row" [class.plan-invalid]="getHourValidationMessages(day, index).length > 0">
               <strong>{{ index + 1 }}. Stunde</strong>
               <label class="field">
-                <input type="time" [name]="'hourStart' + day + index" [(ngModel)]="hour.start_time" (ngModelChange)="hourTimesChange.emit()" required>
+                <input
+                  type="time"
+                  [name]="'hourStart' + day + index"
+                  [(ngModel)]="hour.start_time"
+                  [class.plan-input-invalid]="hasHourFieldIssue(day, index, 'start_time')"
+                  [attr.aria-invalid]="hasHourFieldIssue(day, index, 'start_time') ? 'true' : null"
+                  (ngModelChange)="hourTimesChange.emit()"
+                  required>
               </label>
               <label class="field">
-                <input type="time" [name]="'hourEnd' + day + index" [(ngModel)]="hour.end_time" (ngModelChange)="hourTimesChange.emit()" required>
+                <input
+                  type="time"
+                  [name]="'hourEnd' + day + index"
+                  [(ngModel)]="hour.end_time"
+                  [class.plan-input-invalid]="hasHourFieldIssue(day, index, 'end_time')"
+                  [attr.aria-invalid]="hasHourFieldIssue(day, index, 'end_time') ? 'true' : null"
+                  (ngModelChange)="hourTimesChange.emit()"
+                  required>
               </label>
+              @for (message of getHourValidationMessages(day, index); track message) {
+                <p class="plan-field-error hour-error-message">{{ message }}</p>
+              }
             </div>
           }
         </div>
@@ -155,8 +227,11 @@
   }
 
   @if (!uniformActivities) {
-    <fieldset class="holiday-options plan-activity-selection">
+    <fieldset class="holiday-options plan-activity-selection" [class.plan-invalid]="hasValidationIssue('activity-grid')">
       <legend>Plan befüllen</legend>
+      @for (message of getValidationMessages('activity-grid'); track message) {
+        <p class="plan-field-error">{{ message }}</p>
+      }
       @if (uniformTime && uniformCount) {
         <div class="plan-learn-container">
           <lib-plan-learn

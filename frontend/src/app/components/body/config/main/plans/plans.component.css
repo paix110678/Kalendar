@@ -62,6 +62,18 @@
   color: #9c6500;
 }
 
+.plan-field-error {
+  margin: 0;
+  color: #c92a2a !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.plans-page .plan-input-invalid {
+  border-color: #c92a2a;
+  box-shadow: 0 0 0 1px #c92a2a;
+}
+
 .plan-form {
   padding: 0;
 }
