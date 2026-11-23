@@ -137,13 +137,20 @@ export class PlansComponent implements OnChanges {
 
   onHoursCountChange(value: number): void {
     const count = Math.max(1, Math.min(24, Math.trunc(Number(value) || 1)));
+    const previousDayHours = new Map(
+      this.selectedDays.map((day) => [day, this.getDayHours(day)]),
+    );
     this.hoursCount = count;
-    this.hours = this.resizeHours(this.hours, count);
+    this.hours = this.uniformTime
+      ? this.adjustHoursAtStart(this.hours, count)
+      : this.createDefaultHours(count);
     for (const day of this.selectedDays) {
-      const dayCount = this.uniformCount ? count : this.getDayHours(day).length;
+      const oldDayHours = previousDayHours.get(day) ?? [];
+      const dayCount = this.uniformCount ? count : oldDayHours.length;
+      this.adjustActivityAssignmentsAtStart(day, oldDayHours.length, dayCount);
       this.dayHours[day] = this.uniformTime
         ? this.hours.slice(0, dayCount).map((hour) => ({ ...hour }))
-        : this.resizeHours(this.dayHours[day] ?? this.hours, dayCount);
+        : this.adjustHoursAtStart(oldDayHours, dayCount);
     }
     this.publishEditorActions();
   }
@@ -171,15 +178,22 @@ export class PlansComponent implements OnChanges {
   onUniformCountChange(uniform: boolean): void {
     if (uniform === this.uniformCount) return;
     if (uniform) {
+      const previousDayHours = new Map(
+        this.selectedDays.map((day) => [day, this.getDayHours(day)]),
+      );
       this.hoursCount = Math.max(
         1,
-        ...this.selectedDays.map((day) => this.getDayHours(day).length),
+        ...Array.from(previousDayHours.values(), (hours) => hours.length),
       );
-      this.hours = this.resizeHours(this.hours, this.hoursCount);
+      this.hours = this.uniformTime
+        ? this.adjustHoursAtStart(this.hours, this.hoursCount)
+        : this.createDefaultHours(this.hoursCount);
       for (const day of this.selectedDays) {
+        const oldDayHours = previousDayHours.get(day) ?? [];
+        this.adjustActivityAssignmentsAtStart(day, oldDayHours.length, this.hoursCount);
         this.dayHours[day] = this.uniformTime
           ? this.hours.map((hour) => ({ ...hour }))
-          : this.resizeHours(this.dayHours[day] ?? this.hours, this.hoursCount);
+          : this.adjustHoursAtStart(oldDayHours, this.hoursCount);
       }
     } else {
       this.hoursCount = 1;
@@ -205,6 +219,7 @@ export class PlansComponent implements OnChanges {
   onDayCountChange(day: string, value: number): void {
     if (!Number.isFinite(value)) return;
     const count = Math.max(0, Math.min(24, Math.trunc(Number(value) || 0)));
+    const previousDayHours = this.getDayHours(day);
     if (count === 0) {
       this.selectedDays = this.selectedDays.filter((selectedDay) => selectedDay !== day);
       this.hoursCount = Math.max(
@@ -216,15 +231,24 @@ export class PlansComponent implements OnChanges {
       return;
     }
 
+    if (count !== previousDayHours.length && this.uniformTime) {
+      this.onUniformTimeChange(false);
+      this.warningMessage =
+        'Für individuelle Einheiten wurden einheitliche Zeiten ausgeschaltet, damit bisherige Einheiten erhalten bleiben.';
+    }
+
     if (!this.selectedDays.includes(day)) {
       this.selectedDays = this.daysOfWeek.filter((item) => item === day || this.selectedDays.includes(item));
     }
-    this.dayHours[day] = this.resizeHours(this.dayHours[day] ?? this.hours, count);
+    this.dayHours[day] = this.adjustHoursAtStart(previousDayHours, count);
+    this.adjustActivityAssignmentsAtStart(day, previousDayHours.length, count);
     this.hoursCount = Math.max(
       1,
       ...this.selectedDays.map((selectedDay) => this.getDayHours(selectedDay).length),
     );
-    this.hours = this.resizeHours(this.hours, this.hoursCount);
+    this.hours = this.uniformTime
+      ? this.adjustHoursAtStart(this.hours, this.hoursCount)
+      : this.createDefaultHours(this.hoursCount);
     if (this.uniformTime) {
       for (const selectedDay of this.selectedDays) {
         this.dayHours[selectedDay] = this.hours
@@ -608,6 +632,47 @@ export class PlansComponent implements OnChanges {
     return Array.from({ length: count }, (_, index) => ({
       ...(hours[index] ?? defaults[index]),
     }));
+  }
+
+  private adjustHoursAtStart(hours: PlanHour[], count: number): PlanHour[] {
+    if (count <= hours.length) {
+      return hours.slice(hours.length - count).map((hour) => ({ ...hour }));
+    }
+    if (hours.length === 0) return this.createDefaultHours(count);
+
+    const addedCount = count - hours.length;
+    const firstStart = this.timeToMinutes(hours[0].start_time);
+    const firstEnd = this.timeToMinutes(hours[0].end_time);
+    const interval = firstStart !== null && firstEnd !== null && firstEnd > firstStart
+      ? firstEnd - firstStart
+      : 45;
+    const canFitBeforeFirstHour = firstStart !== null && firstStart >= interval * addedCount;
+    const addedHours = canFitBeforeFirstHour
+      ? Array.from({ length: addedCount }, (_, index) => {
+        const start = firstStart - interval * (addedCount - index);
+        return {
+          start_time: this.formatMinutes(start),
+          end_time: this.formatMinutes(start + interval),
+        };
+      })
+      : Array.from({ length: addedCount }, () => ({ start_time: '', end_time: '' }));
+
+    return [...addedHours, ...hours.map((hour) => ({ ...hour }))];
+  }
+
+  private adjustActivityAssignmentsAtStart(day: string, previousCount: number, nextCount: number): void {
+    const difference = nextCount - previousCount;
+    if (difference === 0) return;
+    const existing = this.activitySubjects[day] ?? [];
+    const updated = difference > 0
+      ? [...Array.from({ length: difference }, () => 0), ...existing]
+      : existing.slice(Math.min(-difference, existing.length));
+    this.activitySubjects = { ...this.activitySubjects, [day]: updated };
+  }
+
+  private timeToMinutes(value: string): number | null {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
   }
 
   private formatMinutes(totalMinutes: number): string {
