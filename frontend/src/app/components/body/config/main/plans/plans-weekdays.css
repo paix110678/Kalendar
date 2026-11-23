@@ -64,6 +64,14 @@
   text-align: center;
 }
 
+.hours-count-control {
+  max-width: 180px;
+}
+
+.field-count .hours-count-control input[type='text'] {
+  max-width: none;
+}
+
 .weekday-count-step {
   display: inline-flex;
   min-width: 28px;

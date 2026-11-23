@@ -451,6 +451,57 @@ describe('PlansComponent', () => {
     expect(component.activitySubjects['Montag']).toEqual([0, 22]);
   });
 
+  it('commits the shared unit count on blur and exposes mobile increment controls', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag'];
+    component.uniformActivities = false;
+    component.hoursCount = 2;
+    component.hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ];
+    component.dayHours = {
+      Montag: component.hours.map((hour) => ({ ...hour })),
+    };
+    component.activitySubjects = { Montag: [11, 22] };
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const countInput = element.querySelector<HTMLInputElement>('input[name="hoursCount"]');
+    expect(countInput).not.toBeNull();
+    countInput!.value = '';
+    countInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(countInput!.value).toBe('');
+    expect(component.hoursCount).toBe(2);
+    expect(component.activitySubjects['Montag']).toEqual([11, 22]);
+
+    countInput!.value = '3';
+    countInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(component.hoursCount).toBe(2);
+    expect(component.activitySubjects['Montag']).toEqual([11, 22]);
+    countInput!.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(component.hoursCount).toBe(3);
+    expect(component.hours).toEqual([
+      { start_time: '07:00', end_time: '07:30' },
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+    ]);
+    expect(component.activitySubjects['Montag']).toEqual([0, 11, 22]);
+
+    element.querySelector<HTMLButtonElement>('[aria-label="Anzahl Einheiten erhöhen"]')!.click();
+    fixture.detectChanges();
+    expect(component.hoursCount).toBe(4);
+    expect(component.activitySubjects['Montag']).toEqual([0, 0, 11, 22]);
+    element.querySelector<HTMLButtonElement>('[aria-label="Anzahl Einheiten verringern"]')!.click();
+    fixture.detectChanges();
+    expect(component.hoursCount).toBe(3);
+    expect(component.activitySubjects['Montag']).toEqual([0, 11, 22]);
+  });
+
   it('rejects overlapping times within an individual weekday', () => {
     const component = fixture.componentInstance;
     component.setupStep = false;

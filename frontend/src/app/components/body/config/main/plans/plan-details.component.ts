@@ -49,6 +49,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Input() validationIssues: PlanValidationIssue[] = [];
   @Input() unitInsertionPosition: UnitInsertionPosition = 'before';
   selectedCategoryId: number | null = null;
+  private hoursCountDraft: string | null = null;
   private dayCountDrafts: Record<string, string> = {};
 
   @Output() uniformTimeChange = new EventEmitter<boolean>();
@@ -65,6 +66,7 @@ export class PlanDetailsComponent implements OnChanges {
   @Output() unitInsertionPositionChange = new EventEmitter<UnitInsertionPosition>();
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['hoursCount']) this.hoursCountDraft = null;
     if (changes['uniformTaskId'] || changes['tasks']) {
       const selectedTask = this.tasks.find((task) => task.id === this.uniformTaskId);
       this.selectedCategoryId = selectedTask?.category_id ?? null;
@@ -126,6 +128,38 @@ export class PlanDetailsComponent implements OnChanges {
 
   getDayCount(day: string): number {
     return this.dayHours[day]?.length ?? Math.max(1, this.hoursCount);
+  }
+
+  get hoursCountInputValue(): string {
+    return this.hoursCountDraft ?? String(this.hoursCount);
+  }
+
+  onHoursCountDraftInput(event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.hoursCountDraft = event.target.value;
+    }
+  }
+
+  commitHoursCount(): void {
+    const draft = this.hoursCountDraft;
+    if (draft === null) return;
+    this.hoursCountDraft = null;
+    if (!/^\d+$/.test(draft)) return;
+    const value = Number(draft);
+    if (value < 1 || value > 24) return;
+    this.hoursCountChange.emit(value);
+  }
+
+  stepHoursCount(change: -1 | 1): void {
+    const draftValue = this.hoursCountDraft?.trim()
+      ? Number(this.hoursCountDraft)
+      : this.hoursCount;
+    const currentValue = Number.isInteger(draftValue) && draftValue >= 1 && draftValue <= 24
+      ? draftValue
+      : this.hoursCount;
+    const value = Math.max(1, Math.min(24, currentValue + change));
+    this.hoursCountDraft = null;
+    this.hoursCountChange.emit(value);
   }
 
   getDayCountInputValue(day: string): string {

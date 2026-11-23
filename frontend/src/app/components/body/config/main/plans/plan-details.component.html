@@ -69,16 +69,32 @@
     <div class="field field-count" [class.plan-invalid]="hasValidationIssue('hours-count')">
       <span id="hours-count-label">Anzahl Einheiten</span>
       @if (uniformCount) {
-        <input
-          type="number"
-          name="hoursCount"
-          min="1"
-          max="24"
-          [class.plan-input-invalid]="hasValidationIssue('hours-count')"
-          [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
-          aria-labelledby="hours-count-label"
-          [ngModel]="hoursCount"
-          (ngModelChange)="hoursCountChange.emit($event)">
+        <div class="weekday-count-control hours-count-control">
+          <button
+            type="button"
+            class="weekday-count-step"
+            aria-label="Anzahl Einheiten verringern"
+            [disabled]="hoursCount <= 1"
+            (click)="stepHoursCount(-1)">-</button>
+          <input
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            name="hoursCount"
+            [value]="hoursCountInputValue"
+            [class.plan-input-invalid]="hasValidationIssue('hours-count')"
+            [attr.aria-invalid]="hasValidationIssue('hours-count') ? 'true' : null"
+            aria-labelledby="hours-count-label"
+            (input)="onHoursCountDraftInput($event)"
+            (blur)="commitHoursCount()"
+            (keydown.enter)="commitHoursCount(); $event.preventDefault()">
+          <button
+            type="button"
+            class="weekday-count-step"
+            aria-label="Anzahl Einheiten erhöhen"
+            [disabled]="hoursCount >= 24"
+            (click)="stepHoursCount(1)">+</button>
+        </div>
       } @else {
         <small>Einheitenanzahl je ausgewähltem Wochentag</small>
       }
