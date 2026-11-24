@@ -78,16 +78,25 @@
     </app-tasks>
   }
   @if (activeTab === 'familyTasks') {
-    <app-family-tasks
-      [activeUsers]="activeUsers"
-      [tasks]="familyTasks"
-      [selectedTaskId]="selectedFamilyTaskId"
-      [defaultMemberId]="selectedFamilyTaskMemberId"
-      [defaultParentId]="selectedFamilyTaskParentId"
-      (tasksChanged)="familyTasksChanged.emit($event)"
-      (selectedTaskIdChange)="selectedFamilyTaskIdChange.emit($event)"
-      (editorActionsChange)="editorActionsChange.emit($event)">
-    </app-family-tasks>
+    @if (selectedFamilyTaskListMemberId !== null) {
+      <app-family-task-list
+        [memberId]="selectedFamilyTaskListMemberId"
+        [tasks]="familyTasks"
+        [activeUsers]="activeUsers"
+        (closeList)="familyTaskListClosed.emit()">
+      </app-family-task-list>
+    } @else {
+      <app-family-tasks
+        [activeUsers]="activeUsers"
+        [tasks]="familyTasks"
+        [selectedTaskId]="selectedFamilyTaskId"
+        [defaultMemberId]="selectedFamilyTaskMemberId"
+        [defaultParentId]="selectedFamilyTaskParentId"
+        (tasksChanged)="familyTasksChanged.emit($event)"
+        (selectedTaskIdChange)="selectedFamilyTaskIdChange.emit($event)"
+        (editorActionsChange)="editorActionsChange.emit($event)">
+      </app-family-tasks>
+    }
   }
   @if (activeTab === 'database') {
     <app-database

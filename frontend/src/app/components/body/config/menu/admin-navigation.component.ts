@@ -27,6 +27,7 @@ export interface AdminNavigationAction {
     | 'task'
     | 'familyTasks'
     | 'familyTask'
+    | 'familyTaskList'
     | 'newFamilyTask'
     | 'newFamilySubtask'
     | 'weather'

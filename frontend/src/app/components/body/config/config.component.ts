@@ -105,6 +105,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
   public selectedFamilyTaskId: number | null = null;
   public selectedFamilyTaskMemberId: number | null = null;
   public selectedFamilyTaskParentId: number | null = null;
+  public selectedFamilyTaskListMemberId: number | null = null;
   public expandedSections: Record<
     'plans' | 'holidays' | 'categories' | 'system' | 'database',
     boolean
@@ -264,6 +265,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
       case 'familyTask':
         if (typeof action.id === 'number') this.openFamilyTask(action.id);
         break;
+      case 'familyTaskList':
+        if (typeof action.id === 'number') this.openFamilyTaskList(action.id);
+        break;
       case 'newFamilyTask':
         if (typeof action.id === 'number') this.openNewFamilyTask(action.id);
         break;
@@ -391,7 +395,23 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedFamilyTaskId = null;
     this.selectedFamilyTaskMemberId = null;
     this.selectedFamilyTaskParentId = null;
+    this.selectedFamilyTaskListMemberId = null;
     this.refreshFamilyTasks();
+  }
+
+  openFamilyTaskList(memberId: number): void {
+    this.editorActions = null;
+    this.activeTab = 'familyTasks';
+    this.selectedFamilyTaskId = null;
+    this.selectedFamilyTaskMemberId = memberId;
+    this.selectedFamilyTaskParentId = null;
+    this.selectedFamilyTaskListMemberId = memberId;
+  }
+
+  closeFamilyTaskList(): void {
+    this.editorActions = null;
+    this.selectedFamilyTaskListMemberId = null;
+    this.selectedFamilyTaskId = null;
   }
 
   openFamilyTask(taskId: number): void {
@@ -402,6 +422,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedFamilyTaskId = task.id;
     this.selectedFamilyTaskMemberId = task.member_id;
     this.selectedFamilyTaskParentId = task.parent_id;
+    this.selectedFamilyTaskListMemberId = null;
   }
 
   openNewFamilyTask(memberId: number): void {
@@ -410,6 +431,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedFamilyTaskId = null;
     this.selectedFamilyTaskMemberId = memberId;
     this.selectedFamilyTaskParentId = null;
+    this.selectedFamilyTaskListMemberId = null;
   }
 
   openNewFamilySubtask(parentId: number): void {
@@ -420,6 +442,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.selectedFamilyTaskId = null;
     this.selectedFamilyTaskMemberId = parent.member_id;
     this.selectedFamilyTaskParentId = parent.id;
+    this.selectedFamilyTaskListMemberId = null;
   }
 
   onFamilyTaskIdChange(taskId: number | null): void {

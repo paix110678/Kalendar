@@ -87,6 +87,7 @@
         [selectedFamilyTaskId]="selectedFamilyTaskId"
         [selectedFamilyTaskMemberId]="selectedFamilyTaskMemberId"
         [selectedFamilyTaskParentId]="selectedFamilyTaskParentId"
+        [selectedFamilyTaskListMemberId]="selectedFamilyTaskListMemberId"
         (editorActionsChange)="onEditorActionsChanged($event)"
         (planSetupViewChange)="planSetupViewActive = $event"
         (accountTreeDataChange)="accountTreeData = $event"
@@ -103,6 +104,7 @@
         (selectedTaskIdChange)="selectedTaskId = $event"
         (familyTasksChanged)="onFamilyTasksChanged($event)"
         (selectedFamilyTaskIdChange)="onFamilyTaskIdChange($event)"
+        (familyTaskListClosed)="closeFamilyTaskList()"
         (selectedBackupIdChange)="selectedDatabaseBackupId = $event"
         (backupsChanged)="onDatabaseBackupsChanged($event)">
       </app-config-main>

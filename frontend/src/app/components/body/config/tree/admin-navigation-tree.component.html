@@ -144,39 +144,40 @@
               </div>
               @for (task of getFamilyTasksForMember(user.id); track task.id) {
                 <div class="family-task-group">
-                  <button
-                    type="button"
-                    class="tree-item family-task-item"
-                    [class.tree-item-active]="selectedFamilyTaskId === task.id"
-                    [attr.aria-label]="(task.completed ? 'Erledigte Aufgabe: ' : 'Aufgabe: ') + task.title + ', ' + familyTaskDescription(task)"
-                    (click)="emit('familyTask', task.id)">
-                    <span class="item-marker" aria-hidden="true">
-                      {{ task.completed ? '✓' : '○' }}
-                    </span>
-                    <span class="item-name">
-                      {{ task.title }}
-                      <small>{{ familyTaskDescription(task) }}</small>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    class="tree-item task-add family-subtask-add"
-                    [class.tree-item-active]="selectedFamilyTaskParentId === task.id && selectedFamilyTaskId === null"
-                    (click)="emit('newFamilySubtask', task.id)">＋ Unteraufgabe</button>
-                  @for (subtask of getFamilySubtasks(task.id); track subtask.id) {
+                  <div class="family-task-row">
                     <button
                       type="button"
-                      class="tree-item family-task-item family-subtask-item"
-                      [class.tree-item-active]="selectedFamilyTaskId === subtask.id"
-                      [attr.aria-label]="(subtask.completed ? 'Erledigte Unteraufgabe: ' : 'Unteraufgabe: ') + subtask.title + ', fällig am ' + formatTaskDate(subtask.due_date)"
-                      (click)="emit('familyTask', subtask.id)">
-                      <span class="item-marker" aria-hidden="true">{{ subtask.completed ? '✓' : '○' }}</span>
+                      class="family-task-list-button"
+                      [attr.aria-label]="'Alle Aufgaben für ' + user.name + ' anzeigen'"
+                      (click)="emit('familyTaskList', task.member_id)">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="tree-item family-task-item"
+                      [class.tree-item-active]="selectedFamilyTaskId === task.id"
+                      [attr.aria-label]="'Aufgabe: ' + task.title + ', ' + familyTaskDescription(task)"
+                      (click)="emit('familyTask', task.id)">
+                      @if (task.series_id) {
+                        <span class="series-marker" title="Wiederkehrende Aufgabe" aria-label="Wiederkehrende Aufgabe">↻</span>
+                      } @else {
+                        <span class="item-marker" aria-hidden="true">○</span>
+                      }
                       <span class="item-name">
-                        {{ subtask.title }}
-                        <small>{{ formatTaskDate(subtask.due_date) }}{{ subtask.points > 0 ? ' · ' + subtask.points + ' Punkte' : '' }}</small>
+                        {{ task.title }}
+                        <small>{{ familyTaskDescription(task) }}</small>
                       </span>
                     </button>
-                  }
+                    @if (!task.series_id) {
+                      <button
+                        type="button"
+                        class="family-task-subtask-plus"
+                        [attr.aria-label]="'Unteraufgabe zu ' + task.title + ' hinzufügen'"
+                        (click)="emit('newFamilySubtask', task.id)">+</button>
+                    }
+                  </div>
                 </div>
               }
             </section>

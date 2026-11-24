@@ -68,7 +68,7 @@ describe('AdminNavigationTreeComponent account entries', () => {
     expect(buttons[0].textContent).toContain(account.email);
   });
 
-  it('groups family tasks by member and emits actions to add and select tasks', () => {
+  it('groups open family tasks by member and emits actions to add, list and select tasks', () => {
     const member: User = {
       id: 7,
       name: 'Alex',
@@ -114,19 +114,24 @@ describe('AdminNavigationTreeComponent account entries', () => {
     expect(element.querySelectorAll('.family-task-member')).toHaveLength(1);
     expect(Array.from(element.querySelectorAll('.family-task-item')).map((item) =>
       item.textContent?.replace(/\s+/g, ' ').trim(),
-    )).toEqual(['○ Ranzen packen 24.11. · 2 Punkte', '✓ Hausaufgaben 24.11.']);
+    )).toEqual(['○ Ranzen packen 24.11. · 2 Punkte']);
+    expect(element.querySelector('.family-subtask-add')).toBeNull();
+    expect(element.querySelector('.family-subtask-item')).toBeNull();
 
     const addTask = element.querySelector('.family-task-add') as HTMLButtonElement;
-    const addSubtask = element.querySelector('.family-subtask-add') as HTMLButtonElement;
-    const taskButtons = Array.from(element.querySelectorAll('.family-task-item')) as HTMLButtonElement[];
+    const addSubtask = element.querySelector('.family-task-subtask-plus') as HTMLButtonElement;
+    const listButton = element.querySelector('.family-task-list-button') as HTMLButtonElement;
+    const taskButton = element.querySelector('.family-task-item') as HTMLButtonElement;
     addTask.click();
     addSubtask.click();
-    taskButtons[1].click();
+    listButton.click();
+    taskButton.click();
 
     expect(actions.map(({ type, id }) => [type, id])).toEqual([
       ['newFamilyTask', member.id],
       ['newFamilySubtask', tasks[0].id],
-      ['familyTask', tasks[1].id],
+      ['familyTaskList', member.id],
+      ['familyTask', tasks[0].id],
     ]);
   });
 });

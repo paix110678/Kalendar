@@ -94,7 +94,7 @@ export class AdminNavigationTreeComponent {
 
   getFamilyTasksForMember(memberId: number): FamilyTask[] {
     const memberTasks = this.familyTasks.filter(
-      (task) => task.member_id === memberId && task.parent_id === null,
+      (task) => task.member_id === memberId && task.parent_id === null && !task.completed,
     );
     const tasksBySeries = new Map<number, FamilyTask>();
     const standaloneTasks = memberTasks.filter((task) => task.series_id == null);
@@ -113,7 +113,7 @@ export class AdminNavigationTreeComponent {
 
   getFamilySubtasks(parentId: number): FamilyTask[] {
     return this.familyTasks
-      .filter((task) => task.parent_id === parentId)
+      .filter((task) => task.parent_id === parentId && !task.completed)
       .sort((left, right) =>
         left.due_date.localeCompare(right.due_date)
         || left.title.localeCompare(right.title, 'de'),

@@ -22,6 +22,7 @@ import { PlansComponent } from './plans/plans.component';
 import { HolidaysComponent } from './holidays/holidays.component';
 import { TasksComponent } from './tasks/tasks.component';
 import { FamilyTasksComponent } from './family-tasks/family-tasks.component';
+import { FamilyTaskListComponent } from './family-task-list/family-task-list.component';
 import { PlatformStatisticsComponent } from './platform-statistics/platform-statistics.component';
 
 @Component({
@@ -38,6 +39,7 @@ import { PlatformStatisticsComponent } from './platform-statistics/platform-stat
     HolidaysComponent,
     TasksComponent,
     FamilyTasksComponent,
+    FamilyTaskListComponent,
     PlatformStatisticsComponent,
   ],
   templateUrl: './config-main.component.html',
@@ -75,6 +77,7 @@ export class ConfigMainComponent {
   @Input() selectedFamilyTaskId: number | null = null;
   @Input() selectedFamilyTaskMemberId: number | null = null;
   @Input() selectedFamilyTaskParentId: number | null = null;
+  @Input() selectedFamilyTaskListMemberId: number | null = null;
 
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions | null>();
   @Output() accountTreeDataChange = new EventEmitter<AccountTreeData>();
@@ -91,6 +94,7 @@ export class ConfigMainComponent {
   @Output() selectedTaskIdChange = new EventEmitter<number | null>();
   @Output() familyTasksChanged = new EventEmitter<FamilyTask[]>();
   @Output() selectedFamilyTaskIdChange = new EventEmitter<number | null>();
+  @Output() familyTaskListClosed = new EventEmitter<void>();
   @Output() selectedBackupIdChange = new EventEmitter<string | null>();
   @Output() backupsChanged = new EventEmitter<DatabaseBackupList>();
   @Output() planSetupViewChange = new EventEmitter<boolean>();

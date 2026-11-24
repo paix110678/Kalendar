@@ -1,0 +1,67 @@
+<section class="family-task-list-page">
+  <header class="family-task-list-header">
+    <div>
+      <h3>Aufgaben von {{ memberName }}</h3>
+      <p>{{ filteredTasks.length }} Einträge · {{ earnedPoints }} verdiente Punkte</p>
+    </div>
+    <button type="button" class="close-list-button" (click)="closeList.emit()">Schließen</button>
+  </header>
+
+  <div class="family-task-list-toolbar" aria-label="Aufgabenfilter">
+    <label>
+      <span>Von</span>
+      <input type="date" [(ngModel)]="fromDate" name="familyTaskListFrom">
+    </label>
+    <label>
+      <span>Bis</span>
+      <input type="date" [(ngModel)]="toDate" name="familyTaskListTo">
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="statusFilter" name="familyTaskListStatus">
+        <option value="open">Offen</option>
+        <option value="completed">Erledigt</option>
+        <option value="all">Alle</option>
+      </select>
+    </label>
+    <label class="subtask-filter">
+      <input type="checkbox" [(ngModel)]="showSubtasks" name="familyTaskListSubtasks">
+      <span>Unteraufgaben anzeigen</span>
+    </label>
+    <button type="button" class="expired-button" [class.active]="showExpired" (click)="toggleExpired(!showExpired)">
+      {{ showExpired ? 'Abgelaufene ausblenden' : 'Abgelaufene anzeigen' }}
+    </button>
+  </div>
+
+  <div #taskList class="family-task-calendar-list">
+    @if (groupedTasks.length === 0) {
+      <p class="empty-task-list">Keine Aufgaben entsprechen dem Filter.</p>
+    } @else {
+      @for (group of groupedTasks; track group.date) {
+        <section class="family-task-date-group" [attr.data-date]="group.date">
+          <h4>{{ formatDate(group.date) }}</h4>
+          @for (task of group.tasks; track task.id) {
+            <article class="family-task-row" [class.family-task-subtask]="task.parent_id !== null">
+              <span class="task-status" [class.task-status-completed]="task.completed">
+                {{ task.completed ? '✓' : '○' }}
+              </span>
+              @if (task.series_id) {
+                <span class="task-series-marker" title="Wiederkehrende Aufgabe" aria-label="Wiederkehrende Aufgabe">↻</span>
+              }
+              <div class="task-name">
+                <strong>{{ task.title }}</strong>
+                @if (task.parent_id !== null) {
+                  <small>Unteraufgabe</small>
+                }
+              </div>
+              <span class="task-progress">{{ task.completed ? 'Erledigt' : 'Offen' }}</span>
+              <span class="task-points">
+                {{ task.points_awarded ? task.points : 0 }} / {{ task.points }} P
+              </span>
+            </article>
+          }
+        </section>
+      }
+    }
+  </div>
+</section>
