@@ -2,7 +2,13 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, FamilyTask, FamilyTaskPayload } from '../../../../../services/api.service';
+import {
+  ApiService,
+  FamilyTask,
+  FamilyTaskPayload,
+  FamilyTaskSeriesPayload,
+  FamilyTaskSeriesResult,
+} from '../../../../../services/api.service';
 import { User } from '../../../../../services/calendar.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { AdminEditorActions } from '../../action-footer/action-footer.component';
@@ -15,6 +21,8 @@ import { AdminEditorActions } from '../../action-footer/action-footer.component'
   styleUrl: './family-tasks.component.css',
 })
 export class FamilyTasksComponent implements OnChanges {
+  readonly weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+
   @Input() activeUsers: User[] = [];
   @Input() tasks: FamilyTask[] = [];
   @Input() selectedTaskId: number | null = null;
@@ -32,6 +40,9 @@ export class FamilyTasksComponent implements OnChanges {
   dueDate = '';
   parentId: number | null = null;
   points: number | null = null;
+  repeatEnabled = false;
+  repeatWeekdays: string[] = [];
+  repeatEndDate = '';
   saving = false;
   errorMessage = '';
   editingTaskId: number | null = null;
@@ -64,6 +75,9 @@ export class FamilyTasksComponent implements OnChanges {
     this.dueDate = task?.due_date ?? parent?.due_date ?? this.today();
     this.parentId = task?.parent_id ?? this.defaultParentId;
     this.points = task?.points || null;
+    this.repeatEnabled = !!task?.repeat_weekdays?.length;
+    this.repeatWeekdays = task?.repeat_weekdays ?? [this.weekdayForDate(this.dueDate)];
+    this.repeatEndDate = task?.series_end_date ?? '';
     this.errorMessage = '';
     this.savedSnapshot = this.formSnapshot();
     this.publishEditorActions();
@@ -74,7 +88,8 @@ export class FamilyTasksComponent implements OnChanges {
       task.parent_id === null
       && task.id !== this.editingTaskId
       && task.member_id === this.memberId
-      && task.due_date === this.dueDate,
+      && task.due_date === this.dueDate
+      && task.series_id == null,
     );
   }
 
@@ -93,6 +108,24 @@ export class FamilyTasksComponent implements OnChanges {
     this.publishEditorActions();
   }
 
+  setRepeatEnabled(enabled: boolean): void {
+    if (this.savedTask?.series_id != null || this.parentId !== null) return;
+    this.repeatEnabled = enabled;
+    if (enabled && this.repeatWeekdays.length === 0) {
+      this.repeatWeekdays = [this.weekdayForDate(this.dueDate)];
+    }
+    this.publishEditorActions();
+  }
+
+  setRepeatWeekday(day: string, checked: boolean): void {
+    this.repeatWeekdays = checked
+      ? [...new Set([...this.repeatWeekdays, day])].sort(
+        (left, right) => this.weekdays.indexOf(left) - this.weekdays.indexOf(right),
+      )
+      : this.repeatWeekdays.filter((selected) => selected !== day);
+    this.publishEditorActions();
+  }
+
   publishEditorActions(): void {
     const dirty = this.formSnapshot() !== this.savedSnapshot;
     this.editorActionsChange.emit({
@@ -108,21 +141,7 @@ export class FamilyTasksComponent implements OnChanges {
   }
 
   cancelChanges(): void {
-    if (this.savedTask) {
-      this.title = this.savedTask.title;
-      this.memberId = this.savedTask.member_id;
-      this.dueDate = this.savedTask.due_date;
-      this.parentId = this.savedTask.parent_id;
-      this.points = this.savedTask.points || null;
-    } else {
-      this.title = '';
-      this.memberId = this.defaultMemberId ?? this.activeUsers[0]?.id ?? null;
-      this.dueDate = this.today();
-      this.parentId = this.defaultParentId;
-      this.points = null;
-    }
-    this.errorMessage = '';
-    this.publishEditorActions();
+    this.loadSelectedTask();
   }
 
   private saveTask(): void {
@@ -141,6 +160,40 @@ export class FamilyTasksComponent implements OnChanges {
     }
     if (this.points !== null && (!Number.isInteger(this.points) || this.points < 0 || this.points > 10000)) {
       this.toastService.show(false, 'Punkte müssen eine ganze Zahl zwischen 0 und 10.000 sein.');
+      return;
+    }
+
+    if (this.repeatEnabled) {
+      if (this.parentId !== null) {
+        this.toastService.show(false, 'Unteraufgaben können nicht wiederholt werden.');
+        return;
+      }
+      if (this.repeatWeekdays.length === 0) {
+        this.toastService.show(false, 'Bitte mindestens einen Wochentag auswählen.');
+        return;
+      }
+      if (this.repeatEndDate && !this.isValidDate(this.repeatEndDate)) {
+        this.toastService.show(false, 'Bitte ein gültiges Enddatum auswählen.');
+        return;
+      }
+      if (this.repeatEndDate && this.repeatEndDate < this.dueDate) {
+        this.toastService.show(false, 'Das Enddatum muss am oder nach dem Start liegen.');
+        return;
+      }
+      if (
+        this.savedTask?.series_id == null
+        && this.editingTaskId !== null
+        && !this.repeatWeekdays.includes(this.weekdayForDate(this.dueDate))
+      ) {
+        this.toastService.show(false, 'Der Starttag muss zu einem ausgewählten Wochentag passen.');
+        return;
+      }
+      this.saveSeries(title);
+      return;
+    }
+
+    if (this.savedTask?.series_id != null) {
+      this.toastService.show(false, 'Bitte lege ein Enddatum fest, um die Wiederholung zu beenden.');
       return;
     }
 
@@ -180,20 +233,70 @@ export class FamilyTasksComponent implements OnChanges {
     });
   }
 
+  private saveSeries(title: string): void {
+    const payload: FamilyTaskSeriesPayload = {
+      title,
+      member_id: this.memberId!,
+      start_date: this.dueDate,
+      repeat_weekdays: this.repeatWeekdays,
+      end_date: this.repeatEndDate || null,
+      points: this.points ?? 0,
+      ...(this.savedTask?.series_id == null && this.editingTaskId !== null
+        ? { existing_task_id: this.editingTaskId }
+        : {}),
+    };
+    const request = this.savedTask?.series_id != null
+      ? this.apiService.updateFamilyTaskSeries(this.savedTask.series_id, payload)
+      : this.apiService.createFamilyTaskSeries(payload);
+    this.saving = true;
+    this.errorMessage = '';
+    this.publishEditorActions();
+    request.subscribe({
+      next: (result) => this.finishSavingSeries(result),
+      error: (error: unknown) => {
+        this.saving = false;
+        this.errorMessage = this.describeError(error, 'Wiederholung konnte nicht gespeichert werden.');
+        this.publishEditorActions();
+      },
+    });
+  }
+
+  private finishSavingSeries(result: FamilyTaskSeriesResult): void {
+    this.saving = false;
+    this.tasksChanged.emit(result.tasks);
+    const representative = this.getSeriesRepresentative(result.tasks, result.series_id);
+    this.editingTaskId = representative?.id ?? null;
+    this.savedTask = representative ? { ...representative } : null;
+    this.title = representative?.title ?? this.title;
+    this.memberId = representative?.member_id ?? this.memberId;
+    this.dueDate = representative?.series_start_date ?? this.dueDate;
+    this.parentId = null;
+    this.points = representative?.points ?? this.points;
+    this.repeatEnabled = true;
+    this.repeatWeekdays = representative?.repeat_weekdays ?? this.repeatWeekdays;
+    this.repeatEndDate = representative
+      ? representative.series_end_date ?? ''
+      : this.repeatEndDate;
+    this.savedSnapshot = this.formSnapshot();
+    this.selectedTaskIdChange.emit(representative?.id ?? null);
+    this.publishEditorActions();
+  }
+
   private deleteTask(): void {
     const task = this.savedTask;
     if (this.editingTaskId === null || !task) return;
-    if (!confirm(`Aufgabe „${task.title}“ wirklich löschen?`)) return;
+    const recurring = task.series_id != null;
+    const prompt = recurring
+      ? `Wiederholung „${task.title}“ wirklich löschen? Vergangene Kalendertermine bleiben erhalten.`
+      : `Aufgabe „${task.title}“ wirklich löschen?`;
+    if (!confirm(prompt)) return;
     const taskId = this.editingTaskId;
     this.saving = true;
     this.errorMessage = '';
     this.publishEditorActions();
-    this.apiService.deleteFamilyTask(taskId).subscribe({
-      next: () => {
+    const finishDelete = (tasks: FamilyTask[]) => {
         this.saving = false;
-        this.tasksChanged.emit(this.tasks.filter((item) =>
-          item.id !== taskId && item.parent_id !== taskId,
-        ));
+        this.tasksChanged.emit(tasks);
         this.editingTaskId = null;
         this.savedTask = null;
         this.title = '';
@@ -204,7 +307,22 @@ export class FamilyTasksComponent implements OnChanges {
         this.savedSnapshot = this.formSnapshot();
         this.selectedTaskIdChange.emit(null);
         this.publishEditorActions();
-      },
+    };
+    if (recurring) {
+      this.apiService.deleteFamilyTaskSeries(task.series_id!).subscribe({
+        next: finishDelete,
+        error: (error: unknown) => {
+          this.saving = false;
+          this.errorMessage = this.describeError(error, 'Wiederholung konnte nicht gelöscht werden.');
+          this.publishEditorActions();
+        },
+      });
+      return;
+    }
+    this.apiService.deleteFamilyTask(taskId).subscribe({
+      next: () => finishDelete(this.tasks.filter((item) =>
+        item.id !== taskId && item.parent_id !== taskId,
+      )),
       error: (error: unknown) => {
         this.saving = false;
         this.errorMessage = this.describeError(error, 'Aufgabe konnte nicht gelöscht werden.');
@@ -226,7 +344,34 @@ export class FamilyTasksComponent implements OnChanges {
   }
 
   private formSnapshot(): string {
-    return JSON.stringify([this.title, this.memberId, this.dueDate, this.parentId, this.points]);
+    return JSON.stringify([
+      this.title,
+      this.memberId,
+      this.dueDate,
+      this.parentId,
+      this.points,
+      this.repeatEnabled,
+      this.repeatWeekdays,
+      this.repeatEndDate,
+    ]);
+  }
+
+  private getSeriesRepresentative(tasks: FamilyTask[], seriesId: number): FamilyTask | undefined {
+    const today = this.today();
+    return tasks
+      .filter((task) => task.series_id === seriesId)
+      .sort((left, right) => {
+        const leftCurrent = !left.completed && left.due_date >= today;
+        const rightCurrent = !right.completed && right.due_date >= today;
+        if (leftCurrent !== rightCurrent) return leftCurrent ? -1 : 1;
+        return left.due_date.localeCompare(right.due_date);
+      })[0];
+  }
+
+  private weekdayForDate(value: string): string {
+    if (!this.isValidDate(value)) return this.weekdays[0];
+    const day = new Date(`${value}T00:00:00`).getDay();
+    return this.weekdays[day === 0 ? 6 : day - 1];
   }
 
   private isValidDate(value: string): boolean {

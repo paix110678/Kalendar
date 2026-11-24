@@ -1,0 +1,69 @@
+<div class="task-comments-backdrop" (click)="close.emit()">
+  <section
+    class="task-comments-dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Kommentare zur Aufgabe ' + task.title"
+    (click)="$event.stopPropagation()">
+    <header class="dialog-header">
+      <div>
+        <h2>Kommentare</h2>
+        <p>{{ task.title }}</p>
+      </div>
+      <button type="button" class="icon-button" aria-label="Schließen" (click)="close.emit()">×</button>
+    </header>
+
+    <div class="comment-list" aria-live="polite">
+      @if (comments.length === 0) {
+        <p class="empty-state">Noch keine Kommentare. Schreibe den ersten.</p>
+      } @else {
+        @for (comment of comments; track comment.id) {
+          <article class="comment">
+            <div class="comment-meta">
+              <strong>{{ comment.author || 'Familienmitglied' }}</strong>
+              <time [attr.datetime]="comment.updatedAt || comment.createdAt">
+                {{ formatTimestamp(comment.updatedAt || comment.createdAt) }}
+                @if (comment.updatedAt) {
+                  <span> · bearbeitet</span>
+                }
+              </time>
+            </div>
+            <p class="comment-text">{{ comment.text }}</p>
+            @if (comment.can_edit) {
+              <div class="comment-actions">
+                <button type="button" (click)="editComment(comment)">Bearbeiten</button>
+                <button type="button" class="delete-action" (click)="deleteComment(comment)">Löschen</button>
+              </div>
+            }
+          </article>
+        }
+      }
+    </div>
+
+    <form class="comment-form" (ngSubmit)="saveComment()">
+      <label for="task-comment-text">{{ editingCommentId === null ? 'Neuer Kommentar' : 'Kommentar bearbeiten' }}</label>
+      <textarea
+        id="task-comment-text"
+        name="taskCommentText"
+        [(ngModel)]="commentText"
+        maxlength="1000"
+        rows="3"
+        [disabled]="saving"
+        placeholder="Kommentar schreiben …"
+        required></textarea>
+      @if (errorMessage) {
+        <p class="form-error" role="alert">{{ errorMessage }}</p>
+      }
+      <div class="form-actions">
+        @if (editingCommentId !== null) {
+          <button type="button" class="secondary-button" [disabled]="saving" (click)="cancelEdit()">
+            Abbrechen
+          </button>
+        }
+        <button type="submit" class="primary-button" [disabled]="saving || !commentText.trim()">
+          {{ saving ? 'Wird gespeichert …' : editingCommentId === null ? 'Kommentar hinzufügen' : 'Speichern' }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>

@@ -31,6 +31,7 @@
       [theme]="calendarTheme"
       (eventsChange)="onCalendarEventsChange($event)"
       (tasksChange)="onCalendarTasksChange($event)"
+      (taskCommentsRequested)="openTaskComments($event)"
       (eventCreateRequested)="onCalendarEventCreated($event)"
       (eventClicked)="onCalendarEventClicked($event)"
       (eventEditRequested)="onCalendarEventEdited($event)"
@@ -40,5 +41,14 @@
       (visibleRangeChange)="onVisibleRangeChange($event)">
     </glc-grid-calendar>
   </div> <!-- /calendar-scroll-viewport -->
+
+  @if (commentsTask; as task) {
+    <app-task-comments-dialog
+      [task]="task"
+      [tasks]="familyTasks"
+      (tasksChanged)="onFamilyTasksChanged($event)"
+      (close)="closeTaskComments()">
+    </app-task-comments-dialog>
+  }
 
 </div>

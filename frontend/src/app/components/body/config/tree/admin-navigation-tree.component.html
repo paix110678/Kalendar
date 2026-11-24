@@ -148,14 +148,14 @@
                     type="button"
                     class="tree-item family-task-item"
                     [class.tree-item-active]="selectedFamilyTaskId === task.id"
-                    [attr.aria-label]="(task.completed ? 'Erledigte Aufgabe: ' : 'Aufgabe: ') + task.title + ', fällig am ' + formatTaskDate(task.due_date)"
+                    [attr.aria-label]="(task.completed ? 'Erledigte Aufgabe: ' : 'Aufgabe: ') + task.title + ', ' + familyTaskDescription(task)"
                     (click)="emit('familyTask', task.id)">
                     <span class="item-marker" aria-hidden="true">
                       {{ task.completed ? '✓' : '○' }}
                     </span>
                     <span class="item-name">
                       {{ task.title }}
-                      <small>{{ formatTaskDate(task.due_date) }}{{ task.points > 0 ? ' · ' + task.points + ' Punkte' : '' }}</small>
+                      <small>{{ familyTaskDescription(task) }}</small>
                     </span>
                   </button>
                   <button

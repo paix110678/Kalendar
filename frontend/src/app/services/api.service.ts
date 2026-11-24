@@ -59,6 +59,35 @@ export interface FamilyTask {
   points: number;
   completed: boolean;
   points_awarded: boolean;
+  comments?: FamilyTaskComment[];
+  series_id?: number | null;
+  repeat_weekdays?: string[];
+  series_start_date?: string;
+  series_end_date?: string | null;
+}
+
+export interface FamilyTaskSeriesPayload {
+  title: string;
+  member_id: number;
+  start_date: string;
+  repeat_weekdays: string[];
+  end_date: string | null;
+  points: number;
+  existing_task_id?: number;
+}
+
+export interface FamilyTaskSeriesResult {
+  series_id: number;
+  tasks: FamilyTask[];
+}
+
+export interface FamilyTaskComment {
+  id: number;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+  author?: string;
+  can_edit: boolean;
 }
 
 export type FamilyTaskPayload = Pick<
@@ -292,8 +321,10 @@ export class ApiService {
     return this.http.put<TaskDefinition>(`${this.apiBase}/tasks/${id}`, task);
   }
   deleteTask(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/tasks/${id}`); }
-  getFamilyTasks(): Observable<FamilyTask[]> {
-    return this.http.get<FamilyTask[]>(`${this.apiBase}/family-tasks`);
+  getFamilyTasks(through?: string): Observable<FamilyTask[]> {
+    return this.http.get<FamilyTask[]>(`${this.apiBase}/family-tasks`, {
+      params: through ? { through } : {},
+    });
   }
   createFamilyTask(task: FamilyTaskPayload): Observable<FamilyTask> {
     return this.http.post<FamilyTask>(`${this.apiBase}/family-tasks`, task);
@@ -303,6 +334,47 @@ export class ApiService {
   }
   deleteFamilyTask(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiBase}/family-tasks/${id}`);
+  }
+  createFamilyTaskSeries(payload: FamilyTaskSeriesPayload): Observable<FamilyTaskSeriesResult> {
+    return this.http.post<FamilyTaskSeriesResult>(
+      `${this.apiBase}/family-tasks/recurrences`,
+      payload,
+    );
+  }
+  updateFamilyTaskSeries(
+    seriesId: number,
+    payload: FamilyTaskSeriesPayload,
+  ): Observable<FamilyTaskSeriesResult> {
+    return this.http.put<FamilyTaskSeriesResult>(
+      `${this.apiBase}/family-tasks/recurrences/${seriesId}`,
+      payload,
+    );
+  }
+  deleteFamilyTaskSeries(seriesId: number): Observable<FamilyTask[]> {
+    return this.http.delete<FamilyTask[]>(
+      `${this.apiBase}/family-tasks/recurrences/${seriesId}`,
+    );
+  }
+  createFamilyTaskComment(taskId: number, text: string): Observable<FamilyTaskComment> {
+    return this.http.post<FamilyTaskComment>(
+      `${this.apiBase}/family-tasks/${taskId}/comments`,
+      { text },
+    );
+  }
+  updateFamilyTaskComment(
+    taskId: number,
+    commentId: number,
+    text: string,
+  ): Observable<FamilyTaskComment> {
+    return this.http.put<FamilyTaskComment>(
+      `${this.apiBase}/family-tasks/${taskId}/comments/${commentId}`,
+      { text },
+    );
+  }
+  deleteFamilyTaskComment(taskId: number, commentId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiBase}/family-tasks/${taskId}/comments/${commentId}`,
+    );
   }
   updateFamilyTaskCompletion(id: number, completed: boolean): Observable<FamilyTaskCompletionResult> {
     return this.http.put<FamilyTaskCompletionResult>(

@@ -12,9 +12,10 @@ import {
   VisibleRange,
   CalendarTask,
 } from '@swbpapk_acmtemu/grid-calendar';
-import { PlanDefinition } from '../../../../services/api.service';
+import { FamilyTask, PlanDefinition } from '../../../../services/api.service';
 import { CalendarService, TimeBlock, User } from '../../../../services/calendar.service';
 import { BlockEditorComponent } from '../block-editor/block-editor.component';
+import { TaskCommentsDialogComponent } from './task-comments-dialog/task-comments-dialog.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
@@ -25,6 +26,7 @@ import { Subscription } from 'rxjs';
     CommonModule,
     GridCalendar,
     BlockEditorComponent,
+    TaskCommentsDialogComponent,
   ],
   templateUrl: './calendar-grid.component.html',
   styleUrls: [
@@ -41,6 +43,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
   private readonly familyTasksSignal = toSignal(this.calendarService.familyTasks$, {
     initialValue: [],
   });
+  public commentsTaskId: number | null = null;
   public activeRewardsSignal = toSignal(this.calendarService.rewards$, { initialValue: [] as any[] });
   private readonly savedPlansSignal = toSignal(this.calendarService.savedPlansState$, {
     initialValue: { data: null, loading: false, error: null },
@@ -128,6 +131,8 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
     today: 'Heute',
     previous: 'Vorheriger Zeitraum',
     next: 'Nächster Zeitraum',
+    addNote: 'Kommentar hinzufügen',
+    showNotes: 'Kommentare anzeigen ({count})',
   };
   public readonly anchorDate = this.getTodayAtMidnight();
   private visibleAnchorDate = new Date(this.anchorDate);
@@ -179,7 +184,32 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
       resourceId: task.member_id,
       ...(task.parent_id === null ? {} : { parentId: task.parent_id }),
       completed: task.completed,
+      comments: task.comments ?? [],
     }));
+  }
+
+  public get familyTasks(): FamilyTask[] {
+    return this.familyTasksSignal();
+  }
+
+  public get commentsTask(): FamilyTask | null {
+    return this.familyTasks.find((task) => task.id === this.commentsTaskId) ?? null;
+  }
+
+  public openTaskComments(taskId: number): void {
+    if (!this.familyTasks.some((task) => task.id === taskId)) {
+      console.error(`Kommentare können nicht geöffnet werden: Aufgabe ${taskId} wurde nicht gefunden.`);
+      return;
+    }
+    this.commentsTaskId = taskId;
+  }
+
+  public closeTaskComments(): void {
+    this.commentsTaskId = null;
+  }
+
+  public onFamilyTasksChanged(tasks: FamilyTask[]): void {
+    this.calendarService.setFamilyTasks(tasks);
   }
 
   public onCalendarTasksChange(updatedTasks: CalendarTask[]): void {
@@ -221,6 +251,7 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
       range.from.getDate(),
     );
     this.currentDayName = this.getDayName(this.visibleAnchorDate);
+    this.calendarService.loadFamilyTasks(this.toDateKey(range.to));
     this.updateViewTimeline();
   }
 

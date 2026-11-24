@@ -105,6 +105,7 @@ export class CalendarService {
   private blocksSubject = new BehaviorSubject<TimeBlock[]>([]);
   public blocks$: Observable<TimeBlock[]> = this.blocksSubject.asObservable();
   private familyTasksSubject = new BehaviorSubject<FamilyTask[]>([]);
+  private familyTasksRequestId = 0;
   public familyTasks$: Observable<FamilyTask[]> = this.familyTasksSubject.asObservable();
   private rewardsSubject = new BehaviorSubject<Reward[]>([]);
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
@@ -206,6 +207,7 @@ export class CalendarService {
     this.usersSubject.next([]);
     this.categoriesSubject.next([]);
     this.blocksSubject.next([]);
+    this.familyTasksRequestId++;
     this.familyTasksSubject.next([]);
     this.rewardsSubject.next([]);
     this.profileWeatherSubject.next({
@@ -442,17 +444,23 @@ export class CalendarService {
   public reloadUsers(): Observable<User[]> {
     return this.apiService.getUsers().pipe(tap((users) => this.usersSubject.next(users)));
   }
-  public reloadFamilyTasks(): Observable<FamilyTask[]> {
-    return this.apiService.getFamilyTasks().pipe(
-      tap((tasks) => this.familyTasksSubject.next(tasks)),
+  public reloadFamilyTasks(through?: string): Observable<FamilyTask[]> {
+    const requestId = ++this.familyTasksRequestId;
+    return this.apiService.getFamilyTasks(through).pipe(
+      tap((tasks) => {
+        if (requestId === this.familyTasksRequestId) {
+          this.familyTasksSubject.next(tasks);
+        }
+      }),
     );
   }
-  public loadFamilyTasks(): void {
-    this.reloadFamilyTasks().subscribe({
+  public loadFamilyTasks(through?: string): void {
+    this.reloadFamilyTasks(through).subscribe({
       error: (error: unknown) => console.error('Aufgaben konnten nicht geladen werden:', error),
     });
   }
   public setFamilyTasks(tasks: FamilyTask[]): void {
+    this.familyTasksRequestId++;
     this.familyTasksSubject.next(tasks);
   }
   public updateFamilyTaskCompletion(
@@ -461,6 +469,7 @@ export class CalendarService {
   ): Observable<FamilyTaskCompletionResult> {
     return this.apiService.updateFamilyTaskCompletion(taskId, completed).pipe(
       tap((result) => {
+        this.familyTasksRequestId++;
         this.familyTasksSubject.next(result.tasks);
         this.updateUserPoints(result.member_id, result.current_points);
       }),

@@ -1,7 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, FamilyTask, FamilyTaskPayload } from '../../../../../services/api.service';
+import {
+  ApiService,
+  FamilyTask,
+  FamilyTaskPayload,
+  FamilyTaskSeriesPayload,
+} from '../../../../../services/api.service';
 import { User } from '../../../../../services/calendar.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { FamilyTasksComponent } from './family-tasks.component';
@@ -41,12 +46,27 @@ describe('FamilyTasksComponent', () => {
     points_awarded: false,
   };
   const createFamilyTask = vi.fn((_payload: FamilyTaskPayload) => of(child));
+  const recurringTask: FamilyTask = {
+    ...parent,
+    id: 21,
+    title: 'Lesen',
+    points: 3,
+    series_id: 8,
+    repeat_weekdays: ['Dienstag'],
+    series_start_date: '2026-11-24',
+    series_end_date: null,
+  };
+  const createFamilyTaskSeries = vi.fn((_payload: FamilyTaskSeriesPayload) => of({
+    series_id: 8,
+    tasks: [recurringTask],
+  }));
   const updateFamilyTask = vi.fn();
   const deleteFamilyTask = vi.fn();
   const toastShow = vi.fn();
 
   beforeEach(async () => {
     createFamilyTask.mockClear();
+    createFamilyTaskSeries.mockClear();
     updateFamilyTask.mockClear();
     deleteFamilyTask.mockClear();
     toastShow.mockClear();
@@ -56,7 +76,12 @@ describe('FamilyTasksComponent', () => {
       providers: [
         {
           provide: ApiService,
-          useValue: { createFamilyTask, updateFamilyTask, deleteFamilyTask },
+          useValue: {
+            createFamilyTask,
+            createFamilyTaskSeries,
+            updateFamilyTask,
+            deleteFamilyTask,
+          },
         },
         { provide: ToastService, useValue: { show: toastShow } },
       ],
@@ -94,5 +119,36 @@ describe('FamilyTasksComponent', () => {
     expect(savedTasks).toEqual([[parent, child]]);
     expect(selectedTaskIds).toEqual([child.id]);
     expect(component.editingTaskId).toBe(child.id);
+  });
+
+  it('creates a weekly recurrence and publishes its calendar occurrence', () => {
+    const component = fixture.componentInstance;
+    fixture.componentRef.setInput('defaultParentId', null);
+    fixture.componentRef.setInput('selectedTaskId', null);
+    fixture.detectChanges();
+    const savedTasks: FamilyTask[][] = [];
+    component.tasksChanged.subscribe((tasks) => savedTasks.push(tasks));
+    component.title = 'Lesen';
+    component.memberId = member.id;
+    component.dueDate = '2026-11-24';
+    component.repeatEnabled = true;
+    component.repeatWeekdays = ['Dienstag'];
+    component.points = 3;
+    let saveAction: (() => void) | undefined;
+    component.editorActionsChange.subscribe((value) => { saveAction = value.save; });
+    component.publishEditorActions();
+
+    saveAction?.();
+
+    expect(createFamilyTaskSeries).toHaveBeenCalledWith({
+      title: 'Lesen',
+      member_id: member.id,
+      start_date: '2026-11-24',
+      repeat_weekdays: ['Dienstag'],
+      end_date: null,
+      points: 3,
+    });
+    expect(savedTasks).toEqual([[recurringTask]]);
+    expect(component.editingTaskId).toBe(recurringTask.id);
   });
 });

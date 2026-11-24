@@ -58,6 +58,64 @@
   border-color: #228be6;
 }
 
+.repeat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #495057;
+  font-size: 13px;
+}
+
+.repeat-toggle input,
+.weekday-options input {
+  accent-color: #228be6;
+}
+
+.repeat-toggle input,
+.weekday-options input {
+  width: 16px;
+  height: 16px;
+}
+
+.repeat-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.repeat-options {
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+.repeat-options legend {
+  padding: 0 5px;
+  color: #495057;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.weekday-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.weekday-options label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #495057;
+  font-size: 13px;
+}
+
+.repeat-end-date {
+  max-width: 360px;
+}
+
 .form-hint,
 .form-error {
   grid-column: 1 / -1;

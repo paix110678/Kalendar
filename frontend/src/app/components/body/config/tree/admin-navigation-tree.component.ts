@@ -93,12 +93,22 @@ export class AdminNavigationTreeComponent {
   }
 
   getFamilyTasksForMember(memberId: number): FamilyTask[] {
-    return this.familyTasks
-      .filter((task) => task.member_id === memberId && task.parent_id === null)
-      .sort((left, right) =>
-        left.due_date.localeCompare(right.due_date)
-        || left.title.localeCompare(right.title, 'de'),
-      );
+    const memberTasks = this.familyTasks.filter(
+      (task) => task.member_id === memberId && task.parent_id === null,
+    );
+    const tasksBySeries = new Map<number, FamilyTask>();
+    const standaloneTasks = memberTasks.filter((task) => task.series_id == null);
+    for (const task of memberTasks) {
+      if (task.series_id == null) continue;
+      const current = tasksBySeries.get(task.series_id);
+      if (!current || this.compareSeriesRepresentatives(task, current) < 0) {
+        tasksBySeries.set(task.series_id, task);
+      }
+    }
+    return [...standaloneTasks, ...tasksBySeries.values()].sort((left, right) =>
+      left.due_date.localeCompare(right.due_date)
+      || left.title.localeCompare(right.title, 'de'),
+    );
   }
 
   getFamilySubtasks(parentId: number): FamilyTask[] {
@@ -115,6 +125,43 @@ export class AdminNavigationTreeComponent {
     return Number.isNaN(date.getTime())
       ? value
       : new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(date);
+  }
+
+  familyTaskDescription(task: FamilyTask): string {
+    if (!task.repeat_weekdays?.length) {
+      return `${this.formatTaskDate(task.due_date)}${task.points > 0 ? ' · ' + task.points + ' Punkte' : ''}`;
+    }
+    const abbreviations: Record<string, string> = {
+      Montag: 'Mo',
+      Dienstag: 'Di',
+      Mittwoch: 'Mi',
+      Donnerstag: 'Do',
+      Freitag: 'Fr',
+      Samstag: 'Sa',
+      Sonntag: 'So',
+    };
+    const repeatDays = task.repeat_weekdays.map((day) => abbreviations[day] ?? day);
+    const start = task.series_start_date
+      ? ` · ab ${this.formatTaskDate(task.series_start_date)}`
+      : '';
+    const end = task.series_end_date
+      ? ` · bis ${this.formatTaskDate(task.series_end_date)}`
+      : ' · ohne Enddatum';
+    const points = task.points > 0 ? ` · ${task.points} Punkte` : '';
+    return `Wöchentlich ${repeatDays.join(', ')}${start}${end}${points}`;
+  }
+
+  private compareSeriesRepresentatives(left: FamilyTask, right: FamilyTask): number {
+    const today = this.todayKey();
+    const leftCurrent = !left.completed && left.due_date >= today;
+    const rightCurrent = !right.completed && right.due_date >= today;
+    if (leftCurrent !== rightCurrent) return leftCurrent ? -1 : 1;
+    return left.due_date.localeCompare(right.due_date);
+  }
+
+  private todayKey(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }
 
   get pendingInvitations(): AccountInvitationRecord[] {

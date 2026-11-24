@@ -1,7 +1,7 @@
 <section class="family-tasks-page">
   <header class="family-tasks-header">
-    <h3>{{ editingTaskId === null ? 'Aufgabe hinzufügen' : 'Aufgabe bearbeiten' }}</h3>
-    <p>Aufgaben mit Fälligkeitstag erscheinen im Kalender des ausgewählten Familienmitglieds.</p>
+    <h3>{{ savedTask?.series_id != null ? 'Wiederholung bearbeiten' : editingTaskId === null ? 'Aufgabe hinzufügen' : 'Aufgabe bearbeiten' }}</h3>
+    <p>Aufgaben erscheinen am Fälligkeitstag oder wöchentlich im Kalender des ausgewählten Familienmitglieds.</p>
   </header>
 
   <form class="family-task-form" (ngSubmit)="$event.preventDefault()">
@@ -33,7 +33,7 @@
     </label>
 
     <label class="field">
-      <span>Fällig am</span>
+      <span>{{ repeatEnabled ? 'Start am' : 'Fällig am' }}</span>
       <input
         type="date"
         name="familyTaskDueDate"
@@ -49,7 +49,7 @@
         name="familyTaskParent"
         [ngModel]="parentId"
         (ngModelChange)="onParentChange($event)"
-        [disabled]="editingTaskId !== null && (savedTask?.parent_id !== null || hasSubtasks)">
+        [disabled]="repeatEnabled || (editingTaskId !== null && (savedTask?.parent_id !== null || hasSubtasks))">
         <option [ngValue]="null">Keine – Hauptaufgabe</option>
         @for (parent of availableParents; track parent.id) {
           <option [ngValue]="parent.id">{{ parent.title }}</option>
@@ -58,7 +58,7 @@
     </label>
 
     <label class="field">
-      <span>Punkte (optional)</span>
+      <span>Punkte je Aufgabe (optional)</span>
       <input
         type="number"
         name="familyTaskPoints"
@@ -69,6 +69,42 @@
         step="1"
         placeholder="Keine Punkte">
     </label>
+
+    <label class="repeat-toggle">
+      <input
+        type="checkbox"
+        name="familyTaskRepeat"
+        [ngModel]="repeatEnabled"
+        (ngModelChange)="setRepeatEnabled($event)"
+        [disabled]="parentId !== null || savedTask?.series_id != null">
+      <span>Wiederholt sich jede Woche</span>
+    </label>
+
+    @if (repeatEnabled) {
+      <fieldset class="repeat-options">
+        <legend>Wiederholung</legend>
+        <div class="weekday-options">
+          @for (day of weekdays; track day) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="repeatWeekdays.includes(day)"
+                (change)="setRepeatWeekday(day, $any($event.target).checked)">
+              {{ day }}
+            </label>
+          }
+        </div>
+        <label class="field repeat-end-date">
+          <span>Endet am (optional)</span>
+          <input
+            type="date"
+            name="familyTaskRepeatEndDate"
+            [(ngModel)]="repeatEndDate"
+            (ngModelChange)="publishEditorActions()">
+        </label>
+        <p class="form-hint">Ohne Enddatum wird die Aufgabe fortlaufend wiederholt. Punkte gelten für jeden einzelnen Kalendertermin.</p>
+      </fieldset>
+    }
 
     @if (parentId !== null) {
       <p class="form-hint">Die Hauptaufgabe gilt erst als erledigt, wenn alle Unteraufgaben abgeschlossen sind.</p>

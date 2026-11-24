@@ -66,7 +66,20 @@ def delete_user_profile_data(conn, user_id, schema="main"):
         (user_id, user_id),
     )
     conn.execute(
+        f"""
+        DELETE FROM {schema}.family_task_comments
+        WHERE task_id IN (
+            SELECT id FROM {schema}.family_tasks WHERE member_id = ?
+        )
+        """,
+        (user_id,),
+    )
+    conn.execute(
         f"DELETE FROM {schema}.family_tasks WHERE member_id = ?",
+        (user_id,),
+    )
+    conn.execute(
+        f"DELETE FROM {schema}.family_task_series WHERE member_id = ?",
         (user_id,),
     )
     conn.execute(
@@ -166,12 +179,53 @@ def _init_db_connection(conn):
             member_id INTEGER NOT NULL,
             due_date TEXT NOT NULL,
             parent_id INTEGER,
+            series_id INTEGER,
             points INTEGER NOT NULL DEFAULT 0,
             completed INTEGER NOT NULL DEFAULT 0,
             points_awarded INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY(member_id) REFERENCES users(id),
             FOREIGN KEY(parent_id) REFERENCES family_tasks(id)
         )
+    """)
+    cursor.execute("PRAGMA table_info(family_tasks)")
+    family_task_columns = {row["name"] for row in cursor.fetchall()}
+    if "series_id" not in family_task_columns:
+        cursor.execute("ALTER TABLE family_tasks ADD COLUMN series_id INTEGER")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS family_task_series (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            member_id INTEGER NOT NULL,
+            start_date TEXT NOT NULL,
+            repeat_weekdays TEXT NOT NULL,
+            end_date TEXT,
+            points INTEGER NOT NULL DEFAULT 0,
+            generated_through TEXT,
+            FOREIGN KEY(member_id) REFERENCES users(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_family_tasks_series_date
+        ON family_tasks(series_id, due_date)
+        WHERE series_id IS NOT NULL
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS family_task_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            author_account_id INTEGER NOT NULL,
+            author TEXT NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT,
+            FOREIGN KEY(task_id) REFERENCES family_tasks(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_family_task_comments_task_created
+        ON family_task_comments(task_id, created_at, id)
     """)
 
     cursor.execute("""
@@ -790,6 +844,8 @@ def _install_family_data_revision_triggers(cursor):
         "categories",
         "tasks",
         "family_tasks",
+        "family_task_series",
+        "family_task_comments",
         "task_participants",
         "task_event_type_migrations",
         "time_blocks",
