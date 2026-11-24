@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import {
   DatabaseBackup,
+  FamilyTask,
   GERMAN_STATES,
   PlanDefinition,
   TaskDefinition,
@@ -52,6 +53,12 @@ export class AdminNavigationTreeComponent {
   @Input() tasksLoadError = '';
   @Input() selectedTaskId: number | null = null;
   @Input() selectedTaskCategoryId: number | null = null;
+  @Input() familyTasks: FamilyTask[] = [];
+  @Input() familyTasksLoading = false;
+  @Input() familyTasksLoadError = '';
+  @Input() selectedFamilyTaskId: number | null = null;
+  @Input() selectedFamilyTaskMemberId: number | null = null;
+  @Input() selectedFamilyTaskParentId: number | null = null;
   @Input() weatherLocations: WeatherLocation[] = [];
   @Input() weatherLocationsLoading = false;
   @Input() weatherLocationsError = '';
@@ -75,6 +82,7 @@ export class AdminNavigationTreeComponent {
       database: 'Datenbank-Backups',
       accounts: 'Konten',
       statistics: 'Statistik',
+      familyTasks: 'Aufgaben',
     }[this.activeTab];
   }
 
@@ -82,6 +90,31 @@ export class AdminNavigationTreeComponent {
     return this.tasks
       .filter((task) => task.category_id === categoryId)
       .sort((left, right) => left.title.localeCompare(right.title, 'de'));
+  }
+
+  getFamilyTasksForMember(memberId: number): FamilyTask[] {
+    return this.familyTasks
+      .filter((task) => task.member_id === memberId && task.parent_id === null)
+      .sort((left, right) =>
+        left.due_date.localeCompare(right.due_date)
+        || left.title.localeCompare(right.title, 'de'),
+      );
+  }
+
+  getFamilySubtasks(parentId: number): FamilyTask[] {
+    return this.familyTasks
+      .filter((task) => task.parent_id === parentId)
+      .sort((left, right) =>
+        left.due_date.localeCompare(right.due_date)
+        || left.title.localeCompare(right.title, 'de'),
+      );
+  }
+
+  formatTaskDate(value: string): string {
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? value
+      : new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(date);
   }
 
   get pendingInvitations(): AccountInvitationRecord[] {

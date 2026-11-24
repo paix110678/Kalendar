@@ -66,6 +66,10 @@ def delete_user_profile_data(conn, user_id, schema="main"):
         (user_id, user_id),
     )
     conn.execute(
+        f"DELETE FROM {schema}.family_tasks WHERE member_id = ?",
+        (user_id,),
+    )
+    conn.execute(
         f"DELETE FROM {schema}.task_participants WHERE user_id = ?",
         (user_id,),
     )
@@ -152,6 +156,21 @@ def _init_db_connection(conn):
             color TEXT NOT NULL,
             category_id INTEGER NOT NULL,
             FOREIGN KEY(category_id) REFERENCES categories(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS family_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            member_id INTEGER NOT NULL,
+            due_date TEXT NOT NULL,
+            parent_id INTEGER,
+            points INTEGER NOT NULL DEFAULT 0,
+            completed INTEGER NOT NULL DEFAULT 0,
+            points_awarded INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY(member_id) REFERENCES users(id),
+            FOREIGN KEY(parent_id) REFERENCES family_tasks(id)
         )
     """)
 
@@ -770,6 +789,7 @@ def _install_family_data_revision_triggers(cursor):
         "rewards",
         "categories",
         "tasks",
+        "family_tasks",
         "task_participants",
         "task_event_type_migrations",
         "time_blocks",

@@ -13,6 +13,7 @@ import {
   ApiService,
   DatabaseBackup,
   DatabaseBackupList,
+  FamilyTask,
   Holiday,
   HolidayStateData,
   PlanDefinition,
@@ -98,6 +99,12 @@ export class ConfigComponent implements OnInit, OnDestroy {
   public tasksLoading = false;
   public tasksLoadError = '';
   public selectedTaskId: number | null = null;
+  public familyTasks: FamilyTask[] = [];
+  public familyTasksLoading = false;
+  public familyTasksLoadError = '';
+  public selectedFamilyTaskId: number | null = null;
+  public selectedFamilyTaskMemberId: number | null = null;
+  public selectedFamilyTaskParentId: number | null = null;
   public expandedSections: Record<
     'plans' | 'holidays' | 'categories' | 'system' | 'database',
     boolean
@@ -164,7 +171,13 @@ export class ConfigComponent implements OnInit, OnDestroy {
       this.calendarService.familyDataChanges$.subscribe(() => {
         if (this.editorActions?.dirty || this.editorActions?.busy) return;
         if (this.expandedSections.categories) this.refreshSavedTasks();
+        if (this.activeTab === 'familyTasks') this.refreshFamilyTasks();
         if (this.expandedSections.system) this.refreshWeatherLocations();
+      }),
+    );
+    this.subscriptions.add(
+      this.calendarService.familyTasks$.subscribe((tasks) => {
+        this.familyTasks = tasks;
       }),
     );
   }
@@ -245,6 +258,18 @@ export class ConfigComponent implements OnInit, OnDestroy {
       case 'task':
         this.openTask(typeof action.id === 'number' ? action.id : null, action.categoryId ?? null);
         break;
+      case 'familyTasks':
+        this.openFamilyTasks();
+        break;
+      case 'familyTask':
+        if (typeof action.id === 'number') this.openFamilyTask(action.id);
+        break;
+      case 'newFamilyTask':
+        if (typeof action.id === 'number') this.openNewFamilyTask(action.id);
+        break;
+      case 'newFamilySubtask':
+        if (typeof action.id === 'number') this.openNewFamilySubtask(action.id);
+        break;
       case 'weather':
         this.openWeatherConfig();
         break;
@@ -271,6 +296,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
         break;
       case 'refreshTasks':
         this.refreshSavedTasks();
+        break;
+      case 'refreshFamilyTasks':
+        this.refreshFamilyTasks();
         break;
       case 'refreshWeather':
         this.refreshWeatherLocations();
@@ -356,6 +384,87 @@ export class ConfigComponent implements OnInit, OnDestroy {
   }
 
   public selectedTaskCategoryId: number | null = null;
+
+  openFamilyTasks(): void {
+    this.editorActions = null;
+    this.activeTab = 'familyTasks';
+    this.selectedFamilyTaskId = null;
+    this.selectedFamilyTaskMemberId = null;
+    this.selectedFamilyTaskParentId = null;
+    this.refreshFamilyTasks();
+  }
+
+  openFamilyTask(taskId: number): void {
+    const task = this.familyTasks.find((item) => item.id === taskId);
+    if (!task) return;
+    this.editorActions = null;
+    this.activeTab = 'familyTasks';
+    this.selectedFamilyTaskId = task.id;
+    this.selectedFamilyTaskMemberId = task.member_id;
+    this.selectedFamilyTaskParentId = task.parent_id;
+  }
+
+  openNewFamilyTask(memberId: number): void {
+    this.editorActions = null;
+    this.activeTab = 'familyTasks';
+    this.selectedFamilyTaskId = null;
+    this.selectedFamilyTaskMemberId = memberId;
+    this.selectedFamilyTaskParentId = null;
+  }
+
+  openNewFamilySubtask(parentId: number): void {
+    const parent = this.familyTasks.find((task) => task.id === parentId);
+    if (!parent) return;
+    this.editorActions = null;
+    this.activeTab = 'familyTasks';
+    this.selectedFamilyTaskId = null;
+    this.selectedFamilyTaskMemberId = parent.member_id;
+    this.selectedFamilyTaskParentId = parent.id;
+  }
+
+  onFamilyTaskIdChange(taskId: number | null): void {
+    this.selectedFamilyTaskId = taskId;
+    if (taskId === null) {
+      this.selectedFamilyTaskParentId = null;
+      return;
+    }
+    const task = this.familyTasks.find((item) => item.id === taskId);
+    if (!task) return;
+    this.selectedFamilyTaskMemberId = task.member_id;
+    this.selectedFamilyTaskParentId = task.parent_id;
+  }
+
+  refreshFamilyTasks(): void {
+    this.familyTasksLoading = true;
+    this.familyTasksLoadError = '';
+    this.subscriptions.add(
+      this.calendarService.reloadFamilyTasks().subscribe({
+        next: (tasks) => {
+          this.familyTasks = tasks;
+          this.familyTasksLoading = false;
+          this.familyTasksLoadError = '';
+          if (
+            this.selectedFamilyTaskId !== null &&
+            !tasks.some((task) => task.id === this.selectedFamilyTaskId)
+          ) {
+            this.selectedFamilyTaskId = null;
+            this.selectedFamilyTaskParentId = null;
+          }
+        },
+        error: (error: unknown) => {
+          console.error('Familienaufgaben konnten nicht geladen werden:', error);
+          this.familyTasksLoading = false;
+          this.familyTasksLoadError = 'Aufgaben konnten nicht geladen werden.';
+        },
+      }),
+    );
+  }
+
+  onFamilyTasksChanged(tasks: FamilyTask[]): void {
+    this.familyTasks = tasks;
+    this.calendarService.setFamilyTasks(tasks);
+    this.refreshFamilyTasks();
+  }
 
   refreshSavedTasks(): void {
     this.tasksLoading = true;

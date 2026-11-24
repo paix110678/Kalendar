@@ -30,6 +30,7 @@ from routers import (
     holidays,
     backups,
     tasks,
+    family_tasks,
     error_reports,
     platform,
     sync,
@@ -184,6 +185,7 @@ app.include_router(plans.router)
 app.include_router(holidays.router)
 app.include_router(backups.router)
 app.include_router(tasks.router)
+app.include_router(family_tasks.router)
 app.include_router(error_reports.router)
 app.include_router(platform.router)
 app.include_router(sync.router)

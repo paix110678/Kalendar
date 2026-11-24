@@ -10,6 +10,7 @@ import {
   GridTheme,
   GridViewMode,
   VisibleRange,
+  CalendarTask,
 } from '@swbpapk_acmtemu/grid-calendar';
 import { PlanDefinition } from '../../../../services/api.service';
 import { CalendarService, TimeBlock, User } from '../../../../services/calendar.service';
@@ -37,6 +38,9 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
 
   public activeUsersSignal = toSignal(this.calendarService.users$, { initialValue: [] as User[] });
   public currentBlocksSignal = toSignal(this.calendarService.blocks$, { initialValue: [] as TimeBlock[] });
+  private readonly familyTasksSignal = toSignal(this.calendarService.familyTasks$, {
+    initialValue: [],
+  });
   public activeRewardsSignal = toSignal(this.calendarService.rewards$, { initialValue: [] as any[] });
   private readonly savedPlansSignal = toSignal(this.calendarService.savedPlansState$, {
     initialValue: { data: null, loading: false, error: null },
@@ -165,6 +169,39 @@ export class CalendarGridComponent implements OnInit, OnDestroy {
       name: user.name,
       color: user.color_code,
     }));
+  }
+
+  public get calendarTasks(): CalendarTask[] {
+    return this.familyTasksSignal().map((task) => ({
+      id: task.id,
+      name: task.title,
+      date: task.due_date,
+      resourceId: task.member_id,
+      ...(task.parent_id === null ? {} : { parentId: task.parent_id }),
+      completed: task.completed,
+    }));
+  }
+
+  public onCalendarTasksChange(updatedTasks: CalendarTask[]): void {
+    const currentTasks = this.familyTasksSignal();
+    const parents = new Set(
+      currentTasks.flatMap((task) => task.parent_id === null ? [] : [task.parent_id]),
+    );
+    const updatedById = new Map(updatedTasks.map((task) => [task.id, task]));
+    const changedTask = currentTasks.find((task) => {
+      const updated = updatedById.get(task.id);
+      return !parents.has(task.id) && updated !== undefined && updated.completed !== task.completed;
+    });
+    if (!changedTask) return;
+    const updatedTask = updatedById.get(changedTask.id);
+    if (!updatedTask) return;
+
+    this.calendarService.updateFamilyTaskCompletion(changedTask.id, updatedTask.completed).subscribe({
+      error: (error: unknown) => {
+        console.error('Aufgabe konnte nicht aktualisiert werden:', error);
+        this.calendarService.loadFamilyTasks();
+      },
+    });
   }
 
   public changeViewMode(mode: 'day' | '3days' | 'week'): void {

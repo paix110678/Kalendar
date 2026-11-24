@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { FamilyTask } from '../../../../services/api.service';
+import { User } from '../../../../services/calendar.service';
 import { AccountInvitationRecord, AuthAccount } from '../../../../services/auth.service';
 import { AdminNavigationTreeComponent } from './admin-navigation-tree.component';
 
@@ -64,5 +66,67 @@ describe('AdminNavigationTreeComponent account entries', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button');
     expect(buttons).toHaveLength(1);
     expect(buttons[0].textContent).toContain(account.email);
+  });
+
+  it('groups family tasks by member and emits actions to add and select tasks', () => {
+    const member: User = {
+      id: 7,
+      name: 'Alex',
+      role: 'child_10',
+      current_points: 0,
+      status_school: 'GREEN',
+      status_sport: 'BASE',
+      color_code: '#228be6',
+      state_code: null,
+      assigned_plan_id: null,
+      is_active: true,
+    };
+    const tasks: FamilyTask[] = [
+      {
+        id: 12,
+        title: 'Ranzen packen',
+        member_id: member.id,
+        due_date: '2026-11-24',
+        parent_id: null,
+        points: 2,
+        completed: false,
+        points_awarded: false,
+      },
+      {
+        id: 13,
+        title: 'Hausaufgaben',
+        member_id: member.id,
+        due_date: '2026-11-24',
+        parent_id: 12,
+        points: 0,
+        completed: true,
+        points_awarded: false,
+      },
+    ];
+    fixture.componentRef.setInput('activeTab', 'familyTasks');
+    fixture.componentRef.setInput('activeUsers', [member]);
+    fixture.componentRef.setInput('familyTasks', tasks);
+    fixture.detectChanges();
+    const actions: Array<{ type: string; id?: number | string | null }> = [];
+    fixture.componentInstance.action.subscribe((action) => actions.push(action));
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.family-task-member')).toHaveLength(1);
+    expect(Array.from(element.querySelectorAll('.family-task-item')).map((item) =>
+      item.textContent?.replace(/\s+/g, ' ').trim(),
+    )).toEqual(['○ Ranzen packen 24.11. · 2 Punkte', '✓ Hausaufgaben 24.11.']);
+
+    const addTask = element.querySelector('.family-task-add') as HTMLButtonElement;
+    const addSubtask = element.querySelector('.family-subtask-add') as HTMLButtonElement;
+    const taskButtons = Array.from(element.querySelectorAll('.family-task-item')) as HTMLButtonElement[];
+    addTask.click();
+    addSubtask.click();
+    taskButtons[1].click();
+
+    expect(actions.map(({ type, id }) => [type, id])).toEqual([
+      ['newFamilyTask', member.id],
+      ['newFamilySubtask', tasks[0].id],
+      ['familyTask', tasks[1].id],
+    ]);
   });
 });

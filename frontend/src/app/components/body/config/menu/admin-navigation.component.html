@@ -32,6 +32,14 @@
     >
       🏷️ Kategorien
     </button>
+    <button
+      type="button"
+      class="top-navigation-button"
+      [class.top-navigation-active]="activeTab === 'familyTasks'"
+      (click)="emit('familyTasks')"
+    >
+      ✅ Aufgaben
+    </button>
     @if (isAdmin) {
       <button
         type="button"

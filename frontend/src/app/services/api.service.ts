@@ -50,6 +50,28 @@ export interface TaskDefinition {
 
 export type TaskPayload = Pick<TaskDefinition, 'title' | 'color' | 'category_id' | 'member_ids'>;
 
+export interface FamilyTask {
+  id: number;
+  title: string;
+  member_id: number;
+  due_date: string;
+  parent_id: number | null;
+  points: number;
+  completed: boolean;
+  points_awarded: boolean;
+}
+
+export type FamilyTaskPayload = Pick<
+  FamilyTask,
+  'title' | 'member_id' | 'due_date' | 'parent_id' | 'points'
+>;
+
+export interface FamilyTaskCompletionResult {
+  tasks: FamilyTask[];
+  member_id: number;
+  current_points: number;
+}
+
 export interface PlanConflict {
   id: number;
   title: string;
@@ -270,6 +292,24 @@ export class ApiService {
     return this.http.put<TaskDefinition>(`${this.apiBase}/tasks/${id}`, task);
   }
   deleteTask(id: number): Observable<void> { return this.http.delete<void>(`${this.apiBase}/tasks/${id}`); }
+  getFamilyTasks(): Observable<FamilyTask[]> {
+    return this.http.get<FamilyTask[]>(`${this.apiBase}/family-tasks`);
+  }
+  createFamilyTask(task: FamilyTaskPayload): Observable<FamilyTask> {
+    return this.http.post<FamilyTask>(`${this.apiBase}/family-tasks`, task);
+  }
+  updateFamilyTask(id: number, task: FamilyTaskPayload): Observable<FamilyTask> {
+    return this.http.put<FamilyTask>(`${this.apiBase}/family-tasks/${id}`, task);
+  }
+  deleteFamilyTask(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/family-tasks/${id}`);
+  }
+  updateFamilyTaskCompletion(id: number, completed: boolean): Observable<FamilyTaskCompletionResult> {
+    return this.http.put<FamilyTaskCompletionResult>(
+      `${this.apiBase}/family-tasks/${id}/completion`,
+      { completed },
+    );
+  }
   getAllBlocks(): Observable<TimeBlock[]> { return this.http.get<TimeBlock[]>(this.apiBase + '/blocks/all'); }
   addTimeBlock(block: any): Observable<any> { return this.http.post(this.apiBase + '/blocks', block); }
   deleteTimeBlock(id: number): Observable<any> { return this.http.delete(this.apiBase + '/blocks/' + id); }

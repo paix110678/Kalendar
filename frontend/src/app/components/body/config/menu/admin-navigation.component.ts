@@ -7,6 +7,7 @@ export type AdminTab =
   | 'plans'
   | 'holidays'
   | 'categories'
+  | 'familyTasks'
   | 'system'
   | 'database'
   | 'tasks'
@@ -24,6 +25,10 @@ export interface AdminNavigationAction {
     | 'holidays'
     | 'categories'
     | 'task'
+    | 'familyTasks'
+    | 'familyTask'
+    | 'newFamilyTask'
+    | 'newFamilySubtask'
     | 'weather'
     | 'weatherLocation'
     | 'database'
@@ -32,6 +37,7 @@ export interface AdminNavigationAction {
     | 'refreshPlans'
     | 'refreshHolidays'
     | 'refreshTasks'
+    | 'refreshFamilyTasks'
     | 'refreshWeather'
     | 'refreshBackups';
   id?: number | string | null;

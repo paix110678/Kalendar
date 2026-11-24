@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import {
   DatabaseBackupList,
+  FamilyTask,
   Holiday,
   HolidayStateData,
   PlanDefinition,
@@ -20,6 +21,7 @@ import { DatabaseComponent } from './database/database.component';
 import { PlansComponent } from './plans/plans.component';
 import { HolidaysComponent } from './holidays/holidays.component';
 import { TasksComponent } from './tasks/tasks.component';
+import { FamilyTasksComponent } from './family-tasks/family-tasks.component';
 import { PlatformStatisticsComponent } from './platform-statistics/platform-statistics.component';
 
 @Component({
@@ -35,6 +37,7 @@ import { PlatformStatisticsComponent } from './platform-statistics/platform-stat
     PlansComponent,
     HolidaysComponent,
     TasksComponent,
+    FamilyTasksComponent,
     PlatformStatisticsComponent,
   ],
   templateUrl: './config-main.component.html',
@@ -66,6 +69,12 @@ export class ConfigMainComponent {
   @Input() tasksLoadError = '';
   @Input() selectedTaskId: number | null = null;
   @Input() selectedTaskCategoryId: number | null = null;
+  @Input() familyTasks: FamilyTask[] = [];
+  @Input() familyTasksLoading = false;
+  @Input() familyTasksLoadError = '';
+  @Input() selectedFamilyTaskId: number | null = null;
+  @Input() selectedFamilyTaskMemberId: number | null = null;
+  @Input() selectedFamilyTaskParentId: number | null = null;
 
   @Output() editorActionsChange = new EventEmitter<AdminEditorActions | null>();
   @Output() accountTreeDataChange = new EventEmitter<AccountTreeData>();
@@ -80,6 +89,8 @@ export class ConfigMainComponent {
   @Output() selectedLocationChanged = new EventEmitter<number | null>();
   @Output() tasksChanged = new EventEmitter<TaskDefinition[]>();
   @Output() selectedTaskIdChange = new EventEmitter<number | null>();
+  @Output() familyTasksChanged = new EventEmitter<FamilyTask[]>();
+  @Output() selectedFamilyTaskIdChange = new EventEmitter<number | null>();
   @Output() selectedBackupIdChange = new EventEmitter<string | null>();
   @Output() backupsChanged = new EventEmitter<DatabaseBackupList>();
   @Output() planSetupViewChange = new EventEmitter<boolean>();

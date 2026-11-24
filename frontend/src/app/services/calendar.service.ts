@@ -21,6 +21,8 @@ import {
 } from 'rxjs';
 import {
   ApiService,
+  FamilyTask,
+  FamilyTaskCompletionResult,
   HeaderPreferences,
   PlanConflictResolution,
   PlanDefinition,
@@ -102,6 +104,8 @@ export class CalendarService {
 
   private blocksSubject = new BehaviorSubject<TimeBlock[]>([]);
   public blocks$: Observable<TimeBlock[]> = this.blocksSubject.asObservable();
+  private familyTasksSubject = new BehaviorSubject<FamilyTask[]>([]);
+  public familyTasks$: Observable<FamilyTask[]> = this.familyTasksSubject.asObservable();
   private rewardsSubject = new BehaviorSubject<Reward[]>([]);
   public rewards$: Observable<Reward[]> = this.rewardsSubject.asObservable();
   private profileWeatherSubject = new BehaviorSubject<SystemConfig>({
@@ -186,6 +190,7 @@ export class CalendarService {
     this.loadCategories();
     this.loadUsers();
     this.loadAllBlocks();
+    this.loadFamilyTasks();
     this.loadRewards();
     this.loadProfileWeather();
     this.loadHeaderPreferences();
@@ -201,6 +206,7 @@ export class CalendarService {
     this.usersSubject.next([]);
     this.categoriesSubject.next([]);
     this.blocksSubject.next([]);
+    this.familyTasksSubject.next([]);
     this.rewardsSubject.next([]);
     this.profileWeatherSubject.next({
       weather_city: '',
@@ -289,6 +295,9 @@ export class CalendarService {
     });
     this.refreshAllBlocks().subscribe({
       error: (error: unknown) => console.error('Kalendertermine konnten nicht aktualisiert werden:', error),
+    });
+    this.reloadFamilyTasks().subscribe({
+      error: (error: unknown) => console.error('Aufgaben konnten nicht aktualisiert werden:', error),
     });
     this.refreshRewards().subscribe({
       error: (error: unknown) => console.error('Belohnungen konnten nicht aktualisiert werden:', error),
@@ -432,6 +441,30 @@ export class CalendarService {
   }
   public reloadUsers(): Observable<User[]> {
     return this.apiService.getUsers().pipe(tap((users) => this.usersSubject.next(users)));
+  }
+  public reloadFamilyTasks(): Observable<FamilyTask[]> {
+    return this.apiService.getFamilyTasks().pipe(
+      tap((tasks) => this.familyTasksSubject.next(tasks)),
+    );
+  }
+  public loadFamilyTasks(): void {
+    this.reloadFamilyTasks().subscribe({
+      error: (error: unknown) => console.error('Aufgaben konnten nicht geladen werden:', error),
+    });
+  }
+  public setFamilyTasks(tasks: FamilyTask[]): void {
+    this.familyTasksSubject.next(tasks);
+  }
+  public updateFamilyTaskCompletion(
+    taskId: number,
+    completed: boolean,
+  ): Observable<FamilyTaskCompletionResult> {
+    return this.apiService.updateFamilyTaskCompletion(taskId, completed).pipe(
+      tap((result) => {
+        this.familyTasksSubject.next(result.tasks);
+        this.updateUserPoints(result.member_id, result.current_points);
+      }),
+    );
   }
   private loadRewards(): void {
     this.refreshRewards().subscribe({

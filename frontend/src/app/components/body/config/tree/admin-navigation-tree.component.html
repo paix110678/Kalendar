@@ -119,6 +119,70 @@
       @case ('tasks') {
         <ng-container *ngTemplateOutlet="categoryTree"></ng-container>
       }
+      @case ('familyTasks') {
+        @if (familyTasksLoading) {
+          <p class="tree-message">Aufgaben werden geladen …</p>
+        } @else if (familyTasksLoadError) {
+          <p class="tree-message tree-error" role="alert">{{ familyTasksLoadError }}</p>
+          <button type="button" class="retry-button" (click)="emit('refreshFamilyTasks')">
+            Erneut versuchen
+          </button>
+        }
+        @if (activeUsers.length === 0) {
+          <p class="tree-message">Keine Familienmitglieder vorhanden</p>
+        } @else {
+          @for (user of activeUsers; track user.id) {
+            <section class="family-task-member category-group">
+              <div class="tree-item family-task-member-heading">
+                <span class="item-color" [style.background-color]="user.color_code"></span>
+                <span class="item-name">{{ user.name }}</span>
+                <button
+                  type="button"
+                  class="family-task-add"
+                  [attr.aria-label]="'Aufgabe für ' + user.name + ' hinzufügen'"
+                  (click)="emit('newFamilyTask', user.id)">+</button>
+              </div>
+              @for (task of getFamilyTasksForMember(user.id); track task.id) {
+                <div class="family-task-group">
+                  <button
+                    type="button"
+                    class="tree-item family-task-item"
+                    [class.tree-item-active]="selectedFamilyTaskId === task.id"
+                    [attr.aria-label]="(task.completed ? 'Erledigte Aufgabe: ' : 'Aufgabe: ') + task.title + ', fällig am ' + formatTaskDate(task.due_date)"
+                    (click)="emit('familyTask', task.id)">
+                    <span class="item-marker" aria-hidden="true">
+                      {{ task.completed ? '✓' : '○' }}
+                    </span>
+                    <span class="item-name">
+                      {{ task.title }}
+                      <small>{{ formatTaskDate(task.due_date) }}{{ task.points > 0 ? ' · ' + task.points + ' Punkte' : '' }}</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="tree-item task-add family-subtask-add"
+                    [class.tree-item-active]="selectedFamilyTaskParentId === task.id && selectedFamilyTaskId === null"
+                    (click)="emit('newFamilySubtask', task.id)">＋ Unteraufgabe</button>
+                  @for (subtask of getFamilySubtasks(task.id); track subtask.id) {
+                    <button
+                      type="button"
+                      class="tree-item family-task-item family-subtask-item"
+                      [class.tree-item-active]="selectedFamilyTaskId === subtask.id"
+                      [attr.aria-label]="(subtask.completed ? 'Erledigte Unteraufgabe: ' : 'Unteraufgabe: ') + subtask.title + ', fällig am ' + formatTaskDate(subtask.due_date)"
+                      (click)="emit('familyTask', subtask.id)">
+                      <span class="item-marker" aria-hidden="true">{{ subtask.completed ? '✓' : '○' }}</span>
+                      <span class="item-name">
+                        {{ subtask.title }}
+                        <small>{{ formatTaskDate(subtask.due_date) }}{{ subtask.points > 0 ? ' · ' + subtask.points + ' Punkte' : '' }}</small>
+                      </span>
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
+        }
+      }
       @case ('system') {
         @if (weatherLocationsLoading) {
           <p class="tree-message">Standorte werden geladen …</p>

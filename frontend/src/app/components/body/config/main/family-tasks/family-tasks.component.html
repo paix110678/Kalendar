@@ -1,0 +1,83 @@
+<section class="family-tasks-page">
+  <header class="family-tasks-header">
+    <h3>{{ editingTaskId === null ? 'Aufgabe hinzufügen' : 'Aufgabe bearbeiten' }}</h3>
+    <p>Aufgaben mit Fälligkeitstag erscheinen im Kalender des ausgewählten Familienmitglieds.</p>
+  </header>
+
+  <form class="family-task-form" (ngSubmit)="$event.preventDefault()">
+    <label class="field">
+      <span>Titel</span>
+      <input
+        type="text"
+        name="familyTaskTitle"
+        [(ngModel)]="title"
+        (ngModelChange)="publishEditorActions()"
+        maxlength="100"
+        autocomplete="off"
+        required>
+    </label>
+
+    <label class="field">
+      <span>Familienmitglied</span>
+      <select
+        name="familyTaskMember"
+        [(ngModel)]="memberId"
+        (ngModelChange)="publishEditorActions()"
+        [disabled]="parentId !== null"
+        required>
+        <option [ngValue]="null">Mitglied auswählen …</option>
+        @for (user of activeUsers; track user.id) {
+          <option [ngValue]="user.id">{{ user.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Fällig am</span>
+      <input
+        type="date"
+        name="familyTaskDueDate"
+        [(ngModel)]="dueDate"
+        (ngModelChange)="publishEditorActions()"
+        [disabled]="parentId !== null"
+        required>
+    </label>
+
+    <label class="field">
+      <span>Übergeordnete Aufgabe</span>
+      <select
+        name="familyTaskParent"
+        [ngModel]="parentId"
+        (ngModelChange)="onParentChange($event)"
+        [disabled]="editingTaskId !== null && (savedTask?.parent_id !== null || hasSubtasks)">
+        <option [ngValue]="null">Keine – Hauptaufgabe</option>
+        @for (parent of availableParents; track parent.id) {
+          <option [ngValue]="parent.id">{{ parent.title }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Punkte (optional)</span>
+      <input
+        type="number"
+        name="familyTaskPoints"
+        [(ngModel)]="points"
+        (ngModelChange)="publishEditorActions()"
+        min="0"
+        max="10000"
+        step="1"
+        placeholder="Keine Punkte">
+    </label>
+
+    @if (parentId !== null) {
+      <p class="form-hint">Die Hauptaufgabe gilt erst als erledigt, wenn alle Unteraufgaben abgeschlossen sind.</p>
+    } @else {
+      <p class="form-hint">Eine Hauptaufgabe mit Unteraufgaben gilt erst als erledigt, wenn alle Unteraufgaben abgeschlossen sind.</p>
+    }
+
+    @if (errorMessage) {
+      <p class="form-error" role="alert">{{ errorMessage }}</p>
+    }
+  </form>
+</section>

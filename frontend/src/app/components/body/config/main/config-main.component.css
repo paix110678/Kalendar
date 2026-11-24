@@ -36,6 +36,7 @@
 .config-content-scroll > app-categories,
 .config-content-scroll > app-system,
 .config-content-scroll > app-tasks,
+.config-content-scroll > app-family-tasks,
 .config-content-scroll > app-database,
 .config-content-scroll > app-account-management,
 .config-content-scroll > app-platform-statistics {
@@ -59,6 +60,7 @@
   .config-content-scroll > app-categories,
   .config-content-scroll > app-system,
   .config-content-scroll > app-tasks,
+  .config-content-scroll > app-family-tasks,
   .config-content-scroll > app-database,
   .config-content-scroll > app-account-management,
   .config-content-scroll > app-platform-statistics {
