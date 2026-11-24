@@ -65,11 +65,11 @@ jobs:
       KALENDAR_VERSION: 1.3.2
       KALENDAR_BACKEND_IMAGE: kalendar_backend:${{ github.sha }}
       KALENDAR_FRONTEND_IMAGE: kalendar_frontend:${{ github.sha }}
-      KALENDAR_SMTP_HOST: ${{ secrets.KALENDAR_SMTP_HOST }}
+      KALENDAR_SMTP_HOST: ""
       KALENDAR_SMTP_PORT: ${{ secrets.KALENDAR_SMTP_PORT }}
       KALENDAR_SMTP_USER: ${{ secrets.KALENDAR_SMTP_USER }}
       KALENDAR_SMTP_PASSWORD: ${{ secrets.KALENDAR_SMTP_PASSWORD }}
-      KALENDAR_SMTP_FROM: ${{ secrets.KALENDAR_SMTP_FROM }}
+      KALENDAR_SMTP_FROM: ""
       KALENDAR_BOOTSTRAP_TOKEN: ${{ secrets.KALENDAR_BOOTSTRAP_TOKEN }}
     steps:
       - name: Check out repository

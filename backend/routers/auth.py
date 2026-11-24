@@ -585,8 +585,6 @@ def resend_verification(payload: EmailPayload, request: Request):
 
 @router.post("/request-password-reset")
 def request_password_reset(payload: EmailPayload, request: Request):
-    client_host = request.client.host if request.client else "unknown"
-    consume_rate_limit(f"password-reset:{client_host}", 5, 3600)
     if not _smtp_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
