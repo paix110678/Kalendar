@@ -1,7 +1,10 @@
 <main class="auth-page">
   <section class="auth-card">
-    @if (error && mode === 'login') {
+    @if (error) {
       <p class="auth-message auth-error" role="alert">{{ error }}</p>
+    }
+    @if (message) {
+      <p class="auth-message" role="status">{{ message }}</p>
     }
 
     @if (mode === 'login') {

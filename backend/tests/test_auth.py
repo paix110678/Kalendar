@@ -235,6 +235,25 @@ def test_family_isolation_roles_and_csrf(tmp_path, monkeypatch):
             },
         )
         assert login.status_code == 200
+        assert child_client.post(
+            "/api/auth/request-password-reset",
+            json={"email": "child@example.invalid"},
+        ).status_code == 200
+        reset_token = _token_from_email(sent_emails[-1])
+        assert child_client.post(
+            "/api/auth/reset-password",
+            json={
+                "token": reset_token,
+                "password": "A-new-child-password-789",
+            },
+        ).status_code == 200
+        assert child_client.post(
+            "/api/auth/login",
+            json={
+                "email": "child@example.invalid",
+                "password": "A-new-child-password-789",
+            },
+        ).status_code == 200
         child_csrf = child_client.cookies.get("kalendar_csrf")
 
         visible_users = child_client.get("/api/users").json()
@@ -410,6 +429,12 @@ def test_password_reset_revokes_sessions_and_token_is_single_use(tmp_path, monke
 
     with TestClient(main.app) as client:
         _register_admin(client, "admin@example.invalid", "One Family", sent_emails)
+        monkeypatch.delenv("KALENDAR_SMTP_HOST")
+        assert client.post(
+            "/api/auth/request-password-reset",
+            json={"email": "admin@example.invalid"},
+        ).status_code == 503
+        monkeypatch.setenv("KALENDAR_SMTP_HOST", "mail.invalid")
         csrf = client.cookies.get("kalendar_csrf")
         request_reset = client.post(
             "/api/auth/request-password-reset",
