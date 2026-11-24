@@ -435,6 +435,23 @@ def test_password_reset_revokes_sessions_and_token_is_single_use(tmp_path, monke
             json={"email": "admin@example.invalid"},
         ).status_code == 503
         monkeypatch.setenv("KALENDAR_SMTP_HOST", "mail.invalid")
+        monkeypatch.setattr(
+            "routers.auth._send_email",
+            lambda recipient, subject, body: (_ for _ in ()).throw(
+                HTTPException(
+                    status_code=503,
+                    detail="E-Mail konnte nicht versendet werden. Bitte später erneut versuchen.",
+                )
+            ),
+        )
+        assert client.post(
+            "/api/auth/request-password-reset",
+            json={"email": "admin@example.invalid"},
+        ).status_code == 503
+        monkeypatch.setattr(
+            "routers.auth._send_email",
+            lambda recipient, subject, body: sent_emails.append(body),
+        )
         csrf = client.cookies.get("kalendar_csrf")
         request_reset = client.post(
             "/api/auth/request-password-reset",

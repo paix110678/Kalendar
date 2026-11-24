@@ -605,14 +605,11 @@ def request_password_reset(payload: EmailPayload, request: Request):
         conn.close()
     if account and account["email_verified"]:
         token = _issue_email_token(account["id"], "reset", timedelta(hours=1))
-        try:
-            _send_email(
-                account["email"],
-                "Familienkalender: Passwort zurücksetzen",
-                f"Setze dein Passwort über diesen Link zurück:\n{_frontend_link('reset-password', token)}\n",
-            )
-        except HTTPException as error:
-            logger.warning("Password reset email could not be sent: %s", error.detail)
+        _send_email(
+            account["email"],
+            "Familienkalender: Passwort zurücksetzen",
+            f"Setze dein Passwort über diesen Link zurück:\n{_frontend_link('reset-password', token)}\n",
+        )
     return {"message": "Falls ein Konto besteht, wurde eine E-Mail zum Zurücksetzen versendet."}
 
 
