@@ -37,6 +37,7 @@ from routers import (
 )
 
 logger = logging.getLogger("uvicorn.error")
+PASSWORD_RESET_LOG_CLEANUP_INTERVAL = 7 * 24 * 60 * 60
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
@@ -65,6 +66,17 @@ async def hourly_weather_cron_task():
         await asyncio.sleep(3600)
 
 
+async def weekly_password_reset_log_cleanup_task():
+    while True:
+        await asyncio.sleep(PASSWORD_RESET_LOG_CLEANUP_INTERVAL)
+        try:
+            deleted = await asyncio.to_thread(auth_database.clear_password_reset_logs)
+        except Exception:
+            logger.exception("Wöchentliche Bereinigung der Passwort-Reset-Protokolle fehlgeschlagen.")
+        else:
+            logger.info("Wöchentliche Bereinigung: %s Passwort-Reset-Protokolle entfernt.", deleted)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info("Familien-Kalender API wird gestartet.")
@@ -77,13 +89,19 @@ async def lifespan(_: FastAPI):
             len(backup_migration_failures),
         )
     weather_task = asyncio.create_task(hourly_weather_cron_task())
-    logger.info("Datenbank initialisiert; Wetteraktualisierung geplant.")
+    reset_log_cleanup_task = asyncio.create_task(weekly_password_reset_log_cleanup_task())
+    logger.info("Datenbank initialisiert; Wetter- und Protokollbereinigung geplant.")
     try:
         yield
     finally:
         weather_task.cancel()
+        reset_log_cleanup_task.cancel()
         try:
             await weather_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await reset_log_cleanup_task
         except asyncio.CancelledError:
             pass
         logger.info("Familien-Kalender API wird beendet.")

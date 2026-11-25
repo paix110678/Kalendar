@@ -241,6 +241,53 @@ def _email_for_token(token: str, purpose: str):
         conn.close()
 
 
+def _create_password_reset_log(email: str) -> int:
+    conn = auth_database.get_auth_connection()
+    try:
+        cursor = conn.execute(
+            """
+            INSERT INTO password_reset_logs (email, status, created_at)
+            VALUES (?, 'received', ?)
+            """,
+            (email, _utc_now().isoformat()),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def _update_password_reset_log(
+    log_id: int,
+    status_value: str,
+    detail: str | None = None,
+    account=None,
+) -> None:
+    conn = auth_database.get_auth_connection()
+    try:
+        conn.execute(
+            """
+            UPDATE password_reset_logs
+            SET status = ?, detail = ?,
+                family_id = COALESCE(?, family_id),
+                account_id = COALESCE(?, account_id),
+                email = COALESCE(?, email)
+            WHERE id = ?
+            """,
+            (
+                status_value,
+                detail,
+                account["family_id"] if account is not None else None,
+                account["id"] if account is not None else None,
+                account["email"] if account is not None else None,
+                log_id,
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _validate_profile_for_role(profile_id: int, role: str):
     conn = database.get_db_connection()
     try:
@@ -599,28 +646,94 @@ def resend_verification(payload: EmailPayload, request: Request):
 
 @router.post("/request-password-reset")
 def request_password_reset(payload: EmailPayload, request: Request):
-    if not _smtp_configured():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="E-Mail-Versand muss vor dem Zurücksetzen des Passworts konfiguriert werden.",
-        )
+    log_id = _create_password_reset_log(payload.email)
     conn = auth_database.get_auth_connection()
     try:
         account = conn.execute(
             """
-            SELECT id, email, email_verified FROM accounts
-            WHERE email = ? COLLATE NOCASE AND is_active = 1
+            SELECT id, family_id, email, email_verified, is_active FROM accounts
+            WHERE email = ? COLLATE NOCASE
             """,
             (payload.email,),
         ).fetchone()
     finally:
         conn.close()
-    if account and account["email_verified"]:
-        token = _issue_email_token(account["id"], "reset", timedelta(hours=1))
-        _send_email(
-            account["email"],
-            "Familienkalender: Passwort zurücksetzen",
-            f"Setze dein Passwort über diesen Link zurück:\n{_frontend_link('reset-password', token)}\n",
+    if account is not None:
+        _update_password_reset_log(
+            log_id,
+            "account_found",
+            "Konto zur angefragten E-Mail-Adresse gefunden.",
+            account,
+        )
+    if not _smtp_configured():
+        _update_password_reset_log(
+            log_id,
+            "smtp_not_configured",
+            "Der SMTP-Versand ist nicht konfiguriert.",
+            account,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="E-Mail-Versand muss vor dem Zurücksetzen des Passworts konfiguriert werden.",
+        )
+    if account is None:
+        _update_password_reset_log(
+            log_id,
+            "account_not_found",
+            "Zu dieser E-Mail-Adresse wurde kein Konto gefunden.",
+        )
+    elif not account["is_active"]:
+        _update_password_reset_log(
+            log_id,
+            "account_inactive",
+            "Das Konto ist deaktiviert.",
+            account,
+        )
+    elif not account["email_verified"]:
+        _update_password_reset_log(
+            log_id,
+            "email_not_verified",
+            "Die E-Mail-Adresse des Kontos ist noch nicht bestätigt.",
+            account,
+        )
+    else:
+        _update_password_reset_log(
+            log_id,
+            "account_verified",
+            "Aktives Konto mit bestätigter E-Mail-Adresse gefunden.",
+            account,
+        )
+        try:
+            token = _issue_email_token(account["id"], "reset", timedelta(hours=1))
+        except Exception:
+            _update_password_reset_log(
+                log_id,
+                "token_creation_failed",
+                "Der Zurücksetzungslink konnte nicht erstellt werden.",
+                account,
+            )
+            logger.exception("Password reset token could not be issued (log_id=%s)", log_id)
+            raise
+        try:
+            _send_email(
+                account["email"],
+                "Familienkalender: Passwort zurücksetzen",
+                f"Setze dein Passwort über diesen Link zurück:\n{_frontend_link('reset-password', token)}\n",
+            )
+        except Exception as error:
+            _update_password_reset_log(
+                log_id,
+                "smtp_send_failed",
+                f"Der Mailversand ist fehlgeschlagen ({type(error).__name__}).",
+                account,
+            )
+            logger.exception("Password reset email could not be sent (log_id=%s)", log_id)
+            raise
+        _update_password_reset_log(
+            log_id,
+            "smtp_accepted",
+            "Der SMTP-Server hat die Nachricht angenommen; die endgültige Zustellung ist nicht bestätigt.",
+            account,
         )
     return {"message": "Falls ein Konto besteht, wurde eine E-Mail zum Zurücksetzen versendet."}
 

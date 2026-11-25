@@ -429,6 +429,34 @@ def test_password_reset_revokes_sessions_and_token_is_single_use(tmp_path, monke
 
     with TestClient(main.app) as client:
         _register_admin(client, "admin@example.invalid", "One Family", sent_emails)
+        unknown_reset = client.post(
+            "/api/auth/request-password-reset",
+            json={"email": "unknown@example.invalid"},
+        )
+        assert unknown_reset.status_code == 200
+        conn = auth_database.get_auth_connection()
+        try:
+            conn.execute(
+                "UPDATE accounts SET email_verified = 0 WHERE email = ?",
+                ("admin@example.invalid",),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        unverified_reset = client.post(
+            "/api/auth/request-password-reset",
+            json={"email": "admin@example.invalid"},
+        )
+        assert unverified_reset.status_code == 200
+        conn = auth_database.get_auth_connection()
+        try:
+            conn.execute(
+                "UPDATE accounts SET email_verified = 1 WHERE email = ?",
+                ("admin@example.invalid",),
+            )
+            conn.commit()
+        finally:
+            conn.close()
         monkeypatch.delenv("KALENDAR_SMTP_HOST")
         assert client.post(
             "/api/auth/request-password-reset",
@@ -486,6 +514,35 @@ def test_password_reset_revokes_sessions_and_token_is_single_use(tmp_path, monke
             "/api/auth/logout",
             headers={"X-CSRF-Token": client.cookies.get("kalendar_csrf") or csrf or ""},
         ).status_code == 200
+
+    conn = auth_database.get_auth_connection()
+    try:
+        reset_logs = conn.execute(
+            """
+            SELECT email, status, family_id, account_id, detail
+            FROM password_reset_logs ORDER BY id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    assert [row["status"] for row in reset_logs] == [
+        "account_not_found",
+        "email_not_verified",
+        "smtp_not_configured",
+        "smtp_send_failed",
+        "smtp_accepted",
+    ]
+    assert reset_logs[0]["family_id"] is None
+    assert reset_logs[1]["family_id"] == reset_logs[2]["family_id"]
+    assert reset_logs[3]["family_id"] == reset_logs[4]["family_id"]
+    assert reset_logs[3]["account_id"] == reset_logs[4]["account_id"]
+    assert "Token" not in reset_logs[4]["detail"]
+    assert auth_database.clear_password_reset_logs() == 5
+    conn = auth_database.get_auth_connection()
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM password_reset_logs").fetchone()[0] == 0
+    finally:
+        conn.close()
 
 
 def test_family_backup_directories_are_isolated(tmp_path, monkeypatch):

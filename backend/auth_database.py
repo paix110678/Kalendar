@@ -101,6 +101,19 @@ def init_auth_db():
                 window_started INTEGER NOT NULL,
                 attempts INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS password_reset_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                family_id TEXT,
+                account_id INTEGER,
+                email TEXT NOT NULL,
+                status TEXT NOT NULL,
+                detail TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_password_reset_logs_created
+                ON password_reset_logs(created_at);
+            CREATE INDEX IF NOT EXISTS idx_password_reset_logs_family
+                ON password_reset_logs(family_id, created_at);
             CREATE TABLE IF NOT EXISTS error_reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 description TEXT NOT NULL,
@@ -284,6 +297,16 @@ def list_family_db_paths() -> list[Path]:
     try:
         rows = conn.execute("SELECT db_key FROM families ORDER BY created_at").fetchall()
         return [get_family_db_path(row["db_key"]) for row in rows]
+    finally:
+        conn.close()
+
+
+def clear_password_reset_logs() -> int:
+    conn = get_auth_connection()
+    try:
+        cursor = conn.execute("DELETE FROM password_reset_logs")
+        conn.commit()
+        return cursor.rowcount
     finally:
         conn.close()
 
