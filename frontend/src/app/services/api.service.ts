@@ -207,6 +207,13 @@ export interface DatabaseTableData {
   rowid_column: string | null;
 }
 
+export interface SystemTableData {
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+  total_rows: number;
+  truncated: boolean;
+}
+
 export interface DatabaseRestoreResult {
   restored_backup_id: string;
   recovery_backup_id: string;
@@ -395,6 +402,14 @@ export class ApiService {
   getDatabaseTables(): Observable<string[]> { return this.http.get<string[]>(`${this.apiBase}/blocks/db/tables`); }
   getTableData(tableName: string): Observable<DatabaseTableData> {
     return this.http.get<DatabaseTableData>(`${this.apiBase}/blocks/db/tables/${encodeURIComponent(tableName)}`);
+  }
+  getSystemTables(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiBase}/auth/system-tables`);
+  }
+  getSystemTableData(tableName: string): Observable<SystemTableData> {
+    return this.http.get<SystemTableData>(
+      `${this.apiBase}/auth/system-tables/${encodeURIComponent(tableName)}`,
+    );
   }
   updateTableRow(
     tableName: string,

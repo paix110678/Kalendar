@@ -115,6 +115,78 @@
   font-size: 0.85rem;
 }
 
+.system-table-inspector {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.system-table-inspector h4,
+.system-table-data h5 {
+  margin: 0;
+}
+
+.system-table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.system-table-list button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.system-table-list button.system-table-selected {
+  border-color: #d6336c;
+  background: #d6336c;
+  color: #fff;
+}
+
+.system-table-data {
+  display: grid;
+  gap: 8px;
+}
+
+.system-table-scroll {
+  max-height: 400px;
+  overflow: auto;
+}
+
+.system-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.system-table-scroll th,
+.system-table-scroll td {
+  max-width: 240px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border-bottom: 1px solid #dee2e6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.system-table-scroll th {
+  position: sticky;
+  top: 0;
+  background: var(--config-background, #fff);
+}
+
+.system-table-empty {
+  color: #687078;
+  text-align: center;
+}
+
 @media (max-width: 600px) {
   .account-management {
     gap: 14px;

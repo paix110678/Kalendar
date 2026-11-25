@@ -91,4 +91,73 @@
   @if (message) {
     <p class="account-hint" role="status">{{ message }}</p>
   }
+  <section class="system-table-inspector" aria-labelledby="system-tables-title">
+    <h4 id="system-tables-title">Systemtabellen</h4>
+    <p class="account-hint">
+      Schreibgeschützte Ansicht der Kontodaten dieser Familie. Passwort-Hashes, Tokens und vertrauliche Diagnosewerte werden ausgeblendet.
+      Tabellen ohne eindeutige Familienzuordnung zeigen keine Datensätze.
+    </p>
+    @if (systemTablesLoading) {
+      <p role="status">Systemtabellen werden geladen …</p>
+    } @else if (systemTableError && !selectedSystemTable) {
+      <p class="account-hint" role="alert">{{ systemTableError }}</p>
+    } @else if (systemTables.length === 0) {
+      <p class="account-hint">Keine Systemtabellen vorhanden.</p>
+    } @else {
+      <div class="system-table-list" aria-label="Systemtabelle auswählen">
+        @for (table of systemTables; track table) {
+          <button
+            type="button"
+            [class.system-table-selected]="selectedSystemTable === table"
+            [attr.aria-pressed]="selectedSystemTable === table"
+            (click)="selectSystemTable(table)">
+            {{ table }}
+          </button>
+        }
+      </div>
+      @if (selectedSystemTable) {
+        <div class="system-table-data">
+          <h5>{{ selectedSystemTable }}</h5>
+          @if (systemTableError) {
+            <p class="account-hint" role="alert">{{ systemTableError }}</p>
+          } @else if (systemTableLoading) {
+            <p role="status">Tabellendaten werden geladen …</p>
+          } @else {
+            <p class="account-hint">
+              {{ systemTableTotalRows }} Datensätze
+              @if (systemTableTruncated) {
+                (die ersten 500 werden angezeigt)
+              }
+            </p>
+            <div class="system-table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    @for (column of systemTableColumns; track column) {
+                      <th scope="col">{{ column }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of systemTableRows; track $index) {
+                    <tr>
+                      @for (column of systemTableColumns; track column) {
+                        <td>{{ row[column] === null ? 'NULL' : row[column] }}</td>
+                      }
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="system-table-empty" [attr.colspan]="systemTableColumns.length">
+                        Keine Datensätze vorhanden.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    }
+  </section>
 </section>

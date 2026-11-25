@@ -34,6 +34,9 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _DUMMY_PASSWORD_HASH = "scrypt$32768$8$1$" + ("00" * 16) + "$" + ("00" * 64)
+_SYSTEM_TABLE_ROW_LIMIT = 500
+_REDACTED_SYSTEM_COLUMNS = {"diagnostics", "screenshot"}
+_SENSITIVE_SYSTEM_COLUMN_PARTS = ("password", "token", "hash", "secret", "csrf")
 
 
 class RegisterPayload(BaseModel):
@@ -127,6 +130,17 @@ class AccountUpdatePayload(BaseModel):
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _quote_sql_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
+
+
+def _is_sensitive_system_column(column: str) -> bool:
+    lowered_column = column.lower()
+    return column in _REDACTED_SYSTEM_COLUMNS or any(
+        sensitive_part in lowered_column for sensitive_part in _SENSITIVE_SYSTEM_COLUMN_PARTS
+    )
 
 
 def _smtp_configured() -> bool:
@@ -738,6 +752,102 @@ def list_accounts(actor: AccountContext = Depends(require_roles("admin"))):
         account["created_at"] = row["created_at"]
         result.append(account)
     return result
+
+
+@router.get("/system-tables")
+def list_system_tables(actor: AccountContext = Depends(require_roles("admin"))):
+    conn = auth_database.get_auth_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+            """
+        ).fetchall()
+        return [row["name"] for row in rows]
+    finally:
+        conn.close()
+
+
+@router.get("/system-tables/{table_name}")
+def get_system_table_data(
+    table_name: str,
+    actor: AccountContext = Depends(require_roles("admin")),
+):
+    conn = auth_database.get_auth_connection()
+    try:
+        table = conn.execute(
+            """
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name = ? AND name NOT LIKE 'sqlite_%'
+            """,
+            (table_name,),
+        ).fetchone()
+        if table is None:
+            raise HTTPException(status_code=404, detail="Systemtabelle nicht gefunden.")
+
+        columns = [
+            row["name"]
+            for row in conn.execute(
+                f"PRAGMA table_info({_quote_sql_identifier(table_name)})"
+            ).fetchall()
+        ]
+        quoted_table = _quote_sql_identifier(table_name)
+        if "family_id" in columns:
+            from_sql = quoted_table
+            where_sql = '"family_id" = ?'
+            parameters = [actor.family_id]
+        elif table_name == "families":
+            from_sql = quoted_table
+            where_sql = '"id" = ?'
+            parameters = [actor.family_id]
+        elif "account_id" in columns:
+            from_sql = (
+                f"{quoted_table} JOIN accounts "
+                f"ON {quoted_table}.account_id = accounts.id"
+            )
+            where_sql = "accounts.family_id = ?"
+            parameters = [actor.family_id]
+        elif "source_db_key" in columns:
+            family = conn.execute(
+                "SELECT db_key FROM families WHERE id = ?",
+                (actor.family_id,),
+            ).fetchone()
+            from_sql = quoted_table
+            where_sql = '"source_db_key" = ?' if family else "0"
+            parameters = [family["db_key"]] if family else []
+        else:
+            from_sql = quoted_table
+            where_sql = "0"
+            parameters = []
+
+        total_rows = conn.execute(
+            f"SELECT COUNT(*) FROM {from_sql} WHERE {where_sql}",
+            parameters,
+        ).fetchone()[0]
+        rows = conn.execute(
+            f"SELECT {quoted_table}.* FROM {from_sql} WHERE {where_sql} LIMIT ?",
+            [*parameters, _SYSTEM_TABLE_ROW_LIMIT],
+        ).fetchall()
+        return {
+            "columns": columns,
+            "rows": [
+                {
+                    column: (
+                        "[ausgeblendet]"
+                        if _is_sensitive_system_column(column) or isinstance(row[column], bytes)
+                        else row[column]
+                    )
+                    for column in columns
+                }
+                for row in rows
+            ],
+            "total_rows": total_rows,
+            "truncated": total_rows > _SYSTEM_TABLE_ROW_LIMIT,
+        }
+    finally:
+        conn.close()
 
 
 @router.get("/invitations")

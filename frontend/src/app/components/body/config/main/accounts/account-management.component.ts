@@ -8,6 +8,7 @@ import {
   AuthAccount,
   AuthService,
 } from '../../../../../services/auth.service';
+import { ApiService, SystemTableData } from '../../../../../services/api.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { User } from '../../../../../services/calendar.service';
 import { AdminEditorActions } from '../../action-footer/action-footer.component';
@@ -43,6 +44,15 @@ export class AccountManagementComponent implements OnInit, OnChanges {
   loading = false;
   invitationsLoading = false;
   saving = false;
+  systemTables: string[] = [];
+  selectedSystemTable: string | null = null;
+  systemTableColumns: string[] = [];
+  systemTableRows: Array<Record<string, unknown>> = [];
+  systemTablesLoading = false;
+  systemTableLoading = false;
+  systemTableTotalRows = 0;
+  systemTableTruncated = false;
+  systemTableError = '';
   error = '';
   private treeError = '';
   message = '';
@@ -50,11 +60,13 @@ export class AccountManagementComponent implements OnInit, OnChanges {
 
   constructor(
     readonly authService: AuthService,
+    private readonly apiService: ApiService,
     private readonly toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
     this.loadAccounts();
+    this.loadSystemTables();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -178,6 +190,42 @@ export class AccountManagementComponent implements OnInit, OnChanges {
         this.error = this.errorMessage(error, 'Einladungen konnten nicht geladen werden.');
         this.publishTreeData();
         this.toastService.show(false, this.error);
+      },
+    });
+  }
+
+  loadSystemTables(): void {
+    this.systemTablesLoading = true;
+    this.systemTableError = '';
+    this.apiService.getSystemTables().subscribe({
+      next: (tables) => {
+        this.systemTables = tables;
+        this.systemTablesLoading = false;
+      },
+      error: (error: unknown) => {
+        this.systemTablesLoading = false;
+        this.systemTableError = this.errorMessage(error, 'Systemtabellen konnten nicht geladen werden.');
+      },
+    });
+  }
+
+  selectSystemTable(tableName: string): void {
+    this.selectedSystemTable = tableName;
+    this.systemTableLoading = true;
+    this.systemTableError = '';
+    this.apiService.getSystemTableData(tableName).subscribe({
+      next: (result: SystemTableData) => {
+        if (this.selectedSystemTable !== tableName) return;
+        this.systemTableColumns = result.columns;
+        this.systemTableRows = result.rows;
+        this.systemTableTotalRows = result.total_rows;
+        this.systemTableTruncated = result.truncated;
+        this.systemTableLoading = false;
+      },
+      error: (error: unknown) => {
+        if (this.selectedSystemTable !== tableName) return;
+        this.systemTableLoading = false;
+        this.systemTableError = this.errorMessage(error, 'Die Systemtabelle konnte nicht geladen werden.');
       },
     });
   }

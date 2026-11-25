@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiService } from '../../../../../services/api.service';
 import { AccountInvitationRecord, AuthAccount, AuthService } from '../../../../../services/auth.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { User } from '../../../../../services/calendar.service';
@@ -12,6 +13,10 @@ describe('AccountManagementComponent', () => {
     getAccounts: ReturnType<typeof vi.fn>;
     getInvitations: ReturnType<typeof vi.fn>;
     inviteAccount: ReturnType<typeof vi.fn>;
+  };
+  let apiService: {
+    getSystemTables: ReturnType<typeof vi.fn>;
+    getSystemTableData: ReturnType<typeof vi.fn>;
   };
 
   const profiles: User[] = [
@@ -81,10 +86,20 @@ describe('AccountManagementComponent', () => {
       getInvitations: vi.fn(() => of([pendingInvitation])),
       inviteAccount: vi.fn(() => of({ message: 'Einladung gesendet.' })),
     };
+    apiService = {
+      getSystemTables: vi.fn(() => of(['accounts', 'roles'])),
+      getSystemTableData: vi.fn(() => of({
+        columns: ['role'],
+        rows: [{ role: 'admin' }],
+        total_rows: 1,
+        truncated: false,
+      })),
+    };
     await TestBed.configureTestingModule({
       imports: [AccountManagementComponent],
       providers: [
         { provide: AuthService, useValue: authService },
+        { provide: ApiService, useValue: apiService },
         { provide: ToastService, useValue: { show: vi.fn() } },
       ],
     }).compileComponents();
@@ -146,5 +161,20 @@ describe('AccountManagementComponent', () => {
     });
     expect(fixture.nativeElement.querySelector('[name="inviteEmail"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('pending@example.invalid');
+  });
+
+  it('loads a selected system table in read-only form', () => {
+    const tableButtons = fixture.nativeElement.querySelectorAll(
+      '.system-table-list button',
+    ) as NodeListOf<HTMLButtonElement>;
+    const tableButton = Array.from(tableButtons)
+      .find((button) => button.textContent?.trim() === 'accounts');
+    expect(tableButton).toBeDefined();
+    tableButton?.click();
+    fixture.detectChanges();
+
+    expect(apiService.getSystemTableData).toHaveBeenCalledWith('accounts');
+    expect(fixture.nativeElement.querySelector('.system-table-data').textContent).toContain('admin');
+    expect(fixture.nativeElement.querySelector('.system-table-data button')).toBeNull();
   });
 });
