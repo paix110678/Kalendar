@@ -42,6 +42,23 @@
         </label>
       </div>
       <p class="account-hint">Verknüpftes Profil: {{ accountProfileName(account) }}</p>
+      <label class="account-active-field">
+        <input
+          type="checkbox"
+          [name]="'account-active-' + account.id"
+          [(ngModel)]="account.is_active"
+          (ngModelChange)="publishEditorActions()"
+          [disabled]="isCurrentAccount(account) || saving">
+        <span>Konto aktiv</span>
+      </label>
+      @if (!account.is_active) {
+        <p class="account-hint">Für deaktivierte Konten wird keine E-Mail zum Zurücksetzen des Passworts versendet.</p>
+      } @else {
+        <p class="account-hint">Anmeldung und Passwort-Zurücksetzen sind möglich, wenn die E-Mail-Adresse bestätigt ist.</p>
+      }
+      @if (account.profile_id !== null && accountProfileIsInactive(account)) {
+        <p class="account-hint">Das verknüpfte Familienmitglied ist inaktiv. Beim Speichern seiner Einstellungen wird das Konto wieder deaktiviert.</p>
+      }
     </article>
   } @else if (selectedInvitationDetails; as invitation) {
     <article class="invitation-card">

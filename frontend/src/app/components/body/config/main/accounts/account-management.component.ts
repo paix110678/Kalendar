@@ -56,7 +56,12 @@ export class AccountManagementComponent implements OnInit, OnChanges {
   error = '';
   private treeError = '';
   message = '';
-  private savedAccountState: { id: number; role: AccountRole; profile_id: number | null } | null = null;
+  private savedAccountState: {
+    id: number;
+    role: AccountRole;
+    profile_id: number | null;
+    is_active: boolean;
+  } | null = null;
 
   constructor(
     readonly authService: AuthService,
@@ -258,7 +263,10 @@ export class AccountManagementComponent implements OnInit, OnChanges {
   }
 
   save(account: AuthAccount): void {
-    if (account.profile_id === null) return;
+    if (account.profile_id === null) {
+      this.error = 'Bitte wähle ein passendes Familienprofil für das Konto aus.';
+      return;
+    }
     this.saving = true;
     this.error = '';
     this.message = '';
@@ -293,6 +301,10 @@ export class AccountManagementComponent implements OnInit, OnChanges {
     return this.familyProfiles.find((profile) => profile.id === account.profile_id)?.name
       ?? account.profile_name
       ?? 'Kein Profil';
+  }
+
+  accountProfileIsInactive(account: AuthAccount): boolean {
+    return this.familyProfiles.some((profile) => profile.id === account.profile_id && !profile.is_active);
   }
 
   onRoleChanged(account: AuthAccount): void {
@@ -394,7 +406,8 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       account &&
       this.savedAccountState?.id === account.id &&
       (account.role !== this.savedAccountState.role ||
-        account.profile_id !== this.savedAccountState.profile_id),
+        account.profile_id !== this.savedAccountState.profile_id ||
+        account.is_active !== this.savedAccountState.is_active),
     );
   }
 
@@ -403,6 +416,7 @@ export class AccountManagementComponent implements OnInit, OnChanges {
     if (!account || this.savedAccountState?.id !== account.id) return;
     account.role = this.savedAccountState.role;
     account.profile_id = this.savedAccountState.profile_id;
+    account.is_active = this.savedAccountState.is_active;
     this.publishEditorActions();
   }
 
@@ -411,6 +425,7 @@ export class AccountManagementComponent implements OnInit, OnChanges {
       id: account.id,
       role: account.role,
       profile_id: account.profile_id,
+      is_active: account.is_active,
     };
   }
 

@@ -5,14 +5,17 @@ import { ApiService } from '../../../../../services/api.service';
 import { AccountInvitationRecord, AuthAccount, AuthService } from '../../../../../services/auth.service';
 import { ToastService } from '../../../../../services/toast.service';
 import { User } from '../../../../../services/calendar.service';
+import { AdminEditorActions } from '../../action-footer/action-footer.component';
 import { AccountManagementComponent } from './account-management.component';
 
 describe('AccountManagementComponent', () => {
   let fixture: ComponentFixture<AccountManagementComponent>;
   let authService: {
+    currentAccount: AuthAccount | null;
     getAccounts: ReturnType<typeof vi.fn>;
     getInvitations: ReturnType<typeof vi.fn>;
     inviteAccount: ReturnType<typeof vi.fn>;
+    updateAccount: ReturnType<typeof vi.fn>;
   };
   let apiService: {
     getSystemTables: ReturnType<typeof vi.fn>;
@@ -81,10 +84,15 @@ describe('AccountManagementComponent', () => {
   };
 
   beforeEach(async () => {
+    linkedAccount.role = 'adult';
+    linkedAccount.profile_id = 1;
+    linkedAccount.is_active = false;
     authService = {
-      getAccounts: vi.fn(() => of([linkedAccount])),
+      currentAccount: null,
+      getAccounts: vi.fn(() => of([{ ...linkedAccount }])),
       getInvitations: vi.fn(() => of([pendingInvitation])),
       inviteAccount: vi.fn(() => of({ message: 'Einladung gesendet.' })),
+      updateAccount: vi.fn(() => of({ message: 'Konto aktualisiert.' })),
     };
     apiService = {
       getSystemTables: vi.fn(() => of(['accounts', 'roles'])),
@@ -137,12 +145,73 @@ describe('AccountManagementComponent', () => {
 
     fixture.componentRef.setInput('selectedTreeItemId', 'account:1');
     fixture.detectChanges();
-    linkedAccount.role = 'child';
-    fixture.componentInstance.onRoleChanged(linkedAccount);
+    const account = fixture.componentInstance.accounts[0];
+    account.role = 'child';
+    fixture.componentInstance.onRoleChanged(account);
 
     expect(actions).toMatchObject({ dirty: true, canDelete: true });
     expect(fixture.nativeElement.textContent).not.toContain('Änderungen speichern');
     expect(fixture.nativeElement.textContent).not.toContain('Login entfernen');
+  });
+
+  it('allows admins to cancel or save account reactivation', async () => {
+    const component = fixture.componentInstance;
+    const actionsChange = vi.fn();
+    component.editorActionsChange.subscribe(actionsChange);
+    fixture.componentRef.setInput('selectedTreeItemId', 'account:1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.selectedAccountDetails).not.toBeNull();
+    const activeCheckbox = fixture.nativeElement.querySelector(
+      '.account-active-field input',
+    ) as HTMLInputElement;
+    expect(activeCheckbox.checked).toBe(false);
+    activeCheckbox.click();
+    fixture.detectChanges();
+
+    expect(component.selectedAccountDetails?.is_active).toBe(true);
+    let actions = actionsChange.mock.lastCall?.[0] as AdminEditorActions;
+    expect(actions.dirty).toBe(true);
+    actions.cancel();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.selectedAccountDetails?.is_active).toBe(false);
+    expect(activeCheckbox.checked).toBe(false);
+    expect(authService.updateAccount).not.toHaveBeenCalled();
+
+    activeCheckbox.click();
+    actions = actionsChange.mock.lastCall?.[0] as AdminEditorActions;
+    actions.save();
+    expect(authService.updateAccount).toHaveBeenCalledWith(1, {
+      role: 'adult',
+      profile_id: 1,
+      is_active: true,
+    });
+  });
+
+  it('does not allow the current admin to deactivate their own account', async () => {
+    authService.currentAccount = linkedAccount;
+    fixture.componentRef.setInput('selectedTreeItemId', 'account:1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const activeCheckbox = fixture.nativeElement.querySelector(
+      '.account-active-field input',
+    ) as HTMLInputElement;
+    expect(activeCheckbox.disabled).toBe(true);
+  });
+
+  it('explains why an account without a family profile cannot be saved', () => {
+    fixture.componentRef.setInput('selectedTreeItemId', 'account:1');
+    fixture.detectChanges();
+    const account = fixture.componentInstance.accounts[0];
+    account.profile_id = null;
+    fixture.componentInstance.save(account);
+    fixture.detectChanges();
+
+    expect(authService.updateAccount).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Bitte wähle ein passendes Familienprofil');
   });
 
   it('offers resend from the shared footer for a selected pending invitation', () => {

@@ -115,6 +115,19 @@
   font-size: 0.85rem;
 }
 
+.account-active-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #495057;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.account-active-field input {
+  accent-color: #d6336c;
+}
+
 .system-table-inspector {
   display: grid;
   gap: 10px;
