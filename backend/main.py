@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 import asyncio
 import hmac
 import logging
@@ -44,7 +44,7 @@ for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors="backslashreplace")
 
 
-# Nativer, asynchroner Hintergrund-Timer für das stündliche Wetter-Update
+# Nativer, asynchroner Hintergrund-Timer fÃ¼r das stÃ¼ndliche Wetter-Update
 async def hourly_weather_cron_task():
     # Wir warten nach dem Serverstart 3 Sekunden, damit die DB bereit ist
     await asyncio.sleep(3)
@@ -55,14 +55,14 @@ async def hourly_weather_cron_task():
                     await asyncio.to_thread(config.ensure_weather_location)
                 except config.LocationLookupError as error:
                     logger.warning(
-                        "Wetterstandort für %s konnte nicht ermittelt werden: %s",
+                        "Wetterstandort fÃ¼r %s konnte nicht ermittelt werden: %s",
                         db_file.name,
                         error,
                     )
                 try:
                     await asyncio.to_thread(config.fetch_live_weather_pure_ram)
                 except Exception:
-                    logger.exception("Wetteraktualisierung für %s fehlgeschlagen", db_file.name)
+                    logger.exception("Wetteraktualisierung fÃ¼r %s fehlgeschlagen", db_file.name)
         await asyncio.sleep(3600)
 
 
@@ -72,9 +72,9 @@ async def weekly_password_reset_log_cleanup_task():
         try:
             deleted = await asyncio.to_thread(auth_database.clear_password_reset_logs)
         except Exception:
-            logger.exception("Wöchentliche Bereinigung der Passwort-Reset-Protokolle fehlgeschlagen.")
+            logger.exception("WÃ¶chentliche Bereinigung der Passwort-Reset-Protokolle fehlgeschlagen.")
         else:
-            logger.info("Wöchentliche Bereinigung: %s Passwort-Reset-Protokolle entfernt.", deleted)
+            logger.info("WÃ¶chentliche Bereinigung: %s Passwort-Reset-Protokolle entfernt.", deleted)
 
 
 @asynccontextmanager
@@ -109,7 +109,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Familien-Kalender API",
-    version="2.0.0",
+    version="2.0.1",
     lifespan=lifespan,
 )
 
@@ -161,7 +161,7 @@ async def authenticate_api_requests(request, call_next):
             )
             return JSONResponse(
                 status_code=403,
-                content={"detail": "CSRF-Prüfung fehlgeschlagen."},
+                content={"detail": "CSRF-PrÃ¼fung fehlgeschlagen."},
                 headers={"Cache-Control": "no-store"},
             )
 
@@ -210,7 +210,7 @@ app.include_router(sync.router)
 
 @app.get("/")
 def read_root():
-    return {"status": "online", "message": "Familienplaner-Zentrale läuft fehlerfrei."}
+    return {"status": "online", "message": "Familienplaner-Zentrale lÃ¤uft fehlerfrei."}
 
 
 if __name__ == "__main__":

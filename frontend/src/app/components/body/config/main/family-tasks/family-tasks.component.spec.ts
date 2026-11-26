@@ -144,6 +144,36 @@ describe('FamilyTasksComponent', () => {
     });
   });
 
+  it('saves tasks for several members one after another', () => {
+    const other: User = { ...member, id: 8, name: 'Bea' };
+    const saved: FamilyTask[] = [];
+    createFamilyTask.mockImplementation((payload: FamilyTaskPayload) => {
+      const task = { ...parent, id: 100 + saved.length, title: payload.title, member_id: payload.member_id, parent_id: null };
+      saved.push(task);
+      return of(task);
+    });
+    const component = fixture.componentInstance;
+    let saveAction: (() => void) | undefined;
+    component.editorActionsChange.subscribe((value) => { saveAction = value.save; });
+    component.tasksChanged.subscribe((tasks) => fixture.componentRef.setInput('tasks', tasks));
+    component.selectedTaskIdChange.subscribe((id) => fixture.componentRef.setInput('selectedTaskId', id));
+    fixture.componentRef.setInput('activeUsers', [member, other]);
+
+    for (const [index, target] of [member, other].entries()) {
+      fixture.componentRef.setInput('selectedTaskId', null);
+      fixture.componentRef.setInput('defaultParentId', null);
+      fixture.componentRef.setInput('defaultMemberId', target.id);
+      fixture.detectChanges();
+      component.title = `Aufgabe ${index}`;
+      component.publishEditorActions();
+      saveAction?.();
+      fixture.detectChanges();
+    }
+
+    expect(saved.map((task) => task.member_id)).toEqual([member.id, other.id]);
+    expect(component.errorMessage).toBe('');
+  });
+
   it('does not silently select the first member without a context', () => {
     fixture.componentRef.setInput('defaultMemberId', null);
     fixture.componentRef.setInput('defaultParentId', null);
