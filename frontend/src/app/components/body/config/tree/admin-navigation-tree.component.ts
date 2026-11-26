@@ -92,6 +92,10 @@ export class AdminNavigationTreeComponent {
       .sort((left, right) => left.title.localeCompare(right.title, 'de'));
   }
 
+  get familyTaskMembers(): User[] {
+    return this.activeUsers.filter((user) => user.is_active);
+  }
+
   getFamilyTasksForMember(memberId: number): FamilyTask[] {
     const memberTasks = this.familyTasks.filter(
       (task) => task.member_id === memberId && task.parent_id === null && !task.completed,

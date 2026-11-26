@@ -128,10 +128,10 @@
             Erneut versuchen
           </button>
         }
-        @if (activeUsers.length === 0) {
-          <p class="tree-message">Keine Familienmitglieder vorhanden</p>
+        @if (familyTaskMembers.length === 0) {
+          <p class="tree-message">Keine aktiven Familienmitglieder vorhanden</p>
         } @else {
-          @for (user of activeUsers; track user.id) {
+          @for (user of familyTaskMembers; track user.id) {
             <section class="family-task-member category-group">
               <div class="tree-item family-task-member-heading">
                 <span class="item-color" [style.background-color]="user.color_code"></span>

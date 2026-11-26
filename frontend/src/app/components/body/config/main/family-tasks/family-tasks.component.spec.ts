@@ -174,6 +174,21 @@ describe('FamilyTasksComponent', () => {
     expect(component.errorMessage).toBe('');
   });
 
+  it('rejects inactive members without calling the API', () => {
+    fixture.componentRef.setInput('activeUsers', [{ ...member, is_active: false }]);
+    fixture.componentRef.setInput('defaultParentId', null);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.title = 'Lesen';
+    let saveAction: (() => void) | undefined;
+    component.editorActionsChange.subscribe((value) => { saveAction = value.save; });
+    component.publishEditorActions();
+
+    saveAction?.();
+    expect(createFamilyTask).not.toHaveBeenCalled();
+    expect(toastShow).toHaveBeenCalledWith(false, expect.stringContaining('inaktiv'));
+  });
+
   it('does not silently select the first member without a context', () => {
     fixture.componentRef.setInput('defaultMemberId', null);
     fixture.componentRef.setInput('defaultParentId', null);

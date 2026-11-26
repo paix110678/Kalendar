@@ -133,8 +133,13 @@ export class FamilyTasksComponent implements OnChanges {
       this.toastService.show(false, 'Bitte einen Aufgabentitel eingeben.');
       return;
     }
-    if (this.memberId === null || !this.activeUsers.some((user) => user.id === this.memberId)) {
+    const member = this.activeUsers.find((user) => user.id === this.memberId);
+    if (!member) {
       this.toastService.show(false, 'Bitte die Aufgabe über das Plus beim Familienmitglied hinzufügen.');
+      return;
+    }
+    if (!member.is_active) {
+      this.toastService.show(false, 'Dieses Familienmitglied ist inaktiv. Aktiviere es unter Einstellungen → Mitglieder, um Aufgaben zu speichern.');
       return;
     }
     if (!this.isValidDate(this.dueDate)) {
@@ -182,7 +187,7 @@ export class FamilyTasksComponent implements OnChanges {
 
     const payload: FamilyTaskPayload = {
       title,
-      member_id: this.memberId,
+      member_id: member.id,
       due_date: this.dueDate,
       parent_id: this.parentId,
       points: this.points ?? 0,
