@@ -190,7 +190,7 @@
 
 .family-task-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) auto 28px;
   align-items: center;
   gap: 2px;
 }
@@ -204,6 +204,7 @@
   display: grid;
   width: 28px;
   height: 28px;
+  flex: 0 0 28px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -231,6 +232,7 @@
 }
 
 .family-task-subtask-plus {
+  grid-column: 3;
   color: #2b8a3e;
   font-size: 18px;
   line-height: 1;

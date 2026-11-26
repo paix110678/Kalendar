@@ -119,6 +119,44 @@ describe('FamilyTasksComponent', () => {
     expect(savedTasks).toEqual([[parent, child]]);
     expect(selectedTaskIds).toEqual([child.id]);
     expect(component.editingTaskId).toBe(child.id);
+    expect(fixture.nativeElement.querySelector('[name="familyTaskMember"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[name="familyTaskParent"]')).toBeNull();
+  });
+
+  it('creates a subtask only for the selected recurring occurrence', () => {
+    fixture.componentRef.setInput('tasks', [recurringTask]);
+    fixture.componentRef.setInput('defaultParentId', recurringTask.id);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.title = 'Buch auswählen';
+    let saveAction: (() => void) | undefined;
+    component.editorActionsChange.subscribe((value) => { saveAction = value.save; });
+    component.publishEditorActions();
+
+    expect(fixture.nativeElement.textContent).toContain('Unteraufgabe zu „Lesen“ am 24.11.2026');
+    saveAction?.();
+    expect(createFamilyTask).toHaveBeenCalledWith({
+      title: 'Buch auswählen',
+      member_id: member.id,
+      due_date: recurringTask.due_date,
+      parent_id: recurringTask.id,
+      points: 0,
+    });
+  });
+
+  it('does not silently select the first member without a context', () => {
+    fixture.componentRef.setInput('defaultMemberId', null);
+    fixture.componentRef.setInput('defaultParentId', null);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.title = 'Lesen';
+    let saveAction: (() => void) | undefined;
+    component.editorActionsChange.subscribe((value) => { saveAction = value.save; });
+    component.publishEditorActions();
+
+    saveAction?.();
+    expect(createFamilyTask).not.toHaveBeenCalled();
+    expect(toastShow).toHaveBeenCalledWith(false, expect.stringContaining('Plus beim Familienmitglied'));
   });
 
   it('creates a weekly recurrence and publishes its calendar occurrence', () => {

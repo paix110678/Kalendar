@@ -310,6 +310,20 @@ def refresh_parent_completion(conn: sqlite3.Connection, parent_id: int) -> None:
         award_task_points_once(conn, parent_id)
 
 
+def delete_task_with_subtasks(conn: sqlite3.Connection, task_id: int) -> None:
+    conn.execute(
+        """
+        DELETE FROM family_task_comments
+        WHERE task_id = ? OR task_id IN (
+            SELECT id FROM family_tasks WHERE parent_id = ?
+        )
+        """,
+        (task_id, task_id),
+    )
+    conn.execute("DELETE FROM family_tasks WHERE parent_id = ?", (task_id,))
+    conn.execute("DELETE FROM family_tasks WHERE id = ?", (task_id,))
+
+
 @router.get("")
 def list_family_tasks(
     actor: AccountContext = Depends(require_authenticated),
@@ -459,18 +473,7 @@ def delete_family_task(task_id: int):
                 status_code=409,
                 detail="Diese Aufgabe gehört zu einer Wiederholung. Bitte lösche die Wiederholung.",
             )
-        conn.execute(
-            """
-            DELETE FROM family_task_comments
-            WHERE task_id = ? OR task_id IN (
-                SELECT id FROM family_tasks WHERE parent_id = ?
-            )
-            """,
-            (task_id, task_id),
-        )
-        if task["parent_id"] is None:
-            conn.execute("DELETE FROM family_tasks WHERE parent_id = ?", (task_id,))
-        conn.execute("DELETE FROM family_tasks WHERE id = ?", (task_id,))
+        delete_task_with_subtasks(conn, task_id)
         if task["parent_id"] is not None:
             refresh_parent_completion(conn, task["parent_id"])
         conn.commit()
@@ -631,15 +634,12 @@ def update_family_task_series(
                     """,
                     (payload.title, payload.member_id, payload.points, task["id"]),
                 )
+                conn.execute(
+                    "UPDATE family_tasks SET member_id = ? WHERE parent_id = ?",
+                    (payload.member_id, task["id"]),
+                )
             else:
-                conn.execute(
-                    "DELETE FROM family_task_comments WHERE task_id = ?",
-                    (task["id"],),
-                )
-                conn.execute(
-                    "DELETE FROM family_tasks WHERE id = ?",
-                    (task["id"],),
-                )
+                delete_task_with_subtasks(conn, task["id"])
         conn.execute(
             """
             UPDATE family_task_series
@@ -704,19 +704,12 @@ def delete_family_task_series(
             """,
             (series_id, today),
         )
-        conn.execute(
-            """
-            DELETE FROM family_task_comments
-            WHERE task_id IN (
-                SELECT id FROM family_tasks WHERE series_id = ?
-            )
-            """,
+        occurrences = conn.execute(
+            "SELECT id FROM family_tasks WHERE series_id = ?",
             (series_id,),
-        )
-        conn.execute(
-            "DELETE FROM family_tasks WHERE series_id = ?",
-            (series_id,),
-        )
+        ).fetchall()
+        for occurrence in occurrences:
+            delete_task_with_subtasks(conn, occurrence["id"])
         conn.execute(
             "DELETE FROM family_task_series WHERE id = ?",
             (series_id,),

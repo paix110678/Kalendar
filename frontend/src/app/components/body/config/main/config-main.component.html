@@ -85,7 +85,7 @@
         [activeUsers]="activeUsers"
         (closeList)="familyTaskListClosed.emit()">
       </app-family-task-list>
-    } @else {
+    } @else if (selectedFamilyTaskMemberId !== null || selectedFamilyTaskId !== null) {
       <app-family-tasks
         [activeUsers]="activeUsers"
         [tasks]="familyTasks"
@@ -96,6 +96,8 @@
         (selectedTaskIdChange)="selectedFamilyTaskIdChange.emit($event)"
         (editorActionsChange)="editorActionsChange.emit($event)">
       </app-family-tasks>
+    } @else {
+      <p>Wähle das Plus bei einem Familienmitglied, um eine Aufgabe hinzuzufügen.</p>
     }
   }
   @if (activeTab === 'database') {

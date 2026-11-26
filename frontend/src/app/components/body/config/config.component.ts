@@ -412,6 +412,8 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.editorActions = null;
     this.selectedFamilyTaskListMemberId = null;
     this.selectedFamilyTaskId = null;
+    this.selectedFamilyTaskMemberId = null;
+    this.selectedFamilyTaskParentId = null;
   }
 
   openFamilyTask(taskId: number): void {
@@ -426,6 +428,13 @@ export class ConfigComponent implements OnInit, OnDestroy {
   }
 
   openNewFamilyTask(memberId: number): void {
+    if (
+      this.activeTab === 'familyTasks'
+      && this.selectedFamilyTaskListMemberId === null
+      && this.selectedFamilyTaskId === null
+      && this.selectedFamilyTaskMemberId === memberId
+      && this.selectedFamilyTaskParentId === null
+    ) return;
     this.editorActions = null;
     this.activeTab = 'familyTasks';
     this.selectedFamilyTaskId = null;
@@ -437,6 +446,13 @@ export class ConfigComponent implements OnInit, OnDestroy {
   openNewFamilySubtask(parentId: number): void {
     const parent = this.familyTasks.find((task) => task.id === parentId);
     if (!parent) return;
+    if (
+      this.activeTab === 'familyTasks'
+      && this.selectedFamilyTaskListMemberId === null
+      && this.selectedFamilyTaskId === null
+      && this.selectedFamilyTaskMemberId === parent.member_id
+      && this.selectedFamilyTaskParentId === parentId
+    ) return;
     this.editorActions = null;
     this.activeTab = 'familyTasks';
     this.selectedFamilyTaskId = null;

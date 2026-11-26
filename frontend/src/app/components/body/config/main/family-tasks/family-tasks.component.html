@@ -1,7 +1,8 @@
 <section class="family-tasks-page">
   <header class="family-tasks-header">
     <h3>{{ savedTask?.series_id != null ? 'Wiederholung bearbeiten' : editingTaskId === null ? 'Aufgabe hinzufügen' : 'Aufgabe bearbeiten' }}</h3>
-    <p>Aufgaben erscheinen am Fälligkeitstag oder wöchentlich im Kalender des ausgewählten Familienmitglieds.</p>
+    <p>Für {{ memberName }}@if (parentTask) { · Unteraufgabe zu „{{ parentTask.title }}“ am {{ dueDate | date:'dd.MM.yyyy' }}}</p>
+    <p>Aufgaben erscheinen am Fälligkeitstag oder wöchentlich im Kalender des Familienmitglieds.</p>
   </header>
 
   <form class="family-task-form" (ngSubmit)="$event.preventDefault()">
@@ -18,21 +19,6 @@
     </label>
 
     <label class="field">
-      <span>Familienmitglied</span>
-      <select
-        name="familyTaskMember"
-        [(ngModel)]="memberId"
-        (ngModelChange)="publishEditorActions()"
-        [disabled]="parentId !== null"
-        required>
-        <option [ngValue]="null">Mitglied auswählen …</option>
-        @for (user of activeUsers; track user.id) {
-          <option [ngValue]="user.id">{{ user.name }}</option>
-        }
-      </select>
-    </label>
-
-    <label class="field">
       <span>{{ repeatEnabled ? 'Start am' : 'Fällig am' }}</span>
       <input
         type="date"
@@ -41,20 +27,6 @@
         (ngModelChange)="publishEditorActions()"
         [disabled]="parentId !== null"
         required>
-    </label>
-
-    <label class="field">
-      <span>Übergeordnete Aufgabe</span>
-      <select
-        name="familyTaskParent"
-        [ngModel]="parentId"
-        (ngModelChange)="onParentChange($event)"
-        [disabled]="repeatEnabled || (editingTaskId !== null && (savedTask?.parent_id !== null || hasSubtasks))">
-        <option [ngValue]="null">Keine – Hauptaufgabe</option>
-        @for (parent of availableParents; track parent.id) {
-          <option [ngValue]="parent.id">{{ parent.title }}</option>
-        }
-      </select>
     </label>
 
     <label class="field">

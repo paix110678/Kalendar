@@ -138,6 +138,15 @@
                 <span class="item-name">{{ user.name }}</span>
                 <button
                   type="button"
+                  class="family-task-list-button"
+                  [attr.aria-label]="'Alle Aufgaben für ' + user.name + ' anzeigen'"
+                  (click)="emit('familyTaskList', user.id)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
                   class="family-task-add"
                   [attr.aria-label]="'Aufgabe für ' + user.name + ' hinzufügen'"
                   (click)="emit('newFamilyTask', user.id)">+</button>
@@ -147,36 +156,23 @@
                   <div class="family-task-row">
                     <button
                       type="button"
-                      class="family-task-list-button"
-                      [attr.aria-label]="'Alle Aufgaben für ' + user.name + ' anzeigen'"
-                      (click)="emit('familyTaskList', task.member_id)">
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
                       class="tree-item family-task-item"
                       [class.tree-item-active]="selectedFamilyTaskId === task.id"
                       [attr.aria-label]="'Aufgabe: ' + task.title + ', ' + familyTaskDescription(task)"
                       (click)="emit('familyTask', task.id)">
-                      @if (task.series_id) {
-                        <span class="series-marker" title="Wiederkehrende Aufgabe" aria-label="Wiederkehrende Aufgabe">↻</span>
-                      } @else {
-                        <span class="item-marker" aria-hidden="true">○</span>
-                      }
                       <span class="item-name">
                         {{ task.title }}
                         <small>{{ familyTaskDescription(task) }}</small>
                       </span>
                     </button>
-                    @if (!task.series_id) {
-                      <button
-                        type="button"
-                        class="family-task-subtask-plus"
-                        [attr.aria-label]="'Unteraufgabe zu ' + task.title + ' hinzufügen'"
-                        (click)="emit('newFamilySubtask', task.id)">+</button>
+                    @if (task.series_id != null) {
+                      <span class="series-marker" title="Wiederkehrende Aufgabe" aria-label="Wiederkehrende Aufgabe">↻</span>
                     }
+                    <button
+                      type="button"
+                      class="family-task-subtask-plus"
+                      [attr.aria-label]="'Unteraufgabe zu ' + task.title + ' hinzufügen'"
+                      (click)="emit('newFamilySubtask', task.id)">+</button>
                   </div>
                 </div>
               }

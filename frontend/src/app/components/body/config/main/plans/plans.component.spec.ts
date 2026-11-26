@@ -348,6 +348,73 @@ describe('PlansComponent', () => {
     expect(element.querySelector('app-plan-details lib-plan-learn')).not.toBeNull();
   });
 
+  it('keeps the existing units and uniform task when switching to individual settings', async () => {
+    const component = fixture.componentInstance;
+    const hours = [
+      { start_time: '08:00', end_time: '08:45' },
+      { start_time: '09:00', end_time: '09:45' },
+      { start_time: '10:00', end_time: '10:45' },
+    ];
+    component.tasks = [
+      { id: 11, title: 'Lesen', color: '#228be6', category_id: 8, category_label: 'Schule', member_ids: [] },
+    ];
+    component.editPlan({
+      ...savedPlan,
+      days: ['Montag', 'Dienstag'],
+      hours_count: hours.length,
+      hours,
+      uniform_activities: true,
+      uniform_task_id: 11,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLInputElement>('input[name="uniformCount"]')!.click();
+    element.querySelector<HTMLInputElement>('input[name="uniformActivities"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.hoursCount).toBe(3);
+    expect(component.hours).toEqual(hours);
+    expect(component.dayHours).toEqual({ Montag: hours, Dienstag: hours });
+    expect(component.uniformTaskId).toBe(11);
+    expect(component.activitySubjects).toEqual({ Montag: [11, 11, 11], Dienstag: [11, 11, 11] });
+    expect(Array.from(element.querySelectorAll<HTMLInputElement>('.weekday-count-control input'))
+      .map((input) => input.value)).toEqual(['3', '3']);
+
+    component.savePlan();
+    expect(updatePlan).toHaveBeenCalledWith(savedPlan.id, expect.objectContaining({
+      hours_count: 3,
+      day_hours: { Montag: hours, Dienstag: hours },
+      uniform_activities: false,
+      activity_subjects: { Montag: [11, 11, 11], Dienstag: [11, 11, 11] },
+    }));
+  });
+
+  it('retains individual day lengths when copying an empty uniform activity', () => {
+    const component = fixture.componentInstance;
+    component.editPlan(savedPlan);
+    component.selectedDays = ['Montag', 'Dienstag'];
+    component.uniformCount = false;
+    component.dayHours = {
+      Montag: [{ start_time: '08:00', end_time: '08:45' }],
+      Dienstag: [
+        { start_time: '08:00', end_time: '08:45' },
+        { start_time: '09:00', end_time: '09:45' },
+      ],
+    };
+    component.uniformTaskId = null;
+
+    component.onUniformActivitiesChange(false);
+
+    expect(component.activitySubjects).toEqual(expect.objectContaining({
+      Montag: [0],
+      Dienstag: [0, 0],
+    }));
+    expect(component.dayHours['Dienstag']).toHaveLength(2);
+  });
+
   it('opens an existing plan in the full-width editor view', () => {
     const component = fixture.componentInstance;
     const setupViewChange = vi.fn();
@@ -376,6 +443,7 @@ describe('PlansComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     component.planName = 'Individuelle Zeiten';
+    component.onHoursCountChange(1);
     component.onUniformCountChange(false);
     fixture.detectChanges();
 

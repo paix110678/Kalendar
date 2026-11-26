@@ -344,6 +344,78 @@ def test_recurrence_updates_preserve_matching_occurrences_and_comments(tmp_path)
         assert updated_occurrence["comments"] == [comment]
 
 
+def test_recurring_occurrence_subtasks_follow_series_updates_and_deletion(tmp_path):
+    db_path = tmp_path / "recurrence-subtasks.sqlite3"
+    database.init_db(db_path)
+    with database.use_database_file(db_path):
+        _create_member("Erstes Kind")
+        second_member_id = _create_member("Zweites Kind")
+        actor = _actor(db_path)
+        start = date.today() + timedelta(days=1)
+        weekday = family_tasks.WEEKDAYS[start.weekday()]
+        series = family_tasks.create_family_task_series(
+            family_tasks.FamilyTaskSeriesPayload(
+                title="Lesen",
+                member_id=1,
+                start_date=start,
+                repeat_weekdays=[weekday],
+                end_date=start + timedelta(days=14),
+            ),
+            actor,
+        )
+        occurrences = [
+            task for task in series["tasks"] if task["series_id"] == series["series_id"]
+        ]
+        children = [
+            family_tasks.create_family_task(
+                _payload(
+                    "Buch auswählen",
+                    due_date=date.fromisoformat(occurrence["due_date"]),
+                    parent_id=occurrence["id"],
+                ),
+                actor,
+            )
+            for occurrence in occurrences
+        ]
+        for child in children:
+            family_tasks.create_family_task_comment(
+                child["id"],
+                family_tasks.FamilyTaskCommentPayload(text="Kommentar"),
+                actor,
+            )
+        family_tasks.update_family_task_completion(
+            children[2]["id"], family_tasks.FamilyTaskCompletion(completed=True), actor
+        )
+
+        updated = family_tasks.update_family_task_series(
+            series["series_id"],
+            family_tasks.FamilyTaskSeriesPayload(
+                title="Lesen",
+                member_id=second_member_id,
+                start_date=start,
+                repeat_weekdays=[weekday],
+                end_date=start,
+            ),
+            actor,
+        )
+        by_id = {task["id"]: task for task in updated["tasks"]}
+        assert by_id[children[0]["id"]]["member_id"] == second_member_id
+        assert by_id[children[0]["id"]]["parent_id"] == occurrences[0]["id"]
+        assert children[1]["id"] not in by_id
+        assert by_id[occurrences[2]["id"]]["series_id"] is None
+        assert by_id[children[2]["id"]]["member_id"] == 1
+        assert len(by_id[children[2]["id"]]["comments"]) == 1
+
+        remaining = family_tasks.delete_family_task_series(series["series_id"], actor)
+        assert {task["id"] for task in remaining} == {occurrences[2]["id"], children[2]["id"]}
+        conn = database.get_db_connection()
+        try:
+            comment_task_ids = conn.execute("SELECT task_id FROM family_task_comments").fetchall()
+            assert [row["task_id"] for row in comment_task_ids] == [children[2]["id"]]
+        finally:
+            conn.close()
+
+
 def test_calendar_load_generates_recurrences_through_the_requested_date(tmp_path):
     db_path = tmp_path / "family-task-recurrence-calendar-range.sqlite3"
     database.init_db(db_path)

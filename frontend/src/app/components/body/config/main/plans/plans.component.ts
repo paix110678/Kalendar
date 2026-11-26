@@ -207,10 +207,8 @@ export class PlansComponent implements OnChanges {
           : this.adjustHours(oldDayHours, this.hoursCount, this.unitInsertionPosition);
       }
     } else {
-      this.hoursCount = 1;
-      this.hours = this.resizeHours(this.hours, 1);
       for (const day of this.selectedDays) {
-        this.dayHours[day] = this.resizeHours(this.getDayHours(day), 1);
+        this.dayHours[day] = this.getDayHours(day).map((hour) => ({ ...hour }));
       }
     }
     this.uniformCount = uniform;
@@ -219,6 +217,11 @@ export class PlansComponent implements OnChanges {
 
   onUniformActivitiesChange(uniform: boolean): void {
     if (uniform === this.uniformActivities) return;
+    if (!uniform) {
+      for (const day of this.selectedDays) {
+        this.activitySubjects[day] = this.getDayHours(day).map(() => this.uniformTaskId ?? 0);
+      }
+    }
     this.uniformActivities = uniform;
     this.publishEditorActions();
   }

@@ -148,7 +148,7 @@ export class AdminNavigationTreeComponent {
       ? ` · bis ${this.formatTaskDate(task.series_end_date)}`
       : ' · ohne Enddatum';
     const points = task.points > 0 ? ` · ${task.points} Punkte` : '';
-    return `Wöchentlich ${repeatDays.join(', ')}${start}${end}${points}`;
+    return `Termin ${this.formatTaskDate(task.due_date)} · wöchentlich ${repeatDays.join(', ')}${start}${end}${points}`;
   }
 
   private compareSeriesRepresentatives(left: FamilyTask, right: FamilyTask): number {

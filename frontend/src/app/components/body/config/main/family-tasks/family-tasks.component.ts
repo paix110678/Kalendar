@@ -71,7 +71,7 @@ export class FamilyTasksComponent implements OnChanges {
     this.editingTaskId = task?.id ?? null;
     this.savedTask = task ? { ...task } : null;
     this.title = task?.title ?? '';
-    this.memberId = task?.member_id ?? parent?.member_id ?? this.defaultMemberId ?? this.activeUsers[0]?.id ?? null;
+    this.memberId = task?.member_id ?? parent?.member_id ?? this.defaultMemberId ?? null;
     this.dueDate = task?.due_date ?? parent?.due_date ?? this.today();
     this.parentId = task?.parent_id ?? this.defaultParentId;
     this.points = task?.points || null;
@@ -83,29 +83,12 @@ export class FamilyTasksComponent implements OnChanges {
     this.publishEditorActions();
   }
 
-  get availableParents(): FamilyTask[] {
-    return this.tasks.filter((task) =>
-      task.parent_id === null
-      && task.id !== this.editingTaskId
-      && task.member_id === this.memberId
-      && task.due_date === this.dueDate
-      && task.series_id == null,
-    );
+  get memberName(): string {
+    return this.activeUsers.find((user) => user.id === this.memberId)?.name ?? 'unbekanntes Familienmitglied';
   }
 
-  get hasSubtasks(): boolean {
-    return this.editingTaskId !== null
-      && this.tasks.some((task) => task.parent_id === this.editingTaskId);
-  }
-
-  onParentChange(parentId: number | null): void {
-    this.parentId = parentId;
-    const parent = this.tasks.find((task) => task.id === parentId);
-    if (parent) {
-      this.memberId = parent.member_id;
-      this.dueDate = parent.due_date;
-    }
-    this.publishEditorActions();
+  get parentTask(): FamilyTask | undefined {
+    return this.tasks.find((task) => task.id === this.parentId);
   }
 
   setRepeatEnabled(enabled: boolean): void {
@@ -151,7 +134,7 @@ export class FamilyTasksComponent implements OnChanges {
       return;
     }
     if (this.memberId === null || !this.activeUsers.some((user) => user.id === this.memberId)) {
-      this.toastService.show(false, 'Bitte ein Familienmitglied auswählen.');
+      this.toastService.show(false, 'Bitte die Aufgabe über das Plus beim Familienmitglied hinzufügen.');
       return;
     }
     if (!this.isValidDate(this.dueDate)) {

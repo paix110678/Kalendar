@@ -114,7 +114,7 @@ describe('AdminNavigationTreeComponent account entries', () => {
     expect(element.querySelectorAll('.family-task-member')).toHaveLength(1);
     expect(Array.from(element.querySelectorAll('.family-task-item')).map((item) =>
       item.textContent?.replace(/\s+/g, ' ').trim(),
-    )).toEqual(['○ Ranzen packen 24.11. · 2 Punkte']);
+    )).toEqual(['Ranzen packen 24.11. · 2 Punkte']);
     expect(element.querySelector('.family-subtask-add')).toBeNull();
     expect(element.querySelector('.family-subtask-item')).toBeNull();
 
@@ -122,6 +122,7 @@ describe('AdminNavigationTreeComponent account entries', () => {
     const addSubtask = element.querySelector('.family-task-subtask-plus') as HTMLButtonElement;
     const listButton = element.querySelector('.family-task-list-button') as HTMLButtonElement;
     const taskButton = element.querySelector('.family-task-item') as HTMLButtonElement;
+    expect(listButton.closest('.family-task-member-heading')).not.toBeNull();
     addTask.click();
     addSubtask.click();
     listButton.click();
@@ -132,6 +133,42 @@ describe('AdminNavigationTreeComponent account entries', () => {
       ['newFamilySubtask', tasks[0].id],
       ['familyTaskList', member.id],
       ['familyTask', tasks[0].id],
+    ]);
+  });
+
+  it('offers the list for members without tasks and adds a subtask to the displayed series occurrence', () => {
+    const member: User = {
+      id: 7, name: 'Alex', role: 'child_10', current_points: 0,
+      status_school: 'GREEN', status_sport: 'BASE', color_code: '#228be6',
+      state_code: null, assigned_plan_id: null, is_active: true,
+    };
+    const emptyMember = { ...member, id: 8, name: 'Sam' };
+    const occurrence: FamilyTask = {
+      id: 21, title: 'Lesen', member_id: member.id, due_date: '2099-01-05',
+      parent_id: null, points: 0, completed: false, points_awarded: false,
+      series_id: 3, repeat_weekdays: ['Montag'], series_start_date: '2099-01-05',
+      series_end_date: null,
+    };
+    fixture.componentRef.setInput('activeTab', 'familyTasks');
+    fixture.componentRef.setInput('activeUsers', [member, emptyMember]);
+    fixture.componentRef.setInput('familyTasks', [
+      { ...occurrence, id: 22, due_date: '2099-01-12' }, occurrence,
+    ]);
+    fixture.detectChanges();
+
+    const actions: Array<{ type: string; id?: number | string | null }> = [];
+    fixture.componentInstance.action.subscribe((action) => actions.push(action));
+    const element = fixture.nativeElement as HTMLElement;
+    const listButtons = element.querySelectorAll<HTMLButtonElement>('.family-task-member-heading .family-task-list-button');
+    expect(listButtons).toHaveLength(2);
+    listButtons[1].click();
+    const row = element.querySelector('.family-task-row') as HTMLElement;
+    expect(row.querySelector('.family-task-item')?.textContent).toContain('Termin 05.01.');
+    expect(row.querySelector('.series-marker')?.previousElementSibling).toBe(row.querySelector('.family-task-item'));
+    (row.querySelector('.family-task-subtask-plus') as HTMLButtonElement).click();
+    expect(actions.map(({ type, id }) => [type, id])).toEqual([
+      ['familyTaskList', emptyMember.id],
+      ['newFamilySubtask', occurrence.id],
     ]);
   });
 });
