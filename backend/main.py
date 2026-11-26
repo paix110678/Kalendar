@@ -109,7 +109,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Familien-Kalender API",
-    version="2.0.1",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
